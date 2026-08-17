@@ -6,7 +6,7 @@ google_oauth_pending.json
 config.yaml
 
 # Runtime state
-chief-of-staff/
+/chief-of-staff/
 logs/
 sessions/
 cache/

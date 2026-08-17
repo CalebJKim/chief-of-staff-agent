@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "source": "fixture",
+  "generated_at": "2026-08-12T12:00:00Z",
+  "timezone": "America/Los_Angeles",
+  "window": {
+    "start": "2026-08-12T00:00:00-07:00",
+    "end": "2026-08-14T00:00:00-07:00"
+  },
+  "identity": {"email": "owner@example.com", "query": "fixture"},
+  "coverage": {"events": 4, "messages": 3, "files": 3, "errors": []},
+  "events": [
+    {
+      "id": "evt-lunch",
+      "title": "Lunch",
+      "start": "2026-08-12T12:00:00-07:00",
+      "end": "2026-08-12T13:00:00-07:00",
+      "all_day": false,
+      "organizer": "owner@example.com",
+      "self_status": "accepted",
+      "attendees": [{"email": "owner@example.com", "self": true}],
+      "meeting_url": "",
+      "html_link": "https://calendar.google.com/event?eid=lunch",
+      "links": []
+    },
+    {
+      "id": "evt-exec",
+      "title": "Exec launch decision",
+      "start": "2026-08-12T16:00:00-07:00",
+      "end": "2026-08-12T17:00:00-07:00",
+      "all_day": false,
+      "organizer": "ceo@example.com",
+      "self_status": "accepted",
+      "attendees": [
+        {"email": "owner@example.com", "self": true},
+        {"email": "ceo@example.com", "self": false},
+        {"email": "vp@example.com", "self": false}
+      ],
+      "meeting_url": "https://meet.google.com/exec",
+      "html_link": "https://calendar.google.com/event?eid=exec",
+      "links": []
+    },
+    {
+      "id": "evt-customer",
+      "title": "Customer launch review",
+      "start": "2026-08-12T16:00:00-07:00",
+      "end": "2026-08-12T16:30:00-07:00",
+      "all_day": false,
+      "organizer": "buyer@customer.com",
+      "self_status": "accepted",
+      "attendees": [
+        {"email": "owner@example.com", "self": true},
+        {"email": "buyer@customer.com", "self": false}
+      ],
+      "meeting_url": "https://meet.google.com/customer",
+      "html_link": "https://calendar.google.com/event?eid=customer",
+      "links": []
+    },
+    {
+      "id": "evt-sync",
+      "title": "Weekly team sync",
+      "start": "2026-08-12T16:15:00-07:00",
+      "end": "2026-08-12T16:45:00-07:00",
+      "all_day": false,
+      "organizer": "owner@example.com",
+      "self_status": "accepted",
+      "attendees": [{"email": "owner@example.com", "self": true}],
+      "meeting_url": "https://meet.google.com/sync",
+      "html_link": "https://calendar.google.com/event?eid=sync",
+      "links": []
+    }
+  ],
+  "messages": [
+    {
+      "id": "msg-urgent",
+      "thread_id": "thread-urgent",
+      "from": "ceo@example.com",
+      "to": "owner@example.com",
+      "subject": "Decision needed: launch blocker",
+      "date": "Wed, 12 Aug 2026 08:00:00 -0700",
+      "internal_ms": 1786546800000,
+      "unread": true,
+      "important": true,
+      "labels": ["INBOX", "UNREAD", "IMPORTANT"],
+      "snippet": "Please review the launch deck and decide on positioning before the exec meeting.",
+      "links": []
+    },
+    {
+      "id": "msg-customer",
+      "thread_id": "thread-customer",
+      "from": "buyer@customer.com",
+      "to": "owner@example.com",
+      "subject": "Customer launch review update",
+      "date": "Wed, 12 Aug 2026 07:30:00 -0700",
+      "internal_ms": 1786545000000,
+      "unread": true,
+      "important": false,
+      "labels": ["INBOX", "UNREAD"],
+      "snippet": "Here is our latest launch feedback for the customer review.",
+      "links": []
+    },
+    {
+      "id": "msg-news",
+      "thread_id": "thread-news",
+      "from": "newsletter@example.net",
+      "to": "owner@example.com",
+      "subject": "Weekly news",
+      "date": "Tue, 11 Aug 2026 10:00:00 -0700",
+      "internal_ms": 1786471200000,
+      "unread": true,
+      "important": false,
+      "labels": ["INBOX", "UNREAD"],
+      "snippet": "A general roundup.",
+      "links": []
+    }
+  ],
+  "files": [
+    {
+      "id": "deck-1",
+      "name": "Launch positioning deck",
+      "kind": "slides",
+      "mime_type": "application/vnd.google-apps.presentation",
+      "modified": "2026-08-12T14:00:00Z",
+      "url": "https://docs.google.com/presentation/d/deck-1/edit",
+      "starred": true,
+      "last_editor": "Owner",
+      "description": "Exec launch decision deck"
+    },
+    {
+      "id": "sheet-1",
+      "name": "Product launch tracker",
+      "kind": "sheet",
+      "mime_type": "application/vnd.google-apps.spreadsheet",
+      "modified": "2026-08-12T13:00:00Z",
+      "url": "https://docs.google.com/spreadsheets/d/sheet-1/edit",
+      "starred": false,
+      "last_editor": "PM",
+      "description": "Launch workstreams and blockers"
+    },
+    {
+      "id": "doc-1",
+      "name": "Customer launch notes",
+      "kind": "doc",
+      "mime_type": "application/vnd.google-apps.document",
+      "modified": "2026-08-12T12:00:00Z",
+      "url": "https://docs.google.com/document/d/doc-1/edit",
+      "starred": false,
+      "last_editor": "Buyer",
+      "description": "Customer review notes"
+    }
+  ]
+}
