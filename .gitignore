@@ -1,0 +1,27 @@
+# Credentials / local configuration
+.env
+google_token.json
+google_client_secret.json
+google_oauth_pending.json
+config.yaml
+
+# Runtime state
+chief-of-staff/
+logs/
+sessions/
+cache/
+cron/
+*.db
+*.db-*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
