@@ -6,12 +6,31 @@ import shutil
 from pathlib import Path
 
 
+ROUTING_START = 'When the user addresses you as "chief of staff"'
+
+
 def default_home() -> Path:
     if os.environ.get("HERMES_HOME"):
         return Path(os.environ["HERMES_HOME"]).expanduser()
     if os.name == "nt" and os.environ.get("LOCALAPPDATA"):
         return Path(os.environ["LOCALAPPDATA"]) / "hermes"
     return Path.home() / ".hermes"
+
+
+def install_soul(source: Path, target: Path, overwrite: bool) -> str:
+    source_text = source.read_text(encoding="utf-8")
+    if not target.exists() or overwrite:
+        shutil.copy2(source, target)
+        return "installed"
+
+    existing = target.read_text(encoding="utf-8")
+    if ROUTING_START in existing:
+        return "preserved; chief-of-staff routing already present"
+
+    routing_start = source_text.index(ROUTING_START)
+    routing = source_text[routing_start:].strip()
+    target.write_text(f"{existing.rstrip()}\n\n{routing}\n", encoding="utf-8")
+    return "preserved; chief-of-staff routing added"
 
 
 def main() -> int:
@@ -29,14 +48,10 @@ def main() -> int:
             shutil.rmtree(destination)
         shutil.copytree(source / "skills" / "productivity" / name, destination, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     soul = target / "SOUL.md"
-    if not soul.exists() or args.overwrite_soul:
-        shutil.copy2(source / "SOUL.md", soul)
-        soul_status = "installed"
-    else:
-        soul_status = "preserved; merge the routing paragraph from this repository manually"
+    soul_status = install_soul(source / "SOUL.md", soul, args.overwrite_soul)
     print(f"Installed skills into {skills_target}")
     print(f"SOUL.md: {soul_status}")
-    print("Next: enable the skills + terminal toolsets and complete Google OAuth (see README.md).")
+    print("Next: enable the skills + terminal toolsets and complete Google OAuth (see QUICKSTART.md).")
     return 0
 
 

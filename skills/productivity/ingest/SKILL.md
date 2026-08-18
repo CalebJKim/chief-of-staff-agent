@@ -33,8 +33,15 @@ Pull a bounded, metadata-first Workspace snapshot for planning. It deliberately 
 Use `terminal` with the active profile root:
 
 ```bash
-COS_HOME="${HERMES_HOME:-$LOCALAPPDATA/hermes}"
-python "$COS_HOME/skills/productivity/ingest/scripts/ingest.py"
+if [ -n "${HERMES_HOME:-}" ]; then
+  COS_HOME="$HERMES_HOME"
+elif [ -n "${LOCALAPPDATA:-}" ]; then
+  COS_HOME="$LOCALAPPDATA/hermes"
+else
+  COS_HOME="$HOME/.hermes"
+fi
+PYTHON="$(command -v python3 || command -v python)"
+"$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py"
 ```
 
 The snapshot is written to `$COS_HOME/chief-of-staff/snapshot.json`. The command prints only counts and connector errors.
@@ -42,14 +49,17 @@ The snapshot is written to `$COS_HOME/chief-of-staff/snapshot.json`. The command
 ## Quick Reference
 
 ```bash
+if [ -n "${HERMES_HOME:-}" ]; then COS_HOME="$HERMES_HOME"; elif [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="$LOCALAPPDATA/hermes"; else COS_HOME="$HOME/.hermes"; fi
+PYTHON="$(command -v python3 || command -v python)"
+
 # Today plus tomorrow; active inbox and recent Drive files
-python "$COS_HOME/skills/productivity/ingest/scripts/ingest.py"
+"$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py"
 
 # Explicit local day and tighter bounds
-python "$COS_HOME/skills/productivity/ingest/scripts/ingest.py" --days-ahead 1 --days-back 30 --max-messages 35
+"$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py" --days-ahead 1 --days-back 30 --max-messages 35
 
 # Use a focused Gmail query
-python "$COS_HOME/skills/productivity/ingest/scripts/ingest.py" --gmail-query 'in:inbox (is:unread OR label:important) -category:promotions'
+"$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py" --gmail-query 'in:inbox (is:unread OR label:important) -category:promotions'
 ```
 
 ## Procedure

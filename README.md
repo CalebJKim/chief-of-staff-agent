@@ -9,6 +9,7 @@ A portable Hermes Agent configuration for a lightweight Google Workspace chief o
 - `skills/productivity/ingest/` contains bounded ingestion, focused actions, verification, and tests.
 - `setup/google-workspace/` contains the portable OAuth helper.
 - `config.example.yaml` documents the minimal recommended tool surface.
+- [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) contains the presentation script and staged demo flow.
 
 No sessions, OAuth credentials, email/calendar fixtures, account IDs, document IDs, or model files are included.
 
@@ -24,43 +25,42 @@ For the shortest installation path, see [QUICKSTART.md](QUICKSTART.md). Every us
 Install dependencies:
 
 ```bash
-python -m pip install -r requirements.txt
+PYTHON="$(command -v python3 || command -v python)"
+"$PYTHON" -m pip install -r requirements.txt
 ```
 
 ## Install into a Hermes profile
 
 ```bash
-# Windows Git Bash
-export HERMES_HOME="$LOCALAPPDATA/hermes"
-
-# Linux/macOS default profile
-# export HERMES_HOME="$HOME/.hermes"
-
-mkdir -p "$HERMES_HOME/skills/productivity"
-cp -R skills/productivity/ingest "$HERMES_HOME/skills/productivity/"
-cp -R skills/productivity/chief-of-staff "$HERMES_HOME/skills/productivity/"
-cp SOUL.md "$HERMES_HOME/SOUL.md"
+"$PYTHON" install.py
 hermes tools enable skills terminal --platform cli
+hermes tools list --platform cli
 ```
 
-If the target has a customized SOUL.md, merge only the routing paragraph instead of overwriting it. Configure the user name in the Soul if desired. Disable unrelated tools and skills with `hermes tools` and `hermes skills config`; do not disable `skills` or `terminal`.
+The installer uses `HERMES_HOME` when set and otherwise detects the normal
+Hermes profile. It preserves an existing `SOUL.md` and adds only the
+chief-of-staff routing instructions. Configure the user name in the Soul if
+desired. Disable unrelated tools and skills with `hermes tools` and
+`hermes skills config`; do not disable `skills` or `terminal`.
 
 ## Connect Google Workspace
 
 Never commit OAuth files. Create a Desktop OAuth client, then run:
 
 ```bash
-python setup/google-workspace/setup.py --install-deps
-python setup/google-workspace/setup.py --client-secret /path/to/client-secret.json
-python setup/google-workspace/setup.py --auth-url --format json
+"$PYTHON" setup/google-workspace/setup.py --install-deps
+"$PYTHON" setup/google-workspace/setup.py --client-secret /path/to/client-secret.json
+"$PYTHON" setup/google-workspace/setup.py --auth-url
 ```
 
-Open the returned URL, approve access, copy the full localhost redirect URL, then run:
+Open the returned URL and approve access. The `http://localhost:1` redirect may
+show a connection error; this is expected. Copy the full URL from the browser
+address bar, then run:
 
 ```bash
-python setup/google-workspace/setup.py --auth-code "FULL_REDIRECT_URL" --format json
-python setup/google-workspace/setup.py --check-live
-python "$HERMES_HOME/skills/productivity/ingest/scripts/verify.py"
+"$PYTHON" setup/google-workspace/setup.py --auth-code "FULL_REDIRECT_URL"
+"$PYTHON" setup/google-workspace/setup.py --check-live
+"$PYTHON" skills/productivity/ingest/scripts/verify.py
 ```
 
 The resulting google_token.json and google_client_secret.json live under HERMES_HOME and are ignored by git.
@@ -90,15 +90,16 @@ Typical follow-ups:
 ## Tests
 
 ```bash
-python -m unittest discover -s skills/productivity/ingest/tests -v
-python -m unittest discover -s skills/productivity/chief-of-staff/tests -v
+"$PYTHON" -m unittest discover -s tests -v
+"$PYTHON" -m unittest discover -s skills/productivity/ingest/tests -v
+"$PYTHON" -m unittest discover -s skills/productivity/chief-of-staff/tests -v
 ```
 
 Live smoke test after OAuth:
 
 ```bash
-python skills/productivity/ingest/scripts/ingest.py
-python skills/productivity/chief-of-staff/scripts/brief.py --max-chars 9000
+"$PYTHON" skills/productivity/ingest/scripts/ingest.py
+"$PYTHON" skills/productivity/chief-of-staff/scripts/brief.py --max-chars 9000
 ```
 
 ## Portability and demo data

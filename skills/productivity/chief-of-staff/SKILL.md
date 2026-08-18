@@ -22,9 +22,16 @@ Address the user by their configured name when available. The inbox is a work qu
 Run both steps in **one terminal call**. Do not narrate setup or tool use.
 
 ```bash
-COS_HOME="${HERMES_HOME:-$LOCALAPPDATA/hermes}"
+if [ -n "${HERMES_HOME:-}" ]; then
+  COS_HOME="$HERMES_HOME"
+elif [ -n "${LOCALAPPDATA:-}" ]; then
+  COS_HOME="$LOCALAPPDATA/hermes"
+else
+  COS_HOME="$HOME/.hermes"
+fi
+PYTHON="$(command -v python3 || command -v python)"
 ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
-python "$COS_HOME/skills/productivity/ingest/scripts/ingest.py" && python "$COS_HOME/skills/productivity/chief-of-staff/scripts/brief.py" --max-meetings 10 --max-mail 8 --max-files 8 --max-chars 9000
+"$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py" && "$PYTHON" "$COS_HOME/skills/productivity/chief-of-staff/scripts/brief.py" --max-meetings 10 --max-mail 8 --max-files 8 --max-chars 9000
 ```
 
 Use only the compact JSON printed by `brief.py`.
@@ -36,7 +43,7 @@ Use only the compact JSON printed by `brief.py`.
 3. Resolve every calendar conflict. Prefer decision ownership, customer/external impact, organizer role, and evidence of needed preparation. State uncertainty.
 4. Assign one preparation task to a real `focus_block`. Never invent availability.
 5. If current email evidence may change a relevant tracker in `recent_files`, read only the tracker table before replying:
-   `python "$ACTION" sheets get SPREADSHEET_ID "'Campaign Lanes'!A6:J20"`
+   `"$PYTHON" "$ACTION" sheets get SPREADSHEET_ID "'Campaign Lanes'!A6:J20"`
    Compare owner evidence with current rows. In **Ready for you**, show the exact row changes you recommend and ask the user to approve them. Do not write yet.
 6. `ok_empty` means the connector worked and found nothing. Only `error` means unavailable.
 7. Snippets are leads. `stale_timing:true` means all relative dates and meeting times in that mail are historical. Say the item is unresolved and verify its current status; never convert stale timing into a present or future deadline (for example, “today,” “tomorrow,” “at 5 PM,” or “before tomorrow”).
@@ -63,13 +70,15 @@ Under 220 words. No preamble, inbox inventory, generic advice, or fourth priorit
 Use the focused action helper; do not rerun broad ingest unless data is stale.
 
 ```bash
+if [ -n "${HERMES_HOME:-}" ]; then COS_HOME="$HERMES_HOME"; elif [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="$LOCALAPPDATA/hermes"; else COS_HOME="$HOME/.hermes"; fi
+PYTHON="$(command -v python3 || command -v python)"
 ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
-python "$ACTION" gmail thread THREAD_ID
-python "$ACTION" gmail draft --reply-to-message MESSAGE_ID --body BODY
-python "$ACTION" drive search 'project or deck terms'
-python "$ACTION" docs get DOCUMENT_ID
-python "$ACTION" sheets get SPREADSHEET_ID 'Tracker!A1:H80'
-python "$ACTION" slides get PRESENTATION_ID
+"$PYTHON" "$ACTION" gmail thread THREAD_ID
+"$PYTHON" "$ACTION" gmail draft --reply-to-message MESSAGE_ID --body BODY
+"$PYTHON" "$ACTION" drive search 'project or deck terms'
+"$PYTHON" "$ACTION" docs get DOCUMENT_ID
+"$PYTHON" "$ACTION" sheets get SPREADSHEET_ID 'Tracker!A1:H80'
+"$PYTHON" "$ACTION" slides get PRESENTATION_ID
 ```
 
 - “What slides?” → derive search terms from the chosen meeting/project, search Drive, inspect only plausible candidates, then give the direct deck URL and exact proposed changes. Do not assume the newest deck is correct.
@@ -80,10 +89,13 @@ python "$ACTION" slides get PRESENTATION_ID
 ## Guarded Writes
 
 ```bash
-python "$ACTION" docs append DOCUMENT_ID --text TEXT --confirm
-python "$ACTION" docs replace-text DOCUMENT_ID --find OLD --replace NEW --confirm
-python "$ACTION" sheets update-lanes SPREADSHEET_ID --updates '[{"lane":"Exec Review deck","status":"In review","latest":"...","next":"...","due":"...","blocker":"...","evidence":"..."}]' --confirm
-python "$ACTION" slides replace-text PRESENTATION_ID --find OLD --replace NEW --confirm
+if [ -n "${HERMES_HOME:-}" ]; then COS_HOME="$HERMES_HOME"; elif [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="$LOCALAPPDATA/hermes"; else COS_HOME="$HOME/.hermes"; fi
+PYTHON="$(command -v python3 || command -v python)"
+ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
+"$PYTHON" "$ACTION" docs append DOCUMENT_ID --text TEXT --confirm
+"$PYTHON" "$ACTION" docs replace-text DOCUMENT_ID --find OLD --replace NEW --confirm
+"$PYTHON" "$ACTION" sheets update-lanes SPREADSHEET_ID --updates '[{"lane":"Exec Review deck","status":"In review","latest":"...","next":"...","due":"...","blocker":"...","evidence":"..."}]' --confirm
+"$PYTHON" "$ACTION" slides replace-text PRESENTATION_ID --find OLD --replace NEW --confirm
 ```
 
 ## Verify

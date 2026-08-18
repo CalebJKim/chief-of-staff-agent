@@ -1,5 +1,5 @@
-# Merge these keys into the target profile config.yaml.
-# Keep other model/provider configuration as desired.
+# Merge these keys into the target profile's config.yaml.
+# Keep the user's model/provider configuration and other platform settings.
 
 platform_toolsets:
   cli:
@@ -7,40 +7,8 @@ platform_toolsets:
     - terminal
 
 # Optional: keep the visible skill catalog minimal for a dedicated profile.
-# Configure this interactively with 
-  Configure skills for:
-  1. All platforms (global default)
-  2. 🖥️  CLI
-  3. 📱 Telegram
-  4. 💬 Discord
-  5. 💼 Slack
-  6. 📱 WhatsApp
-  7. 📱 WhatsApp Business (Cloud)
-  8. 📡 Signal
-  9. 💙 BlueBubbles
-  10. 📧 Email
-  11. 🏠 Home Assistant
-  12. 💬 Mattermost
-  13. 💬 Matrix
-  14. 💬 DingTalk
-  15. 🪽 Feishu
-  16. 💬 WeCom
-  17. 💬 WeCom Callback
-  18. 💬 Weixin
-  19. 💬 QQBot
-  20. 🤖 Yuanbao
-  21. 🔗 Webhook
-  22. ⏰ Cron
-
-  Select [1]: 
-  Configure for: All platforms
-
-  1. Toggle individual skills
-  2. Toggle by category
-
-  Select [1]: ; do not copy a
-# machine-specific disabled list blindly.
-
+# Configure this interactively with `hermes skills config`; do not copy a
+# machine-specific disabled list into another profile.
 skills:
   creation_nudge_interval: 15
 

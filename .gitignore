@@ -3,6 +3,8 @@
 google_token.json
 google_client_secret.json
 google_oauth_pending.json
+client_secret*.json
+client-secret*.json
 config.yaml
 
 # Runtime state
