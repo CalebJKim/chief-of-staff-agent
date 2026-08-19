@@ -13,7 +13,7 @@ A portable Hermes Agent configuration for a lightweight Google Workspace chief o
 
 No sessions, OAuth credentials, email/calendar fixtures, account IDs, document IDs, or model files are included.
 
-For the shortest installation path, see [QUICKSTART.md](QUICKSTART.md). Every user must create OAuth credentials and connect their own Google account.
+For the shortest installation path, see [QUICKSTART.md](QUICKSTART.md). Every user must create OAuth credentials and connect their own Google account. The optional public demo seeder is documented in [demo/DEMO_SPEC.md](demo/DEMO_SPEC.md).
 
 ## Requirements
 

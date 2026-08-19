@@ -44,7 +44,23 @@ python "$HERMES_HOME/skills/productivity/ingest/scripts/verify.py"
 
 Credentials remain under your local `HERMES_HOME`. Never commit them.
 
-## 4. Start a new Hermes chat
+## 4. Optional: seed the full public demo
+
+After OAuth is verified, create the synthetic Gmail, Calendar, Sheet, Doc, and Slides environment in your own account:
+
+```bash
+python demo/seed_workspace.py --confirm
+```
+
+Remove it later with:
+
+```bash
+python demo/seed_workspace.py --cleanup --confirm
+```
+
+See [demo/DEMO_SPEC.md](demo/DEMO_SPEC.md) for the exact seeded data, manual fallback instructions, and troubleshooting.
+
+## 5. Start a new Hermes chat
 
 Say:
 
