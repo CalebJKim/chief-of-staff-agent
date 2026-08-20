@@ -31,15 +31,6 @@ def hermes_home() -> Path:
         return Path(os.environ["LOCALAPPDATA"]) / "hermes"
     return Path.home() / ".hermes"
 
-<<<<<<< HEAD
-def create_sheet(api):
-    rows = [["Lane","PIC","Status","Latest update","Next action","Due","Dependency / blocker","Evidence","Artifact","Notes"],["Product performance claims","Mike Chen","Awaiting update","Performance validation is pending.","Get approved package and update slide 4.","","Awaiting Product evidence","Pending confirmation","","PUBLIC DEMO"],["Exec Review deck","Elena Park","Awaiting update","Deck uses provisional wording.","Apply figures and reconcile slides 6, 7, and 10.","","Blocked on figures","Pending Mike and Aisha","","PUBLIC DEMO"],["Agent Messaging","Demo User","Awaiting update","Messaging carries provisional wording.","Align wording with slide 4.","","Awaiting approved wording","Pending Product and Legal","","PUBLIC DEMO"],["Marketing shoot","Priya Nair","Blocked","Planned venue is unavailable.","Choose Studio B Friday or Studio C Tuesday.","","Replacement-date decision","Priya update","","PUBLIC DEMO"],["Partner enablement","Aisha Rahman","On track","Partner slides are ready.","Decide pilot inclusion.","","Demo-owner decisions open","Aisha update","","PUBLIC DEMO"],["Social rollout","Rafael Costa","Awaiting update","No current status.","Request readiness and blockers.","","PIC status","Email or chat","","PUBLIC DEMO"],["Retail demo readiness","Grant Walker","Blocked","No final retail demo owner.","Assign owner before Exec Review.","","Owner unassigned","Aisha update","","PUBLIC DEMO"],["Legal intake DEMO-0847","Daniel Cho","Awaiting update","No recorded clearance.","Confirm scope and qualification.","","Awaiting Legal","Pending evidence","","PUBLIC DEMO"]]
-    r = api.spreadsheets().create(body={"properties":{"title":"RTX Spark Campaign Tracker — Public Demo"},"sheets":[{"properties":{"title":"Campaign Lanes"}}]}).execute(); sid=r["spreadsheetId"]; shid=r["sheets"][0]["properties"]["sheetId"]
-    api.spreadsheets().values().update(spreadsheetId=sid, range="Campaign Lanes!A6:J14", valueInputOption="USER_ENTERED", body={"values":rows}).execute()
-    api.spreadsheets().batchUpdate(spreadsheetId=sid, body={"requests":[{"setDataValidation":{"range":{"sheetId":shid,"startRowIndex":6,"endRowIndex":14,"startColumnIndex":2,"endColumnIndex":3},"rule":{"condition":{"type":"ONE_OF_LIST","values":[{"userEnteredValue":x} for x in STATUSES]},"strict":True,"showCustomUi":True}}}]}).execute()
-    return {"id":sid,"url":r.get("spreadsheetUrl",f"https://docs.google.com/spreadsheets/d/{sid}/edit")}
-=======
->>>>>>> 4ba908a (Seed the full reference workspace with reset support)
 
 def state_path() -> Path:
     return hermes_home() / STATE_FILE
@@ -225,17 +216,14 @@ def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str) -> tuple[l
 
 EVENTS = [
     ("08:00", "08:25", "Chief of Staff daily priorities", "Overnight changes, today's decision calendar, stakeholder risks, and executive air cover."),
-    ("08:30", "09:15", "Campaign leadership pre-wire", "Review decisions, owners, and likely leadership objections."),
     ("08:30", "09:30", "Keynote speaker risk review", "Final speaker lineup, alternates, and outreach required before print."),
     ("09:00", "10:00", "Finalize IFA four-talk keynote structure", "Finish the cut from six talks to four and align the speaker sequence with the agent-first narrative."),
     ("09:15", "10:00", "IFA campaign PMO stand-up", "Critical path, blocked decisions, partner commitments, creative status, and print readiness."),
-    ("09:15", "09:45", "Marketing PMO stand-up", "Critical path, blockers, creative status, and partner commitments."),
     ("10:00", "10:45", "Creative / claims escalation", "Resolve hero claim, disclaimer, stage-banner resize, and old-UI screenshot."),
     ("10:30", "11:30", "Resolve RTX Spark creative comments", "Update the hero claim, resize the stage banner, and replace the old screenshot."),
     ("12:00", "13:00", "Working lunch — agent-first narrative", "Stress-test the agent-first story and decide which specifications support the narrative."),
     ("13:00", "14:00", "Assign Local AI Summit demo QA DRI", "Name the QA DRI in the tracker and document blockers and owners."),
     ("13:30", "14:30", "Local AI Summit demo QA producer sync", "QA DRI, three-station script, blockers, and AV dependencies."),
-    ("14:00", "15:00", "Partner enablement review", "Partner commitments, demo inclusion, owners, and launch materials."),
     ("15:00", "16:00", "Local AI Summit demo and AV readiness review", "Review the demo plan, AV confirmation, QA status, and blockers."),
     ("15:00", "16:00", "Launch storyboard working session — notes available", "Optional working session; notes will be posted afterward."),
     ("15:30", "16:30", "Launch video agency review — Northstar", "Storyboard feedback, production plan, budget scenarios, and crew-hold risk."),

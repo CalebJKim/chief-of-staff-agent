@@ -52,7 +52,7 @@ After OAuth is verified, create the same realistic Gmail, Calendar, campaign fol
 python demo/seed_workspace.py --confirm
 ```
 
-Remove it later with:
+Reset it to the original pre-email/pre-edit baseline with:
 
 ```bash
 python demo/reset_workspace.py

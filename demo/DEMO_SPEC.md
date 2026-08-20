@@ -11,7 +11,7 @@ The seeder creates a self-contained realistic Chief of Staff workspace in the Go
   - Leadership-review legal clearance
   - Marketing shoot venue deadline
   - Agent Security PRD deadline
-- **95 Calendar events**: 19 per weekday, 8:00 AM–6:45 PM, with intentional overlaps.
+- **80 Calendar events**: 16 per weekday, 8:00 AM–6:45 PM, with intentional overlaps.
 - **1 Google Sheet**: `RTX Spark Campaign Tracker`
   - Tab: `Campaign Lanes`
   - Columns A:J: Lane, PIC, Status, Latest update, Next action, Due, Dependency/blocker, Evidence, Artifact, Notes
