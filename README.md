@@ -13,7 +13,7 @@ A portable Hermes Agent configuration for a lightweight Google Workspace chief o
 
 No sessions, OAuth credentials, email/calendar fixtures, account IDs, document IDs, or model files are included.
 
-For the shortest installation path, see [QUICKSTART.md](QUICKSTART.md). Every user must create OAuth credentials and connect their own Google account. The optional public demo seeder is documented in [demo/DEMO_SPEC.md](demo/DEMO_SPEC.md).
+For the shortest installation path, see [QUICKSTART.md](QUICKSTART.md). Every user must create OAuth credentials and connect their own Google account. The optional reference workspace seeder is documented in [demo/DEMO_SPEC.md](demo/DEMO_SPEC.md).
 
 ## Requirements
 
@@ -104,6 +104,6 @@ Live smoke test after OAuth:
 
 ## Portability and demo data
 
-The agent does not depend on the synthetic emails, crowded calendar, or RTX Spark files used in the original demonstration. Those were account data used to exercise real retrieval and write paths. On another account, the agent reasons over the Workspace data that actually exists.
+The agent does not require seeded workspace data for ordinary use. The included reference-workspace seeder recreates the Gmail, Calendar, Drive, Sheet, Doc, and Slides environment used to exercise the complete workflow. On another account, the agent reasons over the Workspace data that actually exists.
 
 The tracker-specific path currently expects a tab named `Campaign Lanes` with columns A:J matching the demonstrated schema. General Gmail, Calendar, and Drive planning works without that sheet. Supporting arbitrary tracker schemas requires a small schema adapter rather than another hard-coded workbook.

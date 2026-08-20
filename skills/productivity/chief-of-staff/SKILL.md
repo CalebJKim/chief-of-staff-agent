@@ -103,6 +103,6 @@ ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
 Every recommendation traces to a source. Every link opens the intended artifact. Every cloud edit is approved, executed, and read back.
 
 
-## Public Demo Seed
+## Reference Workspace Seed
 
-For a portable synthetic Workspace demo, use the repository demo seeder and read the demo specification. It creates data only in the connected user account and stores generated IDs locally for cleanup.
+For a portable reference Workspace, use the repository demo seeder and read the demo specification. It creates data only in the connected user account and stores generated IDs locally for cleanup.
