@@ -21,7 +21,7 @@ from googleapiclient.discovery import build  # noqa: E402
 MARKER = "chief-of-staff-reference-workspace-v1"
 STATE_FILE = "chief-of-staff-workspace-state.json"
 TZ_NAME = os.environ.get("CHIEF_OF_STAFF_WORKSPACE_TZ", "America/Los_Angeles")
-STATUS_VALUES = ["On track", "In review", "Awaiting update", "Blocked", "Complete"]
+STATUS_VALUES = ["Not started", "In progress", "Ready for review", "On track", "In review", "Awaiting update", "Blocked", "Complete"]
 MEANINGFUL_EMAIL_COUNT = 6
 BACKGROUND_EMAIL_COUNT = 100
 
@@ -86,6 +86,17 @@ def iso(day: date, hm: str) -> str:
     return f"{day.isoformat()}T{hm}:00{utc_offset()}"
 
 
+def next_business_day(day: date) -> date:
+    candidate = day + timedelta(days=1)
+    while candidate.weekday() >= 5:
+        candidate += timedelta(days=1)
+    return candidate
+
+
+def display_date(day: date) -> str:
+    return f"{day.strftime('%A, %B')} {day.day}"
+
+
 def services():
     creds = credentials()
     return {
@@ -110,35 +121,29 @@ def move_to_folder(drive, file_id: str, folder_id: str) -> None:
 
 def create_folder(drive) -> dict:
     item = drive.files().create(
-        body={"name": "RTX Spark Campaign", "mimeType": "application/vnd.google-apps.folder", "description": MARKER},
+        body={"name": "RTX Spark Agent Runtime Demo", "mimeType": "application/vnd.google-apps.folder", "description": MARKER},
         fields="id,name,webViewLink",
     ).execute()
     return {"id": item["id"], "url": item.get("webViewLink", f"https://drive.google.com/drive/folders/{item['id']}")}
 
 
 def create_doc(docs, drive, folder_id: str) -> dict:
-    result = docs.documents().create(body={"title": "RTX Spark Campaign Plan"}).execute()
+    result = docs.documents().create(body={"title": "RTX Spark Agent Runtime Latency Evaluation"}).execute()
     doc_id = result["documentId"]
     text = (
-        "RTX Spark Campaign Plan\n\n"
-        "Campaign objective\n"
-        "Make RTX Spark the clearest example of useful local AI agents: fast, private, efficient, and ready for real work.\n\n"
-        "Narrative\n"
-        "Lead with agents and user outcomes. Use specifications and approved performance claims as evidence, not as the opening story.\n\n"
-        "Workstreams\n"
-        "1. Executive storyline and IFA keynote structure\n"
-        "2. Inference performance claims and legal qualification\n"
-        "3. Exec Review deck and Agent Messaging consistency\n"
-        "4. IFA demo slate, owners, and partner commitments\n"
-        "5. Marketing shoot venue, storyboard, budget, and crew hold\n"
-        "6. Local AI Summit demo QA and AV readiness\n\n"
-        "Current decisions\n"
-        "- Approve the agent-first keynote storyline\n"
-        "- Align on IFA demos and owners\n"
-        "- Choose a replacement marketing shoot date\n"
-        "- Assign the retail demo owner\n\n"
-        "Operating rule\n"
-        "Do not propagate provisional performance language. Once Product and Legal approve the wording, update slide 4, Agent Messaging, and dependent campaign surfaces without drift.\n"
+        "RTX Spark Agent Runtime Latency Evaluation\n\n"
+        "Status\n"
+        "Complete — ready for review.\n\n"
+        "Summary\n"
+        "The Agent Runtime evaluation completed its planned local test matrix. The duplicate-completion regression reported today is a separate release blocker and does not invalidate this report.\n\n"
+        "Evaluation scope\n"
+        "- Interactive tool-call latency across the internal reference workflow\n"
+        "- Recovery behavior after a failed tool response\n"
+        "- Completion consistency across repeated local runs\n\n"
+        "Review notes\n"
+        "The results package, methodology notes, and raw-run references are complete. Mateo Chen has handed the report to the program team for review.\n\n"
+        "Tracker action\n"
+        "Update the Agent Runtime Latency Evaluation lane from In progress to Ready for review. Do not change its owner, due date, or notes.\n"
     )
     docs.documents().batchUpdate(documentId=doc_id, body={"requests": [{"insertText": {"location": {"index": 1}, "text": text}}]}).execute()
     move_to_folder(drive, doc_id, folder_id)
@@ -146,21 +151,17 @@ def create_doc(docs, drive, folder_id: str) -> dict:
 
 
 SLIDES = [
-    ("RTX Spark\nExec Review", "Campaign plan\nDecision-ready working deck"),
-    ("Lead with the agent", "THE PROMISE\nUseful AI coworkers running locally\n\nTHE PROOF\nPerformance, privacy, and readiness support that promise\n\nTHE ASK\nApprove the agent-first keynote storyline"),
-    ("Campaign state at a glance", "8 ACTIVE LANES\n4 awaiting updates • 2 blocked\n\nATTENTION TODAY\nClaims approval • Exec deck • Marketing shoot date"),
-    ("Inference performance — update required", "Performance to go here - Mike Chen to provide\n\nOWNER\nMike Chen / Marketing"),
-    ("One claim across every surface", "IFA DECK\nAgent Messaging • Campaign plan • Creative assets\n\nDECISION GATE\nApprove wording and disclaimer once, then propagate without drift.\n\nCONTROL\nDo not invent, extrapolate, or preserve superseded multipliers."),
-    ("Move the detail out of the live flow", "RECOMMENDATION\nCut this standalone detail slide from the live presentation.\n\nWHY\nIt duplicates the storyline and delays the decisions.\n\nUSE\nKeep supporting detail in the appendix or presenter notes; carry the essential point into slide 7."),
-    ("IFA demos — alignment needed", "DECISION\nAlign on the demo slate that best proves the agent-first story.\n\nKNOWN\nThe event brief requires this decision.\n\nOPEN\nConfirm the proposed demos and owners before final review."),
-    ("Execution dependencies", "CLAIMS\nApproval unlocks deck, messaging, and creative updates\n\nOWNERS\nTwo campaign lanes still need current PIC updates\n\nPARTNERS\nCommitments must map back to the approved keynote and demo decisions"),
-    ("Marketing shoot — decision required", "BLOCKER\nThe planned venue is unavailable.\n\nDECISION\nChoose a replacement shoot date.\n\nIMPACT\nPriya cannot rebook the venue or protect downstream crew holds until the date is set."),
-    ("Two decisions to leave with", "1  APPROVE THE PROPOSED KEYNOTE STORYLINE\nLead with agents; use specifications as evidence.\n\n2  ALIGN ON THE DEMOS FOR IFA\nConfirm the slate and owners that prove the story.\n\nWorking files\nCampaign tracker • Campaign plan"),
+    ("RTX Spark\nPartner Readout", "Agent Runtime partner demo\nInternal working deck"),
+    ("What partners will see", "A short workflow showing how the fictional Agent Runtime coordinates local tools and keeps the user in control."),
+    ("Demo flow", "1  Understand the request\n2  Gather the relevant workspace context\n3  Propose a bounded action\n4  Act only after confirmation"),
+    ("Partner headline — approved copy pending", "APPROVED HEADLINE PLACEHOLDER\n\nOWNER\nElena Torres / Communications\n\nTIMING\nUpdate next week; this is not required today."),
+    ("Presenter notes", "Keep the story focused on the workflow. Do not introduce unapproved performance figures or claims."),
+    ("Backup", "Supporting material for questions after the primary demonstration."),
 ]
 
 
 def create_slides(slides, drive, folder_id: str) -> dict:
-    result = slides.presentations().create(body={"title": "RTX Spark Exec Review"}).execute()
+    result = slides.presentations().create(body={"title": "RTX Spark Partner Readout"}).execute()
     presentation_id = result["presentationId"]
     requests = []
     if result.get("slides"):
@@ -186,23 +187,23 @@ def create_slides(slides, drive, folder_id: str) -> dict:
 def tracker_rows(slides_url: str, doc_url: str, sheet_url: str, evidence: dict[str, str]) -> list[list[str]]:
     return [
         ["Lane", "PIC", "Status", "Latest update", "Next action", "Due", "Dependency / blocker", "Evidence", "Artifact", "Notes"],
-        ["Product performance claims", "Mike Chen", "Awaiting update", "Performance validation is still pending; the tracker does not yet contain approved inference figures.", "Get Mike’s approved performance package, then update slide 4 and dependent campaign copy.", "", "Awaiting approved Product performance evidence.", "Pending Product confirmation", slides_url, "Required qualification must accompany all figures."],
-        ["Exec Review deck", "Elena Park", "Awaiting update", "The Exec Review deck still uses provisional performance language and has not incorporated the latest review notes.", "Apply approved numbers when received; reconcile slide 6, slide 7, and slide 10 feedback before the Exec Review.", "", "Blocked on approved figures and final review direction.", "Pending Mike and Aisha updates", slides_url, "Two decisions: keynote storyline and IFA demos/owners."],
-        ["Agent Messaging", "Workspace Owner", "Awaiting update", "Agent Messaging still carries provisional performance wording and is waiting on the approved claims package.", "Replace provisional wording after Product confirmation and align it exactly with slide 4.", "", "Awaiting approved performance wording and qualification.", "Pending Product / Legal confirmation", doc_url, "Lead with agents; use specifications as proof."],
-        ["Marketing shoot", "Priya Nair", "Blocked", "The planned venue is unavailable. Northstar is holding Studio B Friday and Studio C Tuesday until 4:30 PM.", "Choose Studio B Friday or Studio C Tuesday before the hold expires.", "", "Executive replacement-date decision; venue and preferred crew will be released without it.", evidence.get("priya", "Priya update"), sheet_url, "Missing the hold risks a campaign slip."],
-        ["Partner enablement", "Aisha Rahman", "On track", "The VP requested a review of the partner slides, and the staged Windows pilot passed its smoke check and is ready for an inclusion decision.", "Review the partner section and decide whether the pilot belongs in the demo.", "", "Keynote and IFA demo-owner decisions remain open.", "Partner review evidence", slides_url, "Production inclusion is not yet approved."],
-        ["Social rollout", "Rafael Costa", "Awaiting update", "No current status has been received.", "Request asset readiness, timing, and blockers from Rafael.", "", "PIC status", "Email / Slack", "", "Follow-up draft needed."],
-        ["Retail demo readiness", "Grant Walker", "Blocked", "Aisha confirmed that the retail demo lane still has no final owner, so the IFA demo slate cannot be presented as closed.", "Assign the final retail demo owner and confirm coverage during the Exec Review.", "", "Final retail demo owner is unassigned.", evidence.get("aisha", "Aisha update"), slides_url, "No direct current update from Grant was received."],
-        ["Legal intake LGL-2026-0847", "Daniel Cho", "Awaiting update", "Legal intake is open and the tracker has no recorded clearance for the performance wording.", "Confirm Daniel’s clearance and record the required qualification before campaign-wide propagation.", "", "Awaiting legal confirmation of wording and disclaimer.", "Pending Daniel / Product evidence", sheet_url, "Leadership review and external-copy clearance may differ."],
+        ["Agent Runtime regression", "Priya Shah", "Blocked", "The current build duplicates tool-call completions in repeated local runs.", "Patch and validate the regression before holding the release review.", "Today", "Release review must move while the P0 regression is open.", evidence.get("bug", "Priya's blocker email"), sheet_url, "Calendar and draft follow-up are the immediate coordination actions."],
+        ["Agent Runtime Latency Evaluation", "Mateo Chen", "In progress", "Mateo completed the evaluation report and handed it off for review.", "Change only this lane's status to Ready for review.", "Today", "None; the tracker status is stale.", evidence.get("evaluation", "Mateo's completion email"), doc_url, "Keep the owner, due date, and notes unchanged."],
+        ["Partner Readout Deck", "Elena Torres", "Awaiting update", "Communications approved the replacement headline for slide 4.", "Replace the exact placeholder with the approved copy.", "Next week", "None; intentionally lower priority than today's two actions.", evidence.get("copy", "Elena's approval email"), slides_url, "Optional backup demo; not required today."],
+        ["Reliability test matrix", "Noah Williams", "On track", "Routine coverage review completed with no new blockers.", "Continue the planned test pass.", "This week", "None", "Routine team update", sheet_url, "No executive action needed."],
+        ["Developer guide refresh", "Maya Patel", "In review", "The draft is with technical writing for routine review.", "Wait for consolidated comments.", "Next week", "None", "Routine team update", doc_url, "No action needed today."],
+        ["Partner demo checklist", "Jordan Lee", "On track", "Venue and equipment checks remain on schedule.", "Continue normal preparation.", "Next week", "None", "Routine team update", slides_url, "No action needed today."],
+        ["Accessibility review", "Sofia Martin", "Complete", "The scheduled review is complete.", "No further action.", "Complete", "None", "Routine team update", sheet_url, "Closed."],
+        ["Release notes", "Ethan Brooks", "On track", "The routine draft is progressing on schedule.", "Continue drafting after the regression is resolved.", "This week", "Regression outcome", evidence.get("bug", "Priya's blocker email"), doc_url, "Lower priority than the release blocker."],
     ]
 
 
 def create_sheet(sheets, drive, folder_id: str, slides_url: str, doc_url: str) -> dict:
-    result = sheets.spreadsheets().create(body={"properties": {"title": "RTX Spark Campaign Tracker"}, "sheets": [{"properties": {"title": "Campaign Lanes", "gridProperties": {"rowCount": 100, "columnCount": 12, "frozenRowCount": 6, "hideGridlines": True}}}]}).execute()
+    result = sheets.spreadsheets().create(body={"properties": {"title": "RTX Spark Delivery Tracker"}, "sheets": [{"properties": {"title": "Campaign Lanes", "gridProperties": {"rowCount": 100, "columnCount": 12, "frozenRowCount": 6, "hideGridlines": True}}}]}).execute()
     spreadsheet_id = result["spreadsheetId"]
     sheet_id = result["sheets"][0]["properties"]["sheetId"]
     sheet_url = result.get("spreadsheetUrl", f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit")
-    rows = [["RTX Spark Campaign Tracker"], ["Decision-ready view of campaign execution"], ["Awaiting updates", "4", "", "Blocked", "2", "", "Active lanes", "8", "Last refreshed", local_now().date().isoformat()], ["Statuses are updated from current owner evidence; use the Artifact column to open the working file or decision source."], [], *tracker_rows(slides_url, doc_url, sheet_url, {})]
+    rows = [["RTX Spark Delivery Tracker"], ["Decision-ready view of Agent Runtime work"], ["Awaiting updates", "1", "", "Blocked", "1", "", "Active lanes", "8", "Last refreshed", local_now().date().isoformat()], ["Statuses are updated from current owner evidence; use the Artifact column to open the working file or decision source."], [], *tracker_rows(slides_url, doc_url, sheet_url, {})]
     sheets.spreadsheets().values().update(spreadsheetId=spreadsheet_id, range="'Campaign Lanes'!A1:J14", valueInputOption="USER_ENTERED", body={"values": rows}).execute()
     requests = [
         {"mergeCells": {"range": {"sheetId": sheet_id, "startRowIndex": 0, "endRowIndex": 1, "startColumnIndex": 0, "endColumnIndex": 10}, "mergeType": "MERGE_ALL"}},
@@ -289,73 +290,139 @@ def create_emails(
     deck_url: str,
     sheet_url: str,
     doc_url: str,
+    demo_day: date,
     created: list[dict] | None = None,
 ) -> tuple[list[dict], dict[str, str]]:
     account = gmail.users().getProfile(userId="me").execute()["emailAddress"]
     reference_time = local_now().replace(microsecond=0)
+    follow_up_day = next_business_day(demo_day)
     data = [
-        ("Elena Park <elena.park@nvidia.example>", "URGENT: RTX Spark Exec Review moved to 5 PM today", f"Hi,\n\nLeadership moved the RTX Spark Exec Review from Thursday to 5:00 PM today. This is the decision meeting, not a working session. Please arrive ready to close the agent-first keynote storyline and the IFA demo slate/owners.\n\nThe optional launch storyboard session is 3:00–4:00 PM; skip it if you need time to finish the Agent Security PRD and prep the deck.\n\nDeck: {deck_url}\n\n— Elena"),
-        ("Mike Chen <mike.chen@nvidia.example>", "APPROVED: RTX Spark inference numbers for slide 4", "The performance package is approved for today's Exec Review. Use exactly: 2.1x faster time-to-first-token versus the prior approved release; 38 tokens/second sustained on the fixed 35B workflow; 22% lower energy per completed workflow. Required footnote: Pre-production measurements on the RTX Spark reference configuration. Results vary by model, quantization, and workload. Daniel cleared this wording for leadership review."),
-        ("Aisha Rahman <aisha.rahman@nvidia.example>", "Exec Review deck pass: cut slide 6; protect slide 10", f"I finished the deck pass. Cut slide 6 from the live flow, carry its essential point into slide 7, and use the saved time on slide 10. Slide 10 needs room for two decisions: approve the agent-first keynote storyline and align on the IFA demos and owners. Mike's approved numbers belong on slide 4. The retail demo owner is still unassigned.\n\nDeck: {deck_url}"),
-        ("Daniel Cho <daniel.cho@nvidia.example>", "Legal scope: RTX Spark wording cleared for leadership review", "The RTX Spark performance wording and pre-production qualification are cleared for today's leadership review. This is not blanket campaign-wide approval; keep the qualification intact and route final external copy through Legal."),
-        ("Priya Nair <priya.nair@northstarcreative.example>", "Decision by 4:30 PM today: marketing shoot venue hold", f"The planned venue is unavailable. We can hold Studio B Friday or Studio C Tuesday, with the preferred crew, until 4:30 PM today. Choose one before the hold expires or we risk a campaign slip.\n\nTracker: {sheet_url}"),
-        ("Elena Park <elena.park@nvidia.example>", "Agent Security PRD needs to reach Engineering today", f"Please finish and send the Agent Security PRD to Engineering today. Protect a focused hour for the final pass. You can skip the optional launch storyboard session; notes will be posted afterward.\n\nCampaign plan: {doc_url}"),
+        {
+            "key": "bug",
+            "sender": "Priya Shah <priya.shah@nvidia.example>",
+            "subject": "BLOCKER: Agent Runtime duplicates tool-call completions",
+            "body": (
+                "Hi,\n\nI reproduced a P0 regression in the latest fictional RTX Spark Agent Runtime build: completed tool calls are emitted twice in 8 of 10 repeated local runs. The release candidate should not advance until the patch passes the same matrix cleanly.\n\n"
+                f"Please postpone the RTX Spark Agent Runtime release review scheduled for {display_date(demo_day)}. Daniel is checking the next available slot.\n\n"
+                f"Tracker: {sheet_url}\n\n— Priya"
+            ),
+            "unread": True,
+            "important": True,
+        },
+        {
+            "key": "scheduling",
+            "sender": "Daniel Cho <daniel.cho@nvidia.example>",
+            "subject": "New slot for the Agent Runtime release review",
+            "body": (
+                f"I can host the postponed release review on {display_date(follow_up_day)} at 11:00 AM Pacific. Please move the existing event rather than create a duplicate, keep its current details, and draft a confirmation to Priya and me. Do not send the email yet.\n\n"
+                "— Daniel"
+            ),
+            "unread": True,
+            "important": True,
+        },
+        {
+            "key": "evaluation",
+            "sender": "Mateo Chen <mateo.chen@nvidia.example>",
+            "subject": "READY: Agent Runtime latency evaluation",
+            "body": (
+                "The RTX Spark Agent Runtime latency evaluation is complete and ready for review. The report and methodology notes are in Drive. The delivery tracker still says In progress; please change that lane to Ready for review.\n\n"
+                f"Evaluation report: {doc_url}\n"
+                f"Delivery tracker: {sheet_url}\n\n— Mateo"
+            ),
+            "unread": True,
+            "important": True,
+        },
+        {
+            "key": "tracker",
+            "sender": "Aisha Rahman <aisha.rahman@nvidia.example>",
+            "subject": "Tracker confirmation for the completed evaluation",
+            "body": (
+                "Confirming Mateo's handoff: update only the Agent Runtime Latency Evaluation row from In progress to Ready for review. Keep Mateo as owner and leave the due date and notes unchanged.\n\n"
+                f"Delivery tracker: {sheet_url}\n\n— Aisha"
+            ),
+            "unread": True,
+            "important": True,
+        },
+        {
+            "key": "copy",
+            "sender": "Elena Torres <elena.torres@nvidia.example>",
+            "subject": "For next week: approved Partner Readout headline",
+            "body": (
+                "Communications approved this exact replacement copy for slide 4: “Meet the RTX Spark Agent Runtime: a faster path from intent to completed work.” Replace the text APPROVED HEADLINE PLACEHOLDER and leave the rest of the slide unchanged. This is due next week and is not needed today.\n\n"
+                f"Partner Readout: {deck_url}\n\n— Elena"
+            ),
+            "unread": False,
+            "important": False,
+        },
+        {
+            "key": "deck",
+            "sender": "Rafael Costa <rafael.costa@nvidia.example>",
+            "subject": "Partner Readout file for next week's copy pass",
+            "body": (
+                "Here is the working Partner Readout deck Elena referenced. The approved-copy placeholder is on slide 4. No action is needed today; this is backup work for next week.\n\n"
+                f"Partner Readout: {deck_url}\n\n— Rafael"
+            ),
+            "unread": False,
+            "important": False,
+        },
     ]
     created = created if created is not None else []
-    meaningful = []
-    for index, (sender, subject, body) in enumerate(data, 1):
+    evidence = {}
+    for index, spec in enumerate(data, 1):
         item = import_mail(
             gmail,
             account,
-            sender,
-            subject,
-            body,
+            spec["sender"],
+            spec["subject"],
+            spec["body"],
             index,
             reference_time - timedelta(minutes=index - 1),
-            unread=True,
-            important=True,
+            unread=spec["unread"],
+            important=spec["important"],
             role="meaningful",
         )
-        meaningful.append(item)
         created.append(item)
+        evidence[spec["key"]] = item["url"]
     for index, spec in enumerate(background_email_specs(reference_time), MEANINGFUL_EMAIL_COUNT + 1):
         item = import_mail(gmail, account, index=index, **spec)
         created.append(item)
-    evidence = {"elena": meaningful[0]["url"], "mike": meaningful[1]["url"], "aisha": meaningful[2]["url"], "daniel": meaningful[3]["url"], "priya": meaningful[4]["url"], "prd": meaningful[5]["url"]}
     return created, evidence
 
 
 EVENTS = [
     ("08:00", "08:25", "Chief of Staff daily priorities", "Overnight changes, today's decision calendar, stakeholder risks, and executive air cover."),
-    ("08:30", "09:15", "Campaign leadership pre-wire", "Review decisions, owners, and likely leadership objections."),
-    ("08:30", "09:30", "Keynote speaker risk review", "Final speaker lineup, alternates, and outreach required before print."),
-    ("09:00", "10:00", "Finalize IFA four-talk keynote structure", "Finish the cut from six talks to four and align the speaker sequence with the agent-first narrative."),
-    ("09:15", "10:00", "IFA campaign PMO stand-up", "Critical path, blocked decisions, partner commitments, creative status, and print readiness."),
-    ("09:15", "09:45", "Marketing PMO stand-up", "Critical path, blockers, creative status, and partner commitments."),
-    ("10:00", "10:45", "Creative / claims escalation", "Resolve hero claim, disclaimer, stage-banner resize, and old-UI screenshot."),
-    ("10:30", "11:30", "Resolve RTX Spark creative comments", "Update the hero claim, resize the stage banner, and replace the old screenshot."),
-    ("12:00", "13:00", "Working lunch — agent-first narrative", "Stress-test the agent-first story and decide which specifications support the narrative."),
-    ("13:00", "14:00", "Assign Local AI Summit demo QA DRI", "Name the QA DRI in the tracker and document blockers and owners."),
-    ("13:30", "14:30", "Local AI Summit demo QA producer sync", "QA DRI, three-station script, blockers, and AV dependencies."),
-    ("14:00", "15:00", "Partner enablement review", "Partner commitments, demo inclusion, owners, and launch materials."),
-    ("15:00", "16:00", "Local AI Summit demo and AV readiness review", "Review the demo plan, AV confirmation, QA status, and blockers."),
-    ("15:00", "16:00", "Launch storyboard working session — notes available", "Optional working session; notes will be posted afterward."),
-    ("15:30", "16:30", "Launch video agency review — Northstar", "Storyboard feedback, production plan, budget scenarios, and crew-hold risk."),
-    ("16:00", "17:00", "Executive prep — print handoff", "Prepare the decision and risk brief: speakers, claims, partners, legal status, and owners."),
-    ("17:00", "17:45", "RTX Spark Exec Review — leadership decisions", "Decision meeting: approve the agent-first keynote storyline and align on IFA demos and owners."),
-    ("17:00", "17:30", "Decision follow-up triage", "Send decision notes, chase unresolved owners, and update the escalation list."),
-    ("18:00", "18:45", "APAC executive handoff — decisions and risks", "Close the day with decisions, unresolved risks, and tomorrow's critical path."),
+    ("09:00", "09:30", "Agent Runtime engineering stand-up", "Routine engineering progress, test coverage, and owner check-in."),
+    ("10:00", "10:45", "RTX Spark integration sync", "Routine integration status and dependency review."),
+    ("11:00", "12:00", "Engineering focus block", "Protected time for planned technical work."),
+    ("12:00", "13:00", "Team lunch", "Optional team lunch; no preparation required."),
+    ("15:15", "15:45", "Evaluation office hours", "Optional questions about completed evaluation methodology and results."),
+    ("16:00", "16:30", "Partner demo checklist", "Routine readiness check for next week's partner work."),
+    ("17:00", "17:20", "End-of-day handoff", "Routine owner handoff and next-day planning."),
 ]
 
 
-def create_calendar(calendar, start_day: date, deck_url: str, doc_url: str, sheet_url: str) -> list[dict]:
+def create_calendar(calendar, start_day: date, demo_day: date, deck_url: str, doc_url: str, sheet_url: str) -> list[dict]:
     created = []
     for offset in range(5):
         day = start_day + timedelta(days=offset)
         for begin, end, title, description in EVENTS:
-            link = f"\nDeck: {deck_url}" if title.startswith("RTX Spark Exec Review") else f"\nNotes: {doc_url}" if title.startswith("Launch storyboard") else f"\nTracker: {sheet_url}" if "DRI" in title else ""
+            link = f"\nEvaluation report: {doc_url}" if title.startswith("Evaluation office hours") else f"\nPartner Readout: {deck_url}" if title.startswith("Partner demo") else ""
             result = calendar.events().insert(calendarId="primary", body={"summary": title, "description": f"{description}{link}\n[{MARKER}]", "start": {"dateTime": iso(day, begin), "timeZone": TZ_NAME}, "end": {"dateTime": iso(day, end), "timeZone": TZ_NAME}}, sendUpdates="none").execute()
             created.append({"id": result["id"], "url": result.get("htmlLink", "")})
+    release_review = calendar.events().insert(
+        calendarId="primary",
+        body={
+            "summary": "RTX Spark Agent Runtime release review",
+            "description": (
+                "Release-gate review for the fictional Agent Runtime. If the duplicate-completion regression remains open, postpone this meeting rather than creating a second event.\n"
+                f"Delivery tracker: {sheet_url}\n[{MARKER}]"
+            ),
+            "start": {"dateTime": iso(demo_day, "14:00"), "timeZone": TZ_NAME},
+            "end": {"dateTime": iso(demo_day, "15:00"), "timeZone": TZ_NAME},
+        },
+        sendUpdates="none",
+    ).execute()
+    created.append({"id": release_review["id"], "url": release_review.get("htmlLink", "")})
     return created
 
 
@@ -416,7 +483,9 @@ def cleanup(state: dict) -> dict[str, int]:
 
 def seed(week_of: date) -> dict:
     svc = services()
-    state = {"schema": 2, "marker": MARKER, "week_of": week_of.isoformat(), "events": [], "emails": [], "drafts": []}
+    today = local_now().date()
+    demo_day = today if week_of <= today <= week_of + timedelta(days=4) else week_of
+    state = {"schema": 2, "marker": MARKER, "week_of": week_of.isoformat(), "demo_day": demo_day.isoformat(), "events": [], "emails": [], "drafts": []}
     try:
         state["folder"] = create_folder(svc["drive"])
         state["doc"] = create_doc(svc["docs"], svc["drive"], state["folder"]["id"])
@@ -427,10 +496,11 @@ def seed(week_of: date) -> dict:
             state["slides"]["url"],
             state["sheet"]["url"],
             state["doc"]["url"],
+            demo_day,
             state["emails"],
         )
         update_tracker_evidence(svc["sheets"], state, evidence)
-        state["events"] = create_calendar(svc["calendar"], week_of, state["slides"]["url"], state["doc"]["url"], state["sheet"]["url"])
+        state["events"] = create_calendar(svc["calendar"], week_of, demo_day, state["slides"]["url"], state["doc"]["url"], state["sheet"]["url"])
         state_path().parent.mkdir(parents=True, exist_ok=True)
         state_path().write_text(json.dumps(state, indent=2), encoding="utf-8")
         return state
