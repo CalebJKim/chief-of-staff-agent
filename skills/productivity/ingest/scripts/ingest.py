@@ -19,6 +19,7 @@ GOOGLE_MIMES = {
     "application/vnd.google-apps.folder": "folder",
 }
 URL_RE = re.compile(r"https?://[^\s<>'\"]+")
+DEFAULT_MAX_MESSAGES = 20
 OTP_RE = re.compile(
     r"(?i)\b(verification(?:\s+code)?|security\s+code|one[- ]time\s+(?:code|password)|otp|code)"
     r"(\s*(?:is|:)?\s*)\d{4,8}\b"
@@ -370,7 +371,7 @@ def main() -> int:
     parser.add_argument("--days-ahead", type=int, default=2)
     parser.add_argument("--days-back", type=int, default=30, help="Drive modification lookback; Gmail uses the bounded active inbox")
     parser.add_argument("--max-events", type=int, default=60)
-    parser.add_argument("--max-messages", type=int, default=50)
+    parser.add_argument("--max-messages", type=int, default=DEFAULT_MAX_MESSAGES)
     parser.add_argument("--max-files", type=int, default=30)
     parser.add_argument("--gmail-query", help="Override the bounded Gmail query")
     parser.add_argument("--output", type=Path, default=default_snapshot_path())

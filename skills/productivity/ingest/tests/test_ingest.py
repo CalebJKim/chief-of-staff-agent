@@ -33,7 +33,10 @@ class IngestTests(unittest.TestCase):
         snapshot = ingest.collect(args)
         self.assertEqual(snapshot["source"], "fixture")
         self.assertEqual(snapshot["coverage"]["events"], 4)
-        self.assertLessEqual(len(snapshot["messages"]), 50)
+        self.assertLessEqual(len(snapshot["messages"]), ingest.DEFAULT_MAX_MESSAGES)
+
+    def test_default_mail_scan_is_twenty_messages(self):
+        self.assertEqual(20, ingest.DEFAULT_MAX_MESSAGES)
 
     def test_cloud_mutation_requires_confirmation(self):
         with self.assertRaisesRegex(RuntimeError, "without --confirm"):

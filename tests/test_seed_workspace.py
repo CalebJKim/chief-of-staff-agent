@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import importlib.util
 import unittest
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock, patch
+from zoneinfo import ZoneInfo
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,6 +16,24 @@ SPEC.loader.exec_module(seed_workspace)
 
 
 class SeedWorkspaceTests(unittest.TestCase):
+    def test_background_mail_is_low_signal_and_older_than_meaningful_mail(self) -> None:
+        reference = datetime(2026, 8, 21, 12, 0, tzinfo=ZoneInfo("America/Los_Angeles"))
+        background = seed_workspace.background_email_specs(reference)
+
+        self.assertEqual(100, len(background))
+        self.assertEqual(100, len({item["sender"] for item in background}))
+        self.assertEqual(100, len({item["subject"] for item in background}))
+        self.assertTrue(all(item["received_at"] < reference for item in background))
+        self.assertTrue(all(not item["unread"] and not item["important"] for item in background))
+        prohibited = (
+            "urgent", "blocker", "deadline", "decision", "approve", "approval",
+            "customer", "launch", "exec", "board", "investor", "follow up",
+            "action required", "review", "update",
+        )
+        for item in background:
+            text = f"{item['subject']} {item['body']}".casefold()
+            self.assertFalse(any(term in text for term in prohibited), text)
+
     def test_campaign_lanes_match_tracker_row_contract(self) -> None:
         sheets = Mock()
         drive = Mock()

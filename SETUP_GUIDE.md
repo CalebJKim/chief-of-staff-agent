@@ -91,7 +91,7 @@ calendar event offsets.
 & $Python -m unittest discover -s skills/productivity/chief-of-staff/tests -v
 ```
 
-Expected result: 16 tests pass across the three suites.
+Expected result: 19 tests pass across the three suites.
 
 ## 5. Install the skills into Hermes
 
@@ -155,8 +155,10 @@ for Gmail, Calendar, Drive, Docs, Sheets, and Slides.
 ## 7. Seed the reference workspace
 
 The seeder writes demo content to the connected Google account. It creates six
-Gmail messages, 95 Calendar events, a Drive folder, a campaign Sheet, a plan
-Doc, and an executive-review Slides deck. Seed the current workweek with:
+meaningful Gmail messages, 100 older low-signal messages, 95 Calendar events,
+a Drive folder, a campaign Sheet, a plan Doc, and an executive-review Slides
+deck. Gmail ingestion reads only the newest 20 matching Inbox messages, which
+keeps all six meaningful messages in scope. Seed the current workweek with:
 
 ```powershell
 & $Python demo\seed_workspace.py --confirm
@@ -194,7 +196,7 @@ After seeding, repeat the live verifier and build a decision packet:
 ```powershell
 & $Python skills\productivity\ingest\scripts\verify.py
 & $Python skills\productivity\ingest\scripts\ingest.py --stdout summary
-& $Python skills\productivity\chief-of-staff\scripts\brief.py --max-chars 9000
+& $Python skills\productivity\chief-of-staff\scripts\brief.py --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000
 ```
 
 ## 8. Run the demo
@@ -242,18 +244,23 @@ The following checks passed on August 21, 2026:
 
 - Google OAuth token exchange and a live API call.
 - Gmail, Calendar, Drive, Docs, Sheets, and Slides service verification.
-- Creation and read-back of 6 demo messages, 95 calendar events, one campaign
-  folder, one 14-row tracker Sheet, one campaign Doc, and one 10-slide deck.
-- Bounded ingestion with 19 same-day events, 8 relevant messages, 4 Drive
-  items, and no source errors.
+- Creation and read-back of 106 demo messages (6 meaningful and 100
+  background), 95 calendar events, one campaign folder, one 14-row tracker
+  Sheet, one campaign Doc, and one 10-slide deck.
+- Bounded ingestion of the newest 20 Inbox messages with all 6 meaningful
+  messages present, 19 same-day events, 4 Drive items, and no source errors.
 - Decision-packet generation with the expected conflict groups, 30-minute
   focus block, Exec Review evidence, and campaign tracker lanes.
 - A real Hermes prompt using the installed skill and configured local model:
   `Good morning chief of staff, what should we work on today?`
-- A live seed/draft/cleanup cycle reporting 1 tracked draft deleted, 6 messages
-  trashed, 95 events deleted, and 1 Drive folder trashed. Independent read-back
-  found the tracked draft absent, no seeded Inbox messages, no seeded events, a
-  trashed Drive folder, and no local state file.
+- Two live 106-message seed/cleanup cycles. Trial 1 took 121.18 seconds to seed,
+  5.26 seconds to ingest, and 63.41 seconds to clean up. Trial 2 took 113.39
+  seconds to seed, 5.44 seconds to ingest, and 65.96 seconds to clean up. Each
+  cleanup reported 106 messages trashed, 95 events deleted, and 1 Drive folder
+  trashed. Final read-back found no seeded Inbox messages, seeded events,
+  active Drive items, source errors, or local state file.
+- The 14,000-character decision packet retained all 6 meaningful messages,
+  all 5 conflict groups, 3 prioritized meetings, and 6 compact tracker rows.
 
 The first one-shot response from the 35B local model took approximately two
 minutes while the command buffered output. `ollama ps` showed the model loaded
@@ -285,3 +292,7 @@ expected top-three priorities and schedule recommendations.
    explicit demo-state tracking, and cleanup deletes only those recorded draft
    IDs while leaving all untracked drafts alone. One legacy fake draft created
    before tracking existed was removed once by its exact Gmail draft ID.
+8. With 20 scanned messages and the dense demo calendar, the original packet
+   fitter discarded mail until only one message remained. Conflict and tracker
+   data are now compacted, low-value duplicate context is trimmed first, and
+   the normal 14,000-character budget preserves the six highest-signal emails.

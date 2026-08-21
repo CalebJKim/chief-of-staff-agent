@@ -8,7 +8,8 @@ This README is the complete setup path for a new machine. [`QUICKSTART.md`](QUIC
 
 The optional seeder creates data in the Google account you authorize:
 
-- 6 imported Gmail messages, marked Inbox, Unread, and Important.
+- 6 meaningful Gmail messages, marked Inbox, Unread, and Important.
+- 100 older background messages from fictional people, marked read and not Important.
 - 95 Calendar events across one workweek.
 - A Drive folder containing a 14-row campaign tracker Sheet, a campaign-plan Doc, and a 10-slide executive-review deck.
 - A local state file under `HERMES_HOME` containing only the generated resource IDs needed for reset and cleanup.
@@ -145,7 +146,7 @@ python -m unittest discover -s skills/productivity/ingest/tests -v
 python -m unittest discover -s skills/productivity/chief-of-staff/tests -v
 ```
 
-Expected result: 16 tests pass across the three suites.
+Expected result: 19 tests pass across the three suites.
 
 ## 6. Install the agent into Hermes
 
@@ -234,7 +235,9 @@ python demo/seed_workspace.py --confirm
 
 The command defaults to the current workweek. To seed another week, add a Monday date such as `--week-of 2026-08-17` before `--confirm`.
 
-A successful result reports `"emails": 6`, `"events": 95`, and links for the folder, Sheet, Doc, and Slides deck. It also creates:
+A successful result reports `"emails": 106`, `"events": 95`, and links for the folder, Sheet, Doc, and Slides deck. The six meaningful messages are the newest seeded mail; the 100 background messages are older, non-actionable inbox noise. It also creates:
+
+On the validated Windows demo account, two complete trials averaged about 117 seconds to seed and 65 seconds to clean up. The bounded 20-message ingestion averaged about 5.4 seconds. Google API and network conditions will affect these times.
 
 - Windows: `%LOCALAPPDATA%\hermes\chief-of-staff-workspace-state.json`
 - Linux/macOS: `$HOME/.hermes/chief-of-staff-workspace-state.json`
@@ -247,17 +250,19 @@ Do not manually delete that state file; reset and cleanup need its exact resourc
 # Windows PowerShell
 & $Python (Join-Path $env:HERMES_HOME "skills\productivity\ingest\scripts\verify.py")
 & $Python (Join-Path $env:HERMES_HOME "skills\productivity\ingest\scripts\ingest.py")
-& $Python (Join-Path $env:HERMES_HOME "skills\productivity\chief-of-staff\scripts\brief.py") --max-chars 9000
+& $Python (Join-Path $env:HERMES_HOME "skills\productivity\chief-of-staff\scripts\brief.py") --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000
 ```
 
 ```bash
 # Linux/macOS
 python "$HERMES_HOME/skills/productivity/ingest/scripts/verify.py"
 python "$HERMES_HOME/skills/productivity/ingest/scripts/ingest.py"
-python "$HERMES_HOME/skills/productivity/chief-of-staff/scripts/brief.py" --max-chars 9000
+python "$HERMES_HOME/skills/productivity/chief-of-staff/scripts/brief.py" --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000
 ```
 
 The commands should report successful service access, a bounded evidence packet, and a ranked brief without Python tracebacks.
+
+Gmail ingestion is capped at the newest 20 matching Inbox messages. With the reference data, that scan contains all six meaningful messages plus 14 background messages; the packet builder ranks eight candidates and preserves the six highest-signal messages within its bounded model context.
 
 ## 11. Run the demo
 

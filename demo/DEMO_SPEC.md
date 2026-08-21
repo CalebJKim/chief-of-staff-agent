@@ -4,13 +4,18 @@ The seeder creates a self-contained realistic Chief of Staff workspace in the Go
 
 ## What it creates
 
-- **6 imported Gmail messages** marked Inbox, Unread, and Important:
+- **6 meaningful Gmail messages** marked Inbox, Unread, and Important:
   - Exec Review moved to 5 PM
   - Approved performance metrics
   - Slide 6/7/10 review feedback
   - Leadership-review legal clearance
   - Marketing shoot venue deadline
   - Agent Security PRD deadline
+- **100 background Gmail messages** from unique fictional people:
+  - Each has a unique subject and is marked read and not Important.
+  - Subjects cover harmless office, club, food, photo, and community topics.
+  - Every background message is dated before the six meaningful messages.
+  - Gmail ingestion reads only the newest 20 matching Inbox messages, so it sees all six meaningful messages plus 14 background messages.
 - **95 Calendar events**: 19 per weekday, 8:00 AM–6:45 PM, with intentional overlaps.
 - **1 Google Sheet**: `RTX Spark Campaign Tracker`
   - Tab: `Campaign Lanes`
@@ -54,7 +59,7 @@ python demo/seed_workspace.py --week-of 2026-08-17 --confirm
 ```bash
 python demo/reset_workspace.py
 
-# Permanently remove the seeded workspace instead:
+# Remove the seeded workspace instead (Gmail and Drive items go to Trash):
 python demo/seed_workspace.py --cleanup --confirm
 ```
 
@@ -66,7 +71,7 @@ If OAuth scopes or organization policy prevent the script from creating a resour
 2. **Slides** — Create a 10-slide `RTX Spark Exec Review`. Put `Performance to go here - Mike Chen to provide` on slide 4, `Move the detail out of the live flow` on slide 6, and two decision asks on slide 10.
 3. **Doc** — Create `RTX Spark Campaign Plan` with an agent-first narrative and open work for claims, retail demo ownership, shoot date, and Exec Review preparation.
 4. **Calendar** — Add overlapping weekday events from 8 AM through roughly 7 PM. Include an RTX Spark Exec Review at 5 PM and an overlapping decision-triage event.
-5. **Gmail** — Send or import messages to yourself containing the six topics above. Mark them unread/important. Include the generated Sheet/Slides/Doc links where relevant.
+5. **Gmail** — Send or import messages to yourself containing the six meaningful topics above. Mark them unread/important and make them newer than the 100 read, non-Important background messages. Include the generated Sheet/Slides/Doc links where relevant.
 
 The exact names are helpful for artifact matching, but the Chief of Staff logic still reasons from the actual evidence rather than fixture IDs.
 
@@ -76,4 +81,4 @@ The exact names are helpful for artifact matching, but the Chief of Staff logic 
 - API not enabled: enable Gmail, Calendar, Drive, Docs, Sheets, and Slides APIs in the OAuth project.
 - Workspace admin restriction: ask the administrator to allow the OAuth client/scopes.
 - Existing state file: run cleanup first, or inspect/remove the local state only after manually cleaning created resources.
-- Gmail import blocked by policy: send the six messages to the connected account manually; the rest of the seed can still be created.
+- Gmail import blocked by policy: send the six meaningful messages to the connected account manually; the rest of the seed can still be created.

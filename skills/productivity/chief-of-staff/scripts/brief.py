@@ -148,9 +148,6 @@ def conflicts(events: list[dict[str, Any]], tz: ZoneInfo) -> list[dict[str, Any]
                     "title": item[2].get("title"),
                     "start": item[2].get("start"),
                     "end": item[2].get("end"),
-                    "organizer": item[2].get("organizer"),
-                    "attendee_count": len(item[2].get("attendees", [])),
-                    "url": item[2].get("html_link") or item[2].get("meeting_url"),
                 }
                 for item in group
             ],
@@ -197,7 +194,7 @@ def linked_context(event: dict[str, Any], messages: list[dict[str, Any]], files:
         overlap = sorted(event_tokens & tokens(f"{item.get('name', '')} {item.get('description', '')}"))
         if overlap:
             file_matches.append({"id": item.get("id"), "name": item.get("name"), "kind": item.get("kind"), "url": item.get("url"), "match": overlap[:5]})
-    return {"mail": mail_matches[:4], "files": file_matches[:5]}
+    return {"mail": mail_matches[:2], "files": file_matches[:2]}
 
 
 def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
@@ -212,7 +209,18 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
     events = snapshot.get("events", [])
     messages = snapshot.get("messages", [])
     files = snapshot.get("files", [])
-    trackers = snapshot.get("trackers", [])
+    trackers = [
+        {
+            "id": tracker.get("id"),
+            "name": tracker.get("name"),
+            "url": tracker.get("url"),
+            "rows": [
+                {key: row.get(key) for key in ("row", "lane", "pic", "status", "next", "blocker", "artifact")}
+                for row in tracker.get("rows", [])
+            ],
+        }
+        for tracker in snapshot.get("trackers", [])
+    ]
     generated = parse_dt(snapshot.get("generated_at", ""), tz) or datetime.now(tz)
 
     ranked_events = []
@@ -289,19 +297,55 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
 
 
 def fit_packet(packet: dict[str, Any], max_chars: int) -> str:
-    encoded = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
-    while len(encoded) > max_chars:
-        lists = [packet.get("mail", []), packet.get("recent_files", []), packet.get("meetings", [])]
-        target = max(lists, key=len)
-        if len(target) <= 1:
-            break
-        target.pop()
-        encoded = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
-    if len(encoded) > max_chars:
+    for mail in packet.get("mail", []):
+        mail["snippet"] = (mail.get("snippet") or "")[:320]
+
+    def encode() -> str:
+        return json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
+
+    def trim_list(name: str, floor: int) -> None:
+        items = packet.get(name, [])
+        while len(items) > floor and len(encode()) > max_chars:
+            items.pop()
+
+    def trim_tracker_rows(floor: int) -> None:
+        while len(encode()) > max_chars:
+            candidates = [tracker.get("rows", []) for tracker in packet.get("trackers", [])]
+            target = max(candidates, key=len, default=[])
+            if len(target) <= floor:
+                break
+            target.pop()
+
+    encoded = encode()
+    if len(encoded) <= max_chars:
+        return encoded
+
+    # Preserve the six highest-signal messages long enough for the reference
+    # demo while shedding lower-value duplicates first. More aggressive stages
+    # still guarantee unusually small caller budgets are honored.
+    trim_list("recent_files", 4)
+    trim_list("meetings", 5)
+    trim_list("mail", 6)
+    trim_tracker_rows(6)
+    trim_list("meetings", 3)
+    trim_list("recent_files", 2)
+    trim_tracker_rows(3)
+    trim_list("conflicts", 3)
+    trim_list("mail", 3)
+    trim_list("meetings", 1)
+    trim_list("recent_files", 1)
+    trim_tracker_rows(1)
+    trim_list("conflicts", 1)
+    trim_list("mail", 1)
+
+    if len(encode()) > max_chars:
         for mail in packet.get("mail", []):
             mail["snippet"] = (mail.get("snippet") or "")[:160]
-        encoded = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
-    return encoded
+
+    for name in ("trackers", "recent_files", "meetings", "mail", "conflicts"):
+        trim_list(name, 0)
+
+    return encode()
 
 
 def main() -> int:

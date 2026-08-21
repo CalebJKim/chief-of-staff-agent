@@ -50,6 +50,23 @@ class BriefTests(unittest.TestCase):
         self.assertLessEqual(len(encoded), 5000)
         self.assertIn("conflicts", json.loads(encoded))
 
+    def test_normal_budget_preserves_six_highest_signal_messages(self):
+        packet = {
+            "mail": [
+                {"id": f"message-{index}", "snippet": "signal " * 100}
+                for index in range(8)
+            ],
+            "meetings": [{"id": index, "detail": "calendar " * 100} for index in range(10)],
+            "recent_files": [{"id": index, "detail": "file " * 100} for index in range(8)],
+            "conflicts": [{"id": index, "detail": "conflict " * 100} for index in range(5)],
+            "trackers": [{"rows": [{"row": index, "detail": "tracker " * 100} for index in range(8)]}],
+        }
+
+        fitted = json.loads(brief.fit_packet(packet, 14000))
+
+        self.assertLessEqual(len(json.dumps(fitted, ensure_ascii=False, separators=(",", ":"))), 14000)
+        self.assertGreaterEqual(len(fitted["mail"]), 6)
+
     def test_empty_success_is_not_reported_as_unavailable(self):
         snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
         snapshot["events"] = []

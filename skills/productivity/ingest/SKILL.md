@@ -56,7 +56,7 @@ PYTHON="$(command -v python3 || command -v python)"
 "$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py"
 
 # Explicit local day and tighter bounds
-"$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py" --days-ahead 1 --days-back 30 --max-messages 35
+"$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py" --days-ahead 1 --days-back 30 --max-messages 12
 
 # Use a focused Gmail query
 "$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py" --gmail-query 'in:inbox (is:unread OR label:important) -category:promotions'

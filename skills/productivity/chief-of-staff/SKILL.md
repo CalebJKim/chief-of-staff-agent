@@ -31,7 +31,7 @@ else
 fi
 PYTHON="$(command -v python3 || command -v python)"
 ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
-"$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py" && "$PYTHON" "$COS_HOME/skills/productivity/chief-of-staff/scripts/brief.py" --max-meetings 10 --max-mail 8 --max-files 8 --max-chars 9000
+"$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py" --max-messages 20 && "$PYTHON" "$COS_HOME/skills/productivity/chief-of-staff/scripts/brief.py" --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000
 ```
 
 Use only the compact JSON printed by `brief.py`.

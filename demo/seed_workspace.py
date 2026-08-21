@@ -22,6 +22,40 @@ MARKER = "chief-of-staff-reference-workspace-v1"
 STATE_FILE = "chief-of-staff-workspace-state.json"
 TZ_NAME = os.environ.get("CHIEF_OF_STAFF_WORKSPACE_TZ", "America/Los_Angeles")
 STATUS_VALUES = ["On track", "In review", "Awaiting update", "Blocked", "Complete"]
+MEANINGFUL_EMAIL_COUNT = 6
+BACKGROUND_EMAIL_COUNT = 100
+
+BACKGROUND_FIRST_NAMES = [
+    "Maya", "Owen", "Sofia", "Liam", "Nora",
+    "Ethan", "Chloe", "Mateo", "Iris", "Jonah",
+]
+BACKGROUND_LAST_NAMES = [
+    "Bennett", "Foster", "Kimura", "Okafor", "Santos",
+    "Dubois", "Mehta", "Novak", "Silva", "Tan",
+]
+BACKGROUND_DOMAINS = ["community.example", "office.example", "clubs.example", "bulletin.example"]
+BACKGROUND_TOPICS = [
+    ("Friday cafeteria menu", "Sharing the cafe menu for anyone who is curious. No response is needed."),
+    ("Photos from the summer picnic", "The picnic photo album is available for casual browsing. No response is needed."),
+    ("September book club selection", "The group chose a light mystery for September. Participation is entirely optional."),
+    ("Office plant corner highlights", "A few new plants are now in the third-floor common area. This is simply a cheerful note."),
+    ("Cycling group weekend photos", "Here are a few snapshots from the weekend ride. No response is needed."),
+    ("Recording from the lunchtime history talk", "The recording is available for anyone interested in the topic. Nothing is expected from recipients."),
+    ("New art in the third-floor hallway", "The hallway display now features work from local artists. This is informational only."),
+    ("Recipe exchange favorites", "The recipe exchange collected several popular dishes this month. Enjoy them whenever convenient."),
+    ("Volunteer day photo album", "The volunteer group shared a photo album from its recent outing. No response is needed."),
+    ("Coffee tasting notes", "The coffee club posted tasting notes from its latest gathering. This is just for fun."),
+    ("Neighborhood walking routes", "A few pleasant walking routes near the office are collected here for optional use."),
+    ("Puzzle club results", "The puzzle club posted last week's results and a few favorite clues. Nothing is expected from recipients."),
+    ("Common-room music playlist", "A new common-room playlist is available for anyone who would like background music."),
+    ("Community garden harvest photos", "The garden group shared photos from this season's harvest. No response is needed."),
+    ("Museum lecture recording", "A recording of the museum lecture is available for optional viewing."),
+    ("Quiet workspace design ideas", "Here are several pleasant examples of quiet workspace design for casual inspiration."),
+    ("Weekend hiking snapshots", "The hiking group shared a small set of trail photos. No response is needed."),
+    ("Language circle phrase list", "The language circle collected favorite phrases from its last gathering for anyone interested."),
+    ("Cafeteria chef profile", "This month's short chef profile is available for casual reading."),
+    ("August film club favorites", "The film club collected its favorite titles from August. Participation is entirely optional."),
+]
 
 
 def hermes_home() -> Path:
@@ -185,21 +219,80 @@ def create_sheet(sheets, drive, folder_id: str, slides_url: str, doc_url: str) -
     return {"id": spreadsheet_id, "url": sheet_url, "sheet_id": sheet_id}
 
 
-def import_mail(gmail, account: str, sender: str, subject: str, body: str, index: int) -> dict:
+def import_mail(
+    gmail,
+    account: str,
+    sender: str,
+    subject: str,
+    body: str,
+    index: int,
+    received_at: datetime,
+    *,
+    unread: bool,
+    important: bool,
+    role: str,
+) -> dict:
     message = EmailMessage()
     message["From"] = sender
     message["To"] = account
     message["Subject"] = subject
-    message["Date"] = format_datetime(datetime.now().astimezone())
-    message["Message-ID"] = f"<{MARKER}-{index}@nvidia.example>"
+    message["Date"] = format_datetime(received_at)
+    message["Message-ID"] = f"<{MARKER}-{index}@demo.example>"
     message.set_content(body + f"\n\n[{MARKER}]")
     raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
-    result = gmail.users().messages().import_(userId="me", body={"raw": raw, "labelIds": ["INBOX", "UNREAD", "IMPORTANT"]}, internalDateSource="dateHeader", neverMarkSpam=True, processForCalendar=False).execute()
-    return {"id": result["id"], "thread_id": result.get("threadId", result["id"]), "url": f"https://mail.google.com/mail/u/0/#all/{result.get('threadId', result['id'])}"}
+    labels = ["INBOX"]
+    if unread:
+        labels.append("UNREAD")
+    if important:
+        labels.append("IMPORTANT")
+    result = gmail.users().messages().import_(
+        userId="me",
+        body={"raw": raw, "labelIds": labels},
+        internalDateSource="dateHeader",
+        neverMarkSpam=True,
+        processForCalendar=False,
+    ).execute()
+    return {
+        "id": result["id"],
+        "thread_id": result.get("threadId", result["id"]),
+        "url": f"https://mail.google.com/mail/u/0/#all/{result.get('threadId', result['id'])}",
+        "role": role,
+        "received_at": received_at.isoformat(),
+    }
 
 
-def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str) -> tuple[list[dict], dict[str, str]]:
+def background_email_specs(reference_time: datetime) -> list[dict]:
+    specs = []
+    for index in range(BACKGROUND_EMAIL_COUNT):
+        first = BACKGROUND_FIRST_NAMES[index // len(BACKGROUND_LAST_NAMES)]
+        last = BACKGROUND_LAST_NAMES[index % len(BACKGROUND_LAST_NAMES)]
+        subject, body = BACKGROUND_TOPICS[index % len(BACKGROUND_TOPICS)]
+        domain = BACKGROUND_DOMAINS[index % len(BACKGROUND_DOMAINS)]
+        received_at = reference_time - timedelta(
+            days=1 + index // 4,
+            minutes=90 * (index % 4),
+        )
+        specs.append({
+            "sender": f"{first} {last} <{first.lower()}.{last.lower()}@{domain}>",
+            "subject": f"{subject} - note {index + 1:03d}",
+            "body": body,
+            "received_at": received_at,
+            "unread": False,
+            "important": False,
+            "role": "background",
+        })
+    return specs
+
+
+def create_emails(
+    gmail,
+    deck_url: str,
+    sheet_url: str,
+    doc_url: str,
+    created: list[dict] | None = None,
+) -> tuple[list[dict], dict[str, str]]:
     account = gmail.users().getProfile(userId="me").execute()["emailAddress"]
+    reference_time = local_now().replace(microsecond=0)
     data = [
         ("Elena Park <elena.park@nvidia.example>", "URGENT: RTX Spark Exec Review moved to 5 PM today", f"Hi,\n\nLeadership moved the RTX Spark Exec Review from Thursday to 5:00 PM today. This is the decision meeting, not a working session. Please arrive ready to close the agent-first keynote storyline and the IFA demo slate/owners.\n\nThe optional launch storyboard session is 3:00–4:00 PM; skip it if you need time to finish the Agent Security PRD and prep the deck.\n\nDeck: {deck_url}\n\n— Elena"),
         ("Mike Chen <mike.chen@nvidia.example>", "APPROVED: RTX Spark inference numbers for slide 4", "The performance package is approved for today's Exec Review. Use exactly: 2.1x faster time-to-first-token versus the prior approved release; 38 tokens/second sustained on the fixed 35B workflow; 22% lower energy per completed workflow. Required footnote: Pre-production measurements on the RTX Spark reference configuration. Results vary by model, quantization, and workload. Daniel cleared this wording for leadership review."),
@@ -208,8 +301,27 @@ def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str) -> tuple[l
         ("Priya Nair <priya.nair@northstarcreative.example>", "Decision by 4:30 PM today: marketing shoot venue hold", f"The planned venue is unavailable. We can hold Studio B Friday or Studio C Tuesday, with the preferred crew, until 4:30 PM today. Choose one before the hold expires or we risk a campaign slip.\n\nTracker: {sheet_url}"),
         ("Elena Park <elena.park@nvidia.example>", "Agent Security PRD needs to reach Engineering today", f"Please finish and send the Agent Security PRD to Engineering today. Protect a focused hour for the final pass. You can skip the optional launch storyboard session; notes will be posted afterward.\n\nCampaign plan: {doc_url}"),
     ]
-    created = [import_mail(gmail, account, *item, index) for index, item in enumerate(data, 1)]
-    evidence = {"elena": created[0]["url"], "mike": created[1]["url"], "aisha": created[2]["url"], "daniel": created[3]["url"], "priya": created[4]["url"], "prd": created[5]["url"]}
+    created = created if created is not None else []
+    meaningful = []
+    for index, (sender, subject, body) in enumerate(data, 1):
+        item = import_mail(
+            gmail,
+            account,
+            sender,
+            subject,
+            body,
+            index,
+            reference_time - timedelta(minutes=index - 1),
+            unread=True,
+            important=True,
+            role="meaningful",
+        )
+        meaningful.append(item)
+        created.append(item)
+    for index, spec in enumerate(background_email_specs(reference_time), MEANINGFUL_EMAIL_COUNT + 1):
+        item = import_mail(gmail, account, index=index, **spec)
+        created.append(item)
+    evidence = {"elena": meaningful[0]["url"], "mike": meaningful[1]["url"], "aisha": meaningful[2]["url"], "daniel": meaningful[3]["url"], "priya": meaningful[4]["url"], "prd": meaningful[5]["url"]}
     return created, evidence
 
 
@@ -310,7 +422,13 @@ def seed(week_of: date) -> dict:
         state["doc"] = create_doc(svc["docs"], svc["drive"], state["folder"]["id"])
         state["slides"] = create_slides(svc["slides"], svc["drive"], state["folder"]["id"])
         state["sheet"] = create_sheet(svc["sheets"], svc["drive"], state["folder"]["id"], state["slides"]["url"], state["doc"]["url"])
-        state["emails"], evidence = create_emails(svc["gmail"], state["slides"]["url"], state["sheet"]["url"], state["doc"]["url"])
+        state["emails"], evidence = create_emails(
+            svc["gmail"],
+            state["slides"]["url"],
+            state["sheet"]["url"],
+            state["doc"]["url"],
+            state["emails"],
+        )
         update_tracker_evidence(svc["sheets"], state, evidence)
         state["events"] = create_calendar(svc["calendar"], week_of, state["slides"]["url"], state["doc"]["url"], state["sheet"]["url"])
         state_path().parent.mkdir(parents=True, exist_ok=True)

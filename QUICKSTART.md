@@ -88,7 +88,7 @@ Credentials remain under your local `HERMES_HOME`. Never commit them.
 
 ## 4. Optional: populate the reference workspace
 
-After OAuth is verified, create the same realistic Gmail, Calendar, campaign folder, Sheet, Doc, and Slides workspace in your own account:
+After OAuth is verified, create the same realistic workspace in your own account: 6 meaningful Gmail messages, 100 older low-signal messages, Calendar data, a campaign folder, a Sheet, a Doc, and a Slides deck. Gmail ingestion reads only the newest 20 matching Inbox messages.
 
 ```powershell
 # Windows PowerShell
