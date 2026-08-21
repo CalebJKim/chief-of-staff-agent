@@ -73,8 +73,10 @@ Use the focused action helper; do not rerun broad ingest unless data is stale.
 if [ -n "${HERMES_HOME:-}" ]; then COS_HOME="$HERMES_HOME"; elif [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="$LOCALAPPDATA/hermes"; else COS_HOME="$HOME/.hermes"; fi
 PYTHON="$(command -v python3 || command -v python)"
 ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
+DRAFT_TRACKING=""
+if [ -f "$COS_HOME/chief-of-staff-workspace-state.json" ]; then DRAFT_TRACKING="--track-demo-state"; fi
 "$PYTHON" "$ACTION" gmail thread THREAD_ID
-"$PYTHON" "$ACTION" gmail draft --reply-to-message MESSAGE_ID --body BODY
+"$PYTHON" "$ACTION" gmail draft --reply-to-message MESSAGE_ID --body BODY $DRAFT_TRACKING
 "$PYTHON" "$ACTION" drive search 'project or deck terms'
 "$PYTHON" "$ACTION" docs get DOCUMENT_ID
 "$PYTHON" "$ACTION" sheets get SPREADSHEET_ID 'Tracker!A1:H80'
@@ -82,7 +84,7 @@ ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
 ```
 
 - “What slides?” → derive search terms from the chosen meeting/project, search Drive, inspect only plausible candidates, then give the direct deck URL and exact proposed changes. Do not assume the newest deck is correct.
-- “Draft follow-ups” → read the relevant thread first; create Gmail drafts, never send, and return draft IDs.
+- “Draft follow-ups” → read the relevant thread first; create Gmail drafts, never send, and return draft IDs. Pass `--track-demo-state` only when `$COS_HOME/chief-of-staff-workspace-state.json` exists so reference-demo cleanup can delete exactly those drafts. Outside a seeded reference demo, omit the flag.
 - “Update the tracker/doc/deck” → show the exact proposed edit first. After approval, make one `sheets update-lanes` call containing all lane updates, then read back once. This helper preserves Lane/PIC, rejects duplicate lanes, and validates Status. Status must be exactly `On track`, `In review`, `Awaiting update`, `Blocked`, or `Complete`. Never claim a deck/doc was edited unless that artifact was actually written. In the completion report, list each updated lane once and do not ask to update a lane you just updated.
 - For unsupported operations, load the full Google Workspace skill only then.
 

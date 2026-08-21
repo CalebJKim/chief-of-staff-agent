@@ -13,6 +13,10 @@ from pathlib import Path
 from typing import Any
 
 
+REFERENCE_WORKSPACE_MARKER = "chief-of-staff-reference-workspace-v1"
+REFERENCE_WORKSPACE_STATE_FILE = "chief-of-staff-workspace-state.json"
+
+
 def hermes_home() -> Path:
     override = os.environ.get("HERMES_HOME")
     if override:
@@ -53,6 +57,33 @@ def emit(value: Any) -> None:
 def require_confirm(args: argparse.Namespace, action: str) -> None:
     if not getattr(args, "confirm", False):
         raise RuntimeError(f"Refusing {action} without --confirm after user approval")
+
+
+def reference_workspace_state_path() -> Path:
+    return hermes_home() / REFERENCE_WORKSPACE_STATE_FILE
+
+
+def load_reference_workspace_state() -> tuple[Path, dict[str, Any]]:
+    path = reference_workspace_state_path()
+    if not path.exists():
+        raise RuntimeError(f"No active reference workspace state at {path}; refusing untracked demo draft")
+    state = json.loads(path.read_text(encoding="utf-8"))
+    if state.get("marker") != REFERENCE_WORKSPACE_MARKER:
+        raise RuntimeError(f"Unexpected reference workspace marker in {path}")
+    return path, state
+
+
+def record_reference_workspace_draft(draft_id: str, message_id: str) -> Path:
+    if not draft_id:
+        raise RuntimeError("Gmail created a draft without returning a draft ID")
+    path, state = load_reference_workspace_state()
+    drafts = state.setdefault("drafts", [])
+    if not any(item.get("id") == draft_id for item in drafts):
+        drafts.append({"id": draft_id, "message_id": message_id})
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    temporary.write_text(json.dumps(state, indent=2), encoding="utf-8")
+    os.replace(temporary, path)
+    return path
 
 
 def decode_body(payload: dict[str, Any]) -> str:
@@ -118,6 +149,9 @@ def gmail_thread(args: argparse.Namespace) -> None:
 
 
 def gmail_draft(args: argparse.Namespace) -> None:
+    track_demo_state = getattr(args, "track_demo_state", False)
+    if track_demo_state:
+        load_reference_workspace_state()
     api = service("gmail", "v1")
     message = EmailMessage()
     to = args.to
@@ -153,7 +187,27 @@ def gmail_draft(args: argparse.Namespace) -> None:
     if thread_id:
         body["message"]["threadId"] = thread_id
     result = api.users().drafts().create(userId="me", body=body).execute()
-    emit({"status": "drafted", "draft_id": result.get("id"), "message_id": result.get("message", {}).get("id")})
+    draft_id = result.get("id", "")
+    message_id = result.get("message", {}).get("id", "")
+    tracked_state = ""
+    if track_demo_state:
+        try:
+            tracked_state = str(record_reference_workspace_draft(draft_id, message_id))
+        except Exception as tracking_error:
+            try:
+                api.users().drafts().delete(userId="me", id=draft_id).execute()
+            except Exception as rollback_error:
+                raise RuntimeError(
+                    f"Draft {draft_id} was created but could not be tracked ({tracking_error}) "
+                    f"or rolled back ({rollback_error})"
+                ) from tracking_error
+            raise RuntimeError(f"Draft tracking failed and draft {draft_id} was rolled back: {tracking_error}") from tracking_error
+    emit({
+        "status": "drafted",
+        "draft_id": draft_id,
+        "message_id": message_id,
+        "tracked_demo_state": tracked_state,
+    })
 
 
 def drive_search(args: argparse.Namespace) -> None:
@@ -348,6 +402,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--body", required=True)
     p.add_argument("--thread-id", default="")
     p.add_argument("--reply-to-message", default="", help="Build a correctly threaded reply draft")
+    p.add_argument("--track-demo-state", action="store_true", help="Record this draft for reference-workspace cleanup")
     p.set_defaults(func=gmail_draft)
 
     drive = groups.add_parser("drive").add_subparsers(dest="action", required=True)

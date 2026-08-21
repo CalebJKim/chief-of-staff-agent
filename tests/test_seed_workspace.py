@@ -65,6 +65,7 @@ class SeedWorkspaceTests(unittest.TestCase):
         drive = Mock()
         mock_services.return_value = {"gmail": gmail, "calendar": calendar, "drive": drive}
         state = {
+            "drafts": [{"id": "draft-1"}],
             "emails": [{"id": "message-1"}],
             "events": [{"id": "event-1"}],
             "folder": {"id": "folder-1"},
@@ -72,7 +73,8 @@ class SeedWorkspaceTests(unittest.TestCase):
 
         result = seed_workspace.cleanup(state)
 
-        self.assertEqual({"emails_trashed": 1, "events_deleted": 1, "folders_trashed": 1}, result)
+        self.assertEqual({"drafts_deleted": 1, "emails_trashed": 1, "events_deleted": 1, "folders_trashed": 1}, result)
+        gmail.users().drafts().delete.assert_called_once_with(userId="me", id="draft-1")
         gmail.users().messages().trash.assert_called_once_with(userId="me", id="message-1")
         gmail.users().messages().delete.assert_not_called()
         calendar.events().delete.assert_called_once_with(
@@ -92,6 +94,21 @@ class SeedWorkspaceTests(unittest.TestCase):
 
         with self.assertRaisesRegex(RuntimeError, "email message-1: denied"):
             seed_workspace.cleanup({"emails": [{"id": "message-1"}]})
+
+    @patch.object(seed_workspace, "services")
+    def test_cleanup_retry_accepts_resources_that_are_already_absent(self, mock_services: Mock) -> None:
+        class MissingResource(Exception):
+            resp = type("Response", (), {"status": 404})()
+
+        gmail = Mock()
+        calendar = Mock()
+        drive = Mock()
+        mock_services.return_value = {"gmail": gmail, "calendar": calendar, "drive": drive}
+        gmail.users().drafts().delete.return_value.execute.side_effect = MissingResource("not found")
+
+        result = seed_workspace.cleanup({"drafts": [{"id": "draft-1"}]})
+
+        self.assertEqual(1, result["drafts_deleted"])
 
 
 if __name__ == "__main__":

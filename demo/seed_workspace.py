@@ -253,28 +253,50 @@ def update_tracker_evidence(sheets, state: dict, evidence: dict[str, str]) -> No
     sheets.spreadsheets().values().update(spreadsheetId=sheet["id"], range="'Campaign Lanes'!A6:J14", valueInputOption="USER_ENTERED", body={"values": values}).execute()
 
 
+def resource_is_already_absent(exc: Exception) -> bool:
+    return getattr(getattr(exc, "resp", None), "status", None) in {404, 410}
+
+
 def cleanup(state: dict) -> dict[str, int]:
     svc = services()
-    result = {"emails_trashed": 0, "events_deleted": 0, "folders_trashed": 0}
+    result = {"drafts_deleted": 0, "emails_trashed": 0, "events_deleted": 0, "folders_trashed": 0}
     failures = []
+    for item in state.get("drafts", []):
+        try:
+            svc["gmail"].users().drafts().delete(userId="me", id=item["id"]).execute()
+            result["drafts_deleted"] += 1
+        except Exception as exc:
+            if resource_is_already_absent(exc):
+                result["drafts_deleted"] += 1
+            else:
+                failures.append(f"Gmail draft {item['id']}: {exc}")
     for item in state.get("emails", []):
         try:
             svc["gmail"].users().messages().trash(userId="me", id=item["id"]).execute()
             result["emails_trashed"] += 1
         except Exception as exc:
-            failures.append(f"email {item['id']}: {exc}")
+            if resource_is_already_absent(exc):
+                result["emails_trashed"] += 1
+            else:
+                failures.append(f"email {item['id']}: {exc}")
     for item in state.get("events", []):
         try:
             svc["calendar"].events().delete(calendarId="primary", eventId=item["id"], sendUpdates="none").execute()
             result["events_deleted"] += 1
         except Exception as exc:
-            failures.append(f"calendar event {item['id']}: {exc}")
+            if resource_is_already_absent(exc):
+                result["events_deleted"] += 1
+            else:
+                failures.append(f"calendar event {item['id']}: {exc}")
     if state.get("folder", {}).get("id"):
         try:
             svc["drive"].files().update(fileId=state["folder"]["id"], body={"trashed": True}).execute()
             result["folders_trashed"] += 1
         except Exception as exc:
-            failures.append(f"Drive folder {state['folder']['id']}: {exc}")
+            if resource_is_already_absent(exc):
+                result["folders_trashed"] += 1
+            else:
+                failures.append(f"Drive folder {state['folder']['id']}: {exc}")
     if failures:
         raise RuntimeError("Cleanup incomplete:\n" + "\n".join(failures))
     return result
@@ -282,7 +304,7 @@ def cleanup(state: dict) -> dict[str, int]:
 
 def seed(week_of: date) -> dict:
     svc = services()
-    state = {"schema": 1, "marker": MARKER, "week_of": week_of.isoformat(), "events": [], "emails": []}
+    state = {"schema": 2, "marker": MARKER, "week_of": week_of.isoformat(), "events": [], "emails": [], "drafts": []}
     try:
         state["folder"] = create_folder(svc["drive"])
         state["doc"] = create_doc(svc["docs"], svc["drive"], state["folder"]["id"])

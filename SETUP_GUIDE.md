@@ -91,7 +91,7 @@ calendar event offsets.
 & $Python -m unittest discover -s skills/productivity/chief-of-staff/tests -v
 ```
 
-Expected result: 13 tests pass across the three suites.
+Expected result: 16 tests pass across the three suites.
 
 ## 5. Install the skills into Hermes
 
@@ -174,6 +174,21 @@ Generated resource IDs are stored only at:
 $HERMES_HOME/chief-of-staff-workspace-state.json
 ```
 
+To exercise draft tracking directly during setup validation, create a reply to
+one seeded message through the installed action helper:
+
+```powershell
+$StatePath = Join-Path $env:HERMES_HOME "chief-of-staff-workspace-state.json"
+$State = Get-Content -Raw $StatePath | ConvertFrom-Json
+$Action = Join-Path $env:HERMES_HOME "skills\productivity\ingest\scripts\actions.py"
+& $Python $Action gmail draft --reply-to-message $State.emails[0].id `
+  --body "Thanks, I am preparing the decision brief." --track-demo-state
+```
+
+Confirm that the state file now contains one entry under `drafts`. During an
+interactive reference demo, the Chief of Staff skill applies this flag when it
+detects the active state file.
+
 After seeding, repeat the live verifier and build a decision packet:
 
 ```powershell
@@ -198,17 +213,25 @@ Reset the workspace to its original seeded state:
 & $Python demo\reset_workspace.py
 ```
 
-Move imported messages to Gmail Trash, delete imported calendar events, and
-move the generated Drive folder and its contents to Trash:
+Delete explicitly tracked demo drafts, move imported messages to Gmail Trash,
+delete imported calendar events, and move the generated Drive folder and its
+contents to Trash:
 
 ```powershell
 & $Python demo\seed_workspace.py --cleanup --confirm
 ```
 
-On success, the command reports exact counts for messages trashed, events
-deleted, and folders trashed. If any operation fails, cleanup exits with an
-error and preserves the state file so the remaining resources can be retried.
-Gmail and Drive items remain recoverable from their respective Trash views.
+On success, the command reports exact counts for drafts deleted, messages
+trashed, events deleted, and folders trashed. If any operation fails, cleanup
+exits with an error and preserves the state file so the remaining resources
+can be retried. A retry treats already-absent resources as successfully
+cleared. Gmail messages and Drive items remain recoverable from their respective
+Trash views.
+
+Drafts are eligible for cleanup only when the action helper creates them with
+`--track-demo-state` while the reference-workspace state file exists. This
+records the exact Gmail draft ID; cleanup never guesses by subject or deletes
+ordinary account drafts.
 
 Review `demo/DEMO_SPEC.md` before manually deleting the local state file. The
 state file is needed to identify the resources created by the seeder.
@@ -227,9 +250,10 @@ The following checks passed on August 21, 2026:
   focus block, Exec Review evidence, and campaign tracker lanes.
 - A real Hermes prompt using the installed skill and configured local model:
   `Good morning chief of staff, what should we work on today?`
-- A live seed/cleanup cycle reporting 6 messages trashed, 95 events deleted,
-  and 1 Drive folder trashed. Independent read-back found no seeded Inbox
-  messages, no seeded events, a trashed Drive folder, and no local state file.
+- A live seed/draft/cleanup cycle reporting 1 tracked draft deleted, 6 messages
+  trashed, 95 events deleted, and 1 Drive folder trashed. Independent read-back
+  found the tracked draft absent, no seeded Inbox messages, no seeded events, a
+  trashed Drive folder, and no local state file.
 
 The first one-shot response from the 35B local model took approximately two
 minutes while the command buffered output. `ollama ps` showed the model loaded
@@ -256,3 +280,8 @@ expected top-three priorities and schedule recommendations.
    errors. Cleanup now moves imported messages to Gmail Trash, reports exact
    counts, raises on partial failure, and preserves recovery state until every
    operation succeeds.
+7. Drafts created during the interactive demo were not represented in the
+   seeder state, so cleanup could not identify them. The draft helper now has
+   explicit demo-state tracking, and cleanup deletes only those recorded draft
+   IDs while leaving all untracked drafts alone. One legacy fake draft created
+   before tracking existed was removed once by its exact Gmail draft ID.

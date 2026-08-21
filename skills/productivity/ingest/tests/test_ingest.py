@@ -5,6 +5,8 @@ import base64
 import email
 import importlib.util
 import io
+import json
+import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -103,6 +105,78 @@ class IngestTests(unittest.TestCase):
         self.assertEqual(parsed["To"], "Person <person@example.com>")
         self.assertEqual(parsed["Subject"], "Re: Project update")
         self.assertEqual(parsed["In-Reply-To"], "<original@example.com>")
+
+    def test_demo_draft_is_recorded_in_reference_workspace_state(self):
+        class Request:
+            def __init__(self, value):
+                self.value = value
+
+            def execute(self):
+                return self.value
+
+        class Drafts:
+            def create(self, **_kwargs):
+                return Request({"id": "draft-1", "message": {"id": "message-1"}})
+
+        class Users:
+            def drafts(self):
+                return Drafts()
+
+        class Api:
+            def users(self):
+                return Users()
+
+        with tempfile.TemporaryDirectory() as temp:
+            profile = Path(temp)
+            state_path = profile / actions.REFERENCE_WORKSPACE_STATE_FILE
+            state_path.write_text(json.dumps({
+                "schema": 2,
+                "marker": actions.REFERENCE_WORKSPACE_MARKER,
+                "drafts": [],
+            }), encoding="utf-8")
+            original_home = actions.hermes_home
+            original_service = actions.service
+            actions.hermes_home = lambda: profile
+            actions.service = lambda *_args: Api()
+            try:
+                args = argparse.Namespace(
+                    to="person@example.com",
+                    cc="",
+                    subject="Demo follow-up",
+                    body="Checking in.",
+                    thread_id="",
+                    reply_to_message="",
+                    track_demo_state=True,
+                )
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    actions.gmail_draft(args)
+            finally:
+                actions.hermes_home = original_home
+                actions.service = original_service
+
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertEqual([{"id": "draft-1", "message_id": "message-1"}], state["drafts"])
+            self.assertEqual(str(state_path), json.loads(output.getvalue())["tracked_demo_state"])
+
+    def test_demo_draft_requires_active_reference_workspace_state(self):
+        with tempfile.TemporaryDirectory() as temp:
+            original_home = actions.hermes_home
+            actions.hermes_home = lambda: Path(temp)
+            try:
+                args = argparse.Namespace(
+                    to="person@example.com",
+                    cc="",
+                    subject="Demo follow-up",
+                    body="Checking in.",
+                    thread_id="",
+                    reply_to_message="",
+                    track_demo_state=True,
+                )
+                with self.assertRaisesRegex(RuntimeError, "refusing untracked demo draft"):
+                    actions.gmail_draft(args)
+            finally:
+                actions.hermes_home = original_home
 
 
 if __name__ == "__main__":

@@ -23,14 +23,17 @@ The seeder creates a self-contained realistic Chief of Staff workspace in the Go
   - Slide 6 intentionally needs to move out of the live flow
   - Slide 10 contains the two leadership decisions
 
-Generated IDs are stored only in the local file:
+Generated resource IDs and explicitly tracked demo draft IDs are stored only
+in the local file:
 
 ```text
 $HERMES_HOME/chief-of-staff-workspace-state.json
 ```
 
-The reset and cleanup commands use this file to move imported mail to Gmail
-Trash, delete imported events, and move the generated Drive folder to trash.
+The reset and cleanup commands use this file to delete tracked demo drafts,
+move imported mail to Gmail Trash, delete imported events, and move the
+generated Drive folder to trash. Ordinary Gmail drafts are never listed or
+deleted.
 
 ## Seed
 

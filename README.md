@@ -84,6 +84,7 @@ Typical follow-ups:
 
 - Broad ingestion is bounded and metadata/snippet-first.
 - Gmail drafts are created but never sent by these scripts.
+- Reference-demo cleanup deletes only drafts explicitly recorded in the local demo state.
 - Docs, Sheets, Slides, and Calendar writes require approval and `--confirm`.
 - Tracker updates preserve Lane/PIC, reject duplicate lanes, and validate statuses.
 - One-time codes are redacted before model context.
