@@ -10,6 +10,7 @@ A portable Hermes Agent configuration for a lightweight Google Workspace chief o
 - `setup/google-workspace/` contains the portable OAuth helper.
 - `config.example.yaml` documents the minimal recommended tool surface.
 - [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) contains the presentation script and staged demo flow.
+- [`SETUP_GUIDE.md`](SETUP_GUIDE.md) records the validated end-to-end Windows setup, verification, and cleanup procedure.
 
 No sessions, OAuth credentials, email/calendar fixtures, account IDs, document IDs, or model files are included.
 

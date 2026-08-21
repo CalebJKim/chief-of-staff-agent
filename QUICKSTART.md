@@ -1,5 +1,8 @@
 # Quick setup
 
+For the complete validated Windows procedure, troubleshooting notes, live
+checks, and cleanup workflow, see [SETUP_GUIDE.md](SETUP_GUIDE.md).
+
 ## 1. Install prerequisites
 
 Install [Hermes Agent](https://hermes-agent.nousresearch.com/docs), Python 3.11+, and clone this repository.
