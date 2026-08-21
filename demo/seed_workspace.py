@@ -7,6 +7,7 @@ import base64
 import json
 import os
 import sys
+import time
 from datetime import date, datetime, timedelta
 from email.message import EmailMessage
 from email.utils import format_datetime
@@ -26,6 +27,10 @@ MEANINGFUL_EMAIL_COUNT = 6
 BACKGROUND_EMAIL_COUNT = 100
 EMAIL_REFERENCE_HOUR = 13
 EMAIL_SPACING_MINUTES = 2
+API_BATCH_SIZE = 25
+GMAIL_BATCH_SIZE = 20
+CALENDAR_BATCH_SIZE = 5
+API_BATCH_ATTEMPTS = 4
 
 BACKGROUND_FIRST_NAMES = [
     "Maya", "Owen", "Sofia", "Liam", "Nora",
@@ -109,6 +114,67 @@ def services():
         "calendar": build("calendar", "v3", credentials=creds, cache_discovery=False),
         "gmail": build("gmail", "v1", credentials=creds, cache_discovery=False),
     }
+
+
+def execute_batch_requests(
+    service,
+    entries: list[tuple[str, object]],
+    operation: str,
+    *,
+    on_success=None,
+    accept_exception=None,
+    batch_size: int = API_BATCH_SIZE,
+) -> None:
+    """Execute independent API requests in bounded batches with per-item accounting."""
+    for start in range(0, len(entries), batch_size):
+        pending = entries[start:start + batch_size]
+        for attempt in range(API_BATCH_ATTEMPTS):
+            responses = {}
+            errors = {}
+
+            def callback(request_id, response, exception):
+                if exception is None or (accept_exception and accept_exception(exception)):
+                    responses[request_id] = response
+                else:
+                    errors[request_id] = exception
+
+            batch = service.new_batch_http_request()
+            for request_id, request in pending:
+                batch.add(request, callback=callback, request_id=request_id)
+
+            outer_error = None
+            try:
+                batch.execute()
+            except Exception as exc:
+                outer_error = exc
+
+            for request_id, _ in pending:
+                if request_id in responses and on_success:
+                    on_success(request_id, responses[request_id])
+
+            if outer_error is not None:
+                raise RuntimeError(f"{operation} incomplete:\nbatch transport: {outer_error}")
+
+            non_retryable = [
+                (request_id, errors[request_id])
+                for request_id, _ in pending
+                if request_id in errors and not request_is_retryable(errors[request_id])
+            ]
+            if non_retryable:
+                details = "\n".join(f"{request_id}: {exc}" for request_id, exc in non_retryable)
+                raise RuntimeError(f"{operation} incomplete:\n{details}")
+
+            pending = [(request_id, request) for request_id, request in pending if request_id in errors]
+            if not pending:
+                break
+            if attempt == API_BATCH_ATTEMPTS - 1:
+                details = "\n".join(f"{request_id}: {errors[request_id]}" for request_id, _ in pending)
+                raise RuntimeError(f"{operation} incomplete after {API_BATCH_ATTEMPTS} attempts:\n{details}")
+            time.sleep(2 ** attempt)
+
+
+def request_is_retryable(exc: Exception) -> bool:
+    return getattr(getattr(exc, "resp", None), "status", None) in {409, 429, 500, 502, 503, 504}
 
 
 def move_to_folder(drive, file_id: str, folder_id: str) -> None:
@@ -222,7 +288,7 @@ def create_sheet(sheets, drive, folder_id: str, slides_url: str, doc_url: str) -
     return {"id": spreadsheet_id, "url": sheet_url, "sheet_id": sheet_id}
 
 
-def import_mail(
+def import_mail_request(
     gmail,
     account: str,
     sender: str,
@@ -233,8 +299,7 @@ def import_mail(
     *,
     unread: bool,
     important: bool,
-    role: str,
-) -> dict:
+):
     message = EmailMessage()
     message["From"] = sender
     message["To"] = account
@@ -248,13 +313,16 @@ def import_mail(
         labels.append("UNREAD")
     if important:
         labels.append("IMPORTANT")
-    result = gmail.users().messages().import_(
+    return gmail.users().messages().import_(
         userId="me",
         body={"raw": raw, "labelIds": labels},
         internalDateSource="dateHeader",
         neverMarkSpam=True,
         processForCalendar=False,
-    ).execute()
+    )
+
+
+def imported_mail_state(result: dict, role: str, received_at: datetime) -> dict:
     return {
         "id": result["id"],
         "thread_id": result.get("threadId", result["id"]),
@@ -375,24 +443,49 @@ def create_emails(
     ]
     created = created if created is not None else []
     evidence = {}
+    mail_specs = []
     for index, spec in enumerate(data, 1):
-        item = import_mail(
+        mail_specs.append({
+            **spec,
+            "index": index,
+            "received_at": reference_time - timedelta(minutes=EMAIL_SPACING_MINUTES * (index - 1)),
+            "role": "meaningful",
+        })
+    for index, spec in enumerate(background_email_specs(reference_time), MEANINGFUL_EMAIL_COUNT + 1):
+        mail_specs.append({**spec, "index": index})
+
+    entries = []
+    metadata = {}
+    for spec in mail_specs:
+        request_id = f"email-{spec['index']:03d}"
+        metadata[request_id] = spec
+        request = import_mail_request(
             gmail,
             account,
             spec["sender"],
             spec["subject"],
             spec["body"],
-            index,
-            reference_time - timedelta(minutes=EMAIL_SPACING_MINUTES * (index - 1)),
+            spec["index"],
+            spec["received_at"],
             unread=spec["unread"],
             important=spec["important"],
-            role="meaningful",
         )
+        entries.append((request_id, request))
+
+    def record_import(request_id: str, response: dict) -> None:
+        spec = metadata[request_id]
+        item = imported_mail_state(response, spec["role"], spec["received_at"])
         created.append(item)
-        evidence[spec["key"]] = item["url"]
-    for index, spec in enumerate(background_email_specs(reference_time), MEANINGFUL_EMAIL_COUNT + 1):
-        item = import_mail(gmail, account, index=index, **spec)
-        created.append(item)
+        if spec.get("key"):
+            evidence[spec["key"]] = item["url"]
+
+    execute_batch_requests(
+        gmail,
+        entries,
+        "Gmail import",
+        on_success=record_import,
+        batch_size=GMAIL_BATCH_SIZE,
+    )
     return created, evidence
 
 
@@ -410,12 +503,21 @@ EVENTS = [
 
 def create_calendar(calendar, start_day: date, demo_day: date, deck_url: str, doc_url: str, sheet_url: str) -> list[dict]:
     created = []
-    for offset in range(5):
-        day = start_day + timedelta(days=offset)
-        for begin, end, title, description in EVENTS:
-            link = f"\nEvaluation report: {doc_url}" if title.startswith("Evaluation office hours") else f"\nPartner Readout: {deck_url}" if title.startswith("Partner demo") else ""
-            result = calendar.events().insert(calendarId="primary", body={"summary": title, "description": f"{description}{link}\n[{MARKER}]", "start": {"dateTime": iso(day, begin), "timeZone": TZ_NAME}, "end": {"dateTime": iso(day, end), "timeZone": TZ_NAME}}, sendUpdates="none").execute()
-            created.append({"id": result["id"], "url": result.get("htmlLink", "")})
+    entries = []
+    for index, (begin, end, title, description) in enumerate(EVENTS, 1):
+        link = f"\nEvaluation report: {doc_url}" if title.startswith("Evaluation office hours") else f"\nPartner Readout: {deck_url}" if title.startswith("Partner demo") else ""
+        request = calendar.events().insert(
+            calendarId="primary",
+            body={
+                "summary": title,
+                "description": f"{description}{link}\n[{MARKER}]",
+                "start": {"dateTime": iso(start_day, begin), "timeZone": TZ_NAME},
+                "end": {"dateTime": iso(start_day, end), "timeZone": TZ_NAME},
+                "recurrence": ["RRULE:FREQ=DAILY;COUNT=5"],
+            },
+            sendUpdates="none",
+        )
+        entries.append((f"calendar-routine-{index:02d}", request))
     release_review = calendar.events().insert(
         calendarId="primary",
         body={
@@ -428,8 +530,19 @@ def create_calendar(calendar, start_day: date, demo_day: date, deck_url: str, do
             "end": {"dateTime": iso(demo_day, "15:00"), "timeZone": TZ_NAME},
         },
         sendUpdates="none",
-    ).execute()
-    created.append({"id": release_review["id"], "url": release_review.get("htmlLink", "")})
+    )
+    entries.append(("calendar-release-review", release_review))
+
+    def record_event(_request_id: str, response: dict) -> None:
+        created.append({"id": response["id"], "url": response.get("htmlLink", "")})
+
+    execute_batch_requests(
+        calendar,
+        entries,
+        "Calendar creation",
+        on_success=record_event,
+        batch_size=CALENDAR_BATCH_SIZE,
+    )
     return created
 
 
@@ -456,24 +569,51 @@ def cleanup(state: dict) -> dict[str, int]:
                 result["drafts_deleted"] += 1
             else:
                 failures.append(f"Gmail draft {item['id']}: {exc}")
-    for item in state.get("emails", []):
-        try:
-            svc["gmail"].users().messages().trash(userId="me", id=item["id"]).execute()
-            result["emails_trashed"] += 1
-        except Exception as exc:
-            if resource_is_already_absent(exc):
-                result["emails_trashed"] += 1
-            else:
-                failures.append(f"email {item['id']}: {exc}")
-    for item in state.get("events", []):
-        try:
-            svc["calendar"].events().delete(calendarId="primary", eventId=item["id"], sendUpdates="none").execute()
-            result["events_deleted"] += 1
-        except Exception as exc:
-            if resource_is_already_absent(exc):
-                result["events_deleted"] += 1
-            else:
-                failures.append(f"calendar event {item['id']}: {exc}")
+    email_entries = [
+        (
+            f"email-{item['id']}",
+            svc["gmail"].users().messages().trash(userId="me", id=item["id"]),
+        )
+        for item in state.get("emails", [])
+    ]
+
+    def record_trashed_email(_request_id: str, _response) -> None:
+        result["emails_trashed"] += 1
+
+    try:
+        execute_batch_requests(
+            svc["gmail"],
+            email_entries,
+            "Gmail cleanup",
+            on_success=record_trashed_email,
+            accept_exception=resource_is_already_absent,
+            batch_size=GMAIL_BATCH_SIZE,
+        )
+    except RuntimeError as exc:
+        failures.append(str(exc))
+
+    event_entries = [
+        (
+            f"calendar-{item['id']}",
+            svc["calendar"].events().delete(calendarId="primary", eventId=item["id"], sendUpdates="none"),
+        )
+        for item in state.get("events", [])
+    ]
+
+    def record_deleted_event(_request_id: str, _response) -> None:
+        result["events_deleted"] += 1
+
+    try:
+        execute_batch_requests(
+            svc["calendar"],
+            event_entries,
+            "Calendar cleanup",
+            on_success=record_deleted_event,
+            accept_exception=resource_is_already_absent,
+            batch_size=CALENDAR_BATCH_SIZE,
+        )
+    except RuntimeError as exc:
+        failures.append(str(exc))
     if state.get("folder", {}).get("id"):
         try:
             svc["drive"].files().update(fileId=state["folder"]["id"], body={"trashed": True}).execute()
