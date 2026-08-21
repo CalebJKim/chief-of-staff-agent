@@ -500,6 +500,18 @@ EVENTS = [
     ("17:00", "17:20", "End-of-day handoff", "Routine owner handoff and next-day planning."),
 ]
 
+WEEKDAY_CODES = ("MO", "TU", "WE", "TH", "FR")
+OVERLAP_EVENTS = [
+    ((1, 3), "09:15", "10:15", "Agent Runtime design review", "Routine architecture review; decisions and notes stay with the engineering team."),
+    ((2, 4), "11:30", "12:30", "Reliability test office hours", "Optional working session for routine test questions; no preparation is required."),
+    ((0, 2), "15:30", "16:15", "Partner demo dry run", "Rehearsal for next week's partner demo; no action is needed today."),
+]
+
+
+def recurrence_for_days(day_offsets: tuple[int, ...]) -> str:
+    days = ",".join(WEEKDAY_CODES[offset] for offset in day_offsets)
+    return f"RRULE:FREQ=WEEKLY;BYDAY={days};COUNT={len(day_offsets)}"
+
 
 def create_calendar(calendar, start_day: date, demo_day: date, deck_url: str, doc_url: str, sheet_url: str) -> list[dict]:
     created = []
@@ -518,6 +530,20 @@ def create_calendar(calendar, start_day: date, demo_day: date, deck_url: str, do
             sendUpdates="none",
         )
         entries.append((f"calendar-routine-{index:02d}", request))
+    for index, (day_offsets, begin, end, title, description) in enumerate(OVERLAP_EVENTS, 1):
+        first_day = start_day + timedelta(days=day_offsets[0])
+        request = calendar.events().insert(
+            calendarId="primary",
+            body={
+                "summary": title,
+                "description": f"{description}\n[{MARKER}]",
+                "start": {"dateTime": iso(first_day, begin), "timeZone": TZ_NAME},
+                "end": {"dateTime": iso(first_day, end), "timeZone": TZ_NAME},
+                "recurrence": [recurrence_for_days(day_offsets)],
+            },
+            sendUpdates="none",
+        )
+        entries.append((f"calendar-overlap-{index:02d}", request))
     release_review = calendar.events().insert(
         calendarId="primary",
         body={

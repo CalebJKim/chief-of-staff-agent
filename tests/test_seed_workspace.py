@@ -162,7 +162,7 @@ class SeedWorkspaceTests(unittest.TestCase):
         calendar.new_batch_http_request.side_effect = FakeBatch
         calendar.events().insert.return_value.execute.side_effect = [
             {"id": f"event-{index}", "htmlLink": f"https://example.test/event-{index}"}
-            for index in range(len(seed_workspace.EVENTS) + 1)
+            for index in range(len(seed_workspace.EVENTS) + len(seed_workspace.OVERLAP_EVENTS) + 1)
         ]
 
         created = seed_workspace.create_calendar(
@@ -175,12 +175,36 @@ class SeedWorkspaceTests(unittest.TestCase):
         )
 
         calls = calendar.events().insert.call_args_list
-        self.assertEqual(9, len(created))
-        self.assertEqual(9, len(calls))
-        self.assertEqual(2, calendar.new_batch_http_request.call_count)
+        self.assertEqual(12, len(created))
+        self.assertEqual(12, len(calls))
+        self.assertEqual(3, calendar.new_batch_http_request.call_count)
         for call in calls[:8]:
             self.assertEqual(["RRULE:FREQ=DAILY;COUNT=5"], call.kwargs["body"]["recurrence"])
-        self.assertNotIn("recurrence", calls[8].kwargs["body"])
+        for call, (day_offsets, *_rest) in zip(calls[8:11], seed_workspace.OVERLAP_EVENTS):
+            self.assertEqual([seed_workspace.recurrence_for_days(day_offsets)], call.kwargs["body"]["recurrence"])
+        self.assertNotIn("recurrence", calls[11].kwargs["body"])
+
+    def test_added_meeting_series_overlap_at_three_distinct_times(self) -> None:
+        def minutes(value: str) -> int:
+            hour, minute = (int(part) for part in value.split(":"))
+            return hour * 60 + minute
+
+        routine = [(minutes(begin), minutes(end)) for begin, end, *_rest in seed_workspace.EVENTS]
+        start_times = set()
+        added_by_day = [0, 0, 0, 0, 0]
+        for day_offsets, begin, end, *_rest in seed_workspace.OVERLAP_EVENTS:
+            start = minutes(begin)
+            finish = minutes(end)
+            start_times.add(start)
+            self.assertGreater(len(day_offsets), 0)
+            self.assertLess(len(day_offsets), 5)
+            self.assertTrue(any(start < routine_end and routine_start < finish for routine_start, routine_end in routine))
+            for offset in day_offsets:
+                added_by_day[offset] += 1
+
+        self.assertEqual(3, len(seed_workspace.OVERLAP_EVENTS))
+        self.assertEqual(3, len(start_times))
+        self.assertEqual([1, 1, 2, 1, 1], added_by_day)
 
     @patch.object(seed_workspace, "services")
     def test_cleanup_uses_supported_trash_operations_and_reports_counts(self, mock_services: Mock) -> None:
