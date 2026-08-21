@@ -24,6 +24,8 @@ TZ_NAME = os.environ.get("CHIEF_OF_STAFF_WORKSPACE_TZ", "America/Los_Angeles")
 STATUS_VALUES = ["Not started", "In progress", "Ready for review", "On track", "In review", "Awaiting update", "Blocked", "Complete"]
 MEANINGFUL_EMAIL_COUNT = 6
 BACKGROUND_EMAIL_COUNT = 100
+EMAIL_REFERENCE_HOUR = 13
+EMAIL_SPACING_MINUTES = 2
 
 BACKGROUND_FIRST_NAMES = [
     "Maya", "Owen", "Sofia", "Liam", "Nora",
@@ -270,15 +272,14 @@ def background_email_specs(reference_time: datetime) -> list[dict]:
         subject, body = BACKGROUND_TOPICS[index % len(BACKGROUND_TOPICS)]
         domain = BACKGROUND_DOMAINS[index % len(BACKGROUND_DOMAINS)]
         received_at = reference_time - timedelta(
-            days=1 + index // 4,
-            minutes=90 * (index % 4),
+            minutes=EMAIL_SPACING_MINUTES * (MEANINGFUL_EMAIL_COUNT + index),
         )
         specs.append({
             "sender": f"{first} {last} <{first.lower()}.{last.lower()}@{domain}>",
             "subject": f"{subject} - note {index + 1:03d}",
             "body": body,
             "received_at": received_at,
-            "unread": False,
+            "unread": True,
             "important": False,
             "role": "background",
         })
@@ -294,7 +295,13 @@ def create_emails(
     created: list[dict] | None = None,
 ) -> tuple[list[dict], dict[str, str]]:
     account = gmail.users().getProfile(userId="me").execute()["emailAddress"]
-    reference_time = local_now().replace(microsecond=0)
+    reference_time = datetime(
+        demo_day.year,
+        demo_day.month,
+        demo_day.day,
+        EMAIL_REFERENCE_HOUR,
+        tzinfo=ZoneInfo(TZ_NAME),
+    )
     follow_up_day = next_business_day(demo_day)
     data = [
         {
@@ -351,7 +358,7 @@ def create_emails(
                 "Communications approved this exact replacement copy for slide 4: “Meet the RTX Spark Agent Runtime: a faster path from intent to completed work.” Replace the text APPROVED HEADLINE PLACEHOLDER and leave the rest of the slide unchanged. This is due next week and is not needed today.\n\n"
                 f"Partner Readout: {deck_url}\n\n— Elena"
             ),
-            "unread": False,
+            "unread": True,
             "important": False,
         },
         {
@@ -362,7 +369,7 @@ def create_emails(
                 "Here is the working Partner Readout deck Elena referenced. The approved-copy placeholder is on slide 4. No action is needed today; this is backup work for next week.\n\n"
                 f"Partner Readout: {deck_url}\n\n— Rafael"
             ),
-            "unread": False,
+            "unread": True,
             "important": False,
         },
     ]
@@ -376,7 +383,7 @@ def create_emails(
             spec["subject"],
             spec["body"],
             index,
-            reference_time - timedelta(minutes=index - 1),
+            reference_time - timedelta(minutes=EMAIL_SPACING_MINUTES * (index - 1)),
             unread=spec["unread"],
             important=spec["important"],
             role="meaningful",

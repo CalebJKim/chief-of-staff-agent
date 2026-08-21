@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import base64
 import importlib.util
 import unittest
 from datetime import datetime
+from email import message_from_bytes
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from unittest.mock import Mock, patch
 from zoneinfo import ZoneInfo
@@ -16,7 +19,7 @@ SPEC.loader.exec_module(seed_workspace)
 
 
 class SeedWorkspaceTests(unittest.TestCase):
-    def test_background_mail_is_low_signal_and_older_than_meaningful_mail(self) -> None:
+    def test_background_mail_is_low_signal_unread_and_on_one_day(self) -> None:
         reference = datetime(2026, 8, 21, 12, 0, tzinfo=ZoneInfo("America/Los_Angeles"))
         background = seed_workspace.background_email_specs(reference)
 
@@ -24,7 +27,9 @@ class SeedWorkspaceTests(unittest.TestCase):
         self.assertEqual(100, len({item["sender"] for item in background}))
         self.assertEqual(100, len({item["subject"] for item in background}))
         self.assertTrue(all(item["received_at"] < reference for item in background))
-        self.assertTrue(all(not item["unread"] and not item["important"] for item in background))
+        self.assertEqual({reference.date()}, {item["received_at"].date() for item in background})
+        self.assertEqual(100, len({item["received_at"] for item in background}))
+        self.assertTrue(all(item["unread"] and not item["important"] for item in background))
         prohibited = (
             "urgent", "blocker", "deadline", "decision", "approve", "approval",
             "customer", "launch", "exec", "board", "investor", "follow up",
@@ -33,6 +38,39 @@ class SeedWorkspaceTests(unittest.TestCase):
         for item in background:
             text = f"{item['subject']} {item['body']}".casefold()
             self.assertFalse(any(term in text for term in prohibited), text)
+
+    def test_all_seeded_mail_is_unread_with_unique_times_on_demo_day(self) -> None:
+        gmail = Mock()
+        gmail.users().getProfile.return_value.execute.return_value = {"emailAddress": "demo@example.test"}
+        gmail.users().messages().import_.return_value.execute.side_effect = [
+            {"id": f"message-{index}", "threadId": f"thread-{index}"}
+            for index in range(seed_workspace.MEANINGFUL_EMAIL_COUNT + seed_workspace.BACKGROUND_EMAIL_COUNT)
+        ]
+        demo_day = datetime(2026, 8, 21).date()
+
+        created, _ = seed_workspace.create_emails(
+            gmail,
+            "https://example.test/deck",
+            "https://example.test/sheet",
+            "https://example.test/doc",
+            demo_day,
+        )
+
+        calls = gmail.users().messages().import_.call_args_list
+        dates = []
+        for call in calls:
+            body = call.kwargs["body"]
+            labels = body["labelIds"]
+            message = message_from_bytes(base64.urlsafe_b64decode(body["raw"]))
+            dates.append(parsedate_to_datetime(message["Date"]))
+            self.assertIn("INBOX", labels)
+            self.assertIn("UNREAD", labels)
+
+        self.assertEqual(106, len(created))
+        self.assertEqual(106, len(dates))
+        self.assertEqual({demo_day}, {item.date() for item in dates})
+        self.assertEqual(106, len(set(dates)))
+        self.assertGreater(min(dates[:6]), max(dates[6:]))
 
     def test_campaign_lanes_match_tracker_row_contract(self) -> None:
         sheets = Mock()
