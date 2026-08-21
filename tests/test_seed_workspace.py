@@ -3,7 +3,7 @@ from __future__ import annotations
 import importlib.util
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -57,6 +57,41 @@ class SeedWorkspaceTests(unittest.TestCase):
             removeParents="",
             fields="id,parents",
         )
+
+    @patch.object(seed_workspace, "services")
+    def test_cleanup_uses_supported_trash_operations_and_reports_counts(self, mock_services: Mock) -> None:
+        gmail = Mock()
+        calendar = Mock()
+        drive = Mock()
+        mock_services.return_value = {"gmail": gmail, "calendar": calendar, "drive": drive}
+        state = {
+            "emails": [{"id": "message-1"}],
+            "events": [{"id": "event-1"}],
+            "folder": {"id": "folder-1"},
+        }
+
+        result = seed_workspace.cleanup(state)
+
+        self.assertEqual({"emails_trashed": 1, "events_deleted": 1, "folders_trashed": 1}, result)
+        gmail.users().messages().trash.assert_called_once_with(userId="me", id="message-1")
+        gmail.users().messages().delete.assert_not_called()
+        calendar.events().delete.assert_called_once_with(
+            calendarId="primary",
+            eventId="event-1",
+            sendUpdates="none",
+        )
+        drive.files().update.assert_called_once_with(fileId="folder-1", body={"trashed": True})
+
+    @patch.object(seed_workspace, "services")
+    def test_cleanup_raises_when_any_resource_cannot_be_removed(self, mock_services: Mock) -> None:
+        gmail = Mock()
+        calendar = Mock()
+        drive = Mock()
+        mock_services.return_value = {"gmail": gmail, "calendar": calendar, "drive": drive}
+        gmail.users().messages().trash.return_value.execute.side_effect = RuntimeError("denied")
+
+        with self.assertRaisesRegex(RuntimeError, "email message-1: denied"):
+            seed_workspace.cleanup({"emails": [{"id": "message-1"}]})
 
 
 if __name__ == "__main__":

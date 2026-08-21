@@ -29,7 +29,8 @@ Generated IDs are stored only in the local file:
 $HERMES_HOME/chief-of-staff-workspace-state.json
 ```
 
-The reset and cleanup commands use this file to delete imported mail/events and move generated Drive files to trash.
+The reset and cleanup commands use this file to move imported mail to Gmail
+Trash, delete imported events, and move the generated Drive folder to trash.
 
 ## Seed
 

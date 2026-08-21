@@ -91,7 +91,7 @@ calendar event offsets.
 & $Python -m unittest discover -s skills/productivity/chief-of-staff/tests -v
 ```
 
-Expected result: 11 tests pass across the three suites.
+Expected result: 13 tests pass across the three suites.
 
 ## 5. Install the skills into Hermes
 
@@ -198,11 +198,17 @@ Reset the workspace to its original seeded state:
 & $Python demo\reset_workspace.py
 ```
 
-Remove imported mail and events and move generated Drive content to trash:
+Move imported messages to Gmail Trash, delete imported calendar events, and
+move the generated Drive folder and its contents to Trash:
 
 ```powershell
 & $Python demo\seed_workspace.py --cleanup --confirm
 ```
+
+On success, the command reports exact counts for messages trashed, events
+deleted, and folders trashed. If any operation fails, cleanup exits with an
+error and preserves the state file so the remaining resources can be retried.
+Gmail and Drive items remain recoverable from their respective Trash views.
 
 Review `demo/DEMO_SPEC.md` before manually deleting the local state file. The
 state file is needed to identify the resources created by the seeder.
@@ -221,6 +227,9 @@ The following checks passed on August 21, 2026:
   focus block, Exec Review evidence, and campaign tracker lanes.
 - A real Hermes prompt using the installed skill and configured local model:
   `Good morning chief of staff, what should we work on today?`
+- A live seed/cleanup cycle reporting 6 messages trashed, 95 events deleted,
+  and 1 Drive folder trashed. Independent read-back found no seeded Inbox
+  messages, no seeded events, a trashed Drive folder, and no local state file.
 
 The first one-shot response from the 35B local model took approximately two
 minutes while the command buffered output. `ollama ps` showed the model loaded
@@ -242,3 +251,8 @@ expected top-three priorities and schedule recommendations.
 5. Generic `hermes verify` detects `pytest` for this repository, while the
    repository intentionally documents `unittest`. Use the three explicit test
    commands above as the authoritative offline verification.
+6. Cleanup used Gmail's permanent-delete endpoint, which was not allowed by
+   the intentionally limited `gmail.modify` scope, and silently ignored the
+   errors. Cleanup now moves imported messages to Gmail Trash, reports exact
+   counts, raises on partial failure, and preserves recovery state until every
+   operation succeeds.

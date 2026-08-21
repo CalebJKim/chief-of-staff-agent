@@ -106,7 +106,7 @@ Remove it later with:
 # Windows PowerShell
 & $Python demo\reset_workspace.py
 
-# Or remove it entirely:
+# Or remove the seeded workspace (Gmail and Drive content go to Trash):
 & $Python demo\seed_workspace.py --cleanup --confirm
 ```
 
@@ -114,7 +114,7 @@ Remove it later with:
 # Linux/macOS
 python demo/reset_workspace.py
 
-# Or remove it entirely:
+# Or remove the seeded workspace (Gmail and Drive content go to Trash):
 python demo/seed_workspace.py --cleanup --confirm
 ```
 

@@ -253,17 +253,31 @@ def update_tracker_evidence(sheets, state: dict, evidence: dict[str, str]) -> No
     sheets.spreadsheets().values().update(spreadsheetId=sheet["id"], range="'Campaign Lanes'!A6:J14", valueInputOption="USER_ENTERED", body={"values": values}).execute()
 
 
-def cleanup(state: dict) -> None:
+def cleanup(state: dict) -> dict[str, int]:
     svc = services()
+    result = {"emails_trashed": 0, "events_deleted": 0, "folders_trashed": 0}
+    failures = []
     for item in state.get("emails", []):
-        try: svc["gmail"].users().messages().delete(userId="me", id=item["id"]).execute()
-        except Exception: pass
+        try:
+            svc["gmail"].users().messages().trash(userId="me", id=item["id"]).execute()
+            result["emails_trashed"] += 1
+        except Exception as exc:
+            failures.append(f"email {item['id']}: {exc}")
     for item in state.get("events", []):
-        try: svc["calendar"].events().delete(calendarId="primary", eventId=item["id"], sendUpdates="none").execute()
-        except Exception: pass
+        try:
+            svc["calendar"].events().delete(calendarId="primary", eventId=item["id"], sendUpdates="none").execute()
+            result["events_deleted"] += 1
+        except Exception as exc:
+            failures.append(f"calendar event {item['id']}: {exc}")
     if state.get("folder", {}).get("id"):
-        try: svc["drive"].files().update(fileId=state["folder"]["id"], body={"trashed": True}).execute()
-        except Exception: pass
+        try:
+            svc["drive"].files().update(fileId=state["folder"]["id"], body={"trashed": True}).execute()
+            result["folders_trashed"] += 1
+        except Exception as exc:
+            failures.append(f"Drive folder {state['folder']['id']}: {exc}")
+    if failures:
+        raise RuntimeError("Cleanup incomplete:\n" + "\n".join(failures))
+    return result
 
 
 def seed(week_of: date) -> dict:
@@ -281,7 +295,13 @@ def seed(week_of: date) -> dict:
         state_path().write_text(json.dumps(state, indent=2), encoding="utf-8")
         return state
     except Exception:
-        cleanup(state)
+        try:
+            cleanup(state)
+        except Exception as cleanup_error:
+            state_path().parent.mkdir(parents=True, exist_ok=True)
+            state_path().write_text(json.dumps(state, indent=2), encoding="utf-8")
+            print(f"WARNING: Automatic rollback was incomplete: {cleanup_error}", file=sys.stderr)
+            print(f"Cleanup state saved to {state_path()}", file=sys.stderr)
         raise
 
 
@@ -297,9 +317,9 @@ def main() -> int:
     path = state_path()
     if args.cleanup:
         if not path.exists(): raise SystemExit(f"No workspace state at {path}")
-        cleanup(json.loads(path.read_text(encoding="utf-8")))
+        cleanup_result = cleanup(json.loads(path.read_text(encoding="utf-8")))
         path.unlink(missing_ok=True)
-        print(json.dumps({"ok": True, "status": "removed"}))
+        print(json.dumps({"ok": True, "status": "removed", **cleanup_result}))
         return 0
     chosen_week = date.fromisoformat(args.week_of) if args.week_of else week_monday(local_now().date())
     if args.reset:
