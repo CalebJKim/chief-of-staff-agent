@@ -1,78 +1,277 @@
 # Hermes Chief of Staff Agent
 
-A portable Hermes Agent configuration for a lightweight Google Workspace chief of staff. It reads bounded Gmail, Calendar, Drive, Docs, Sheets, and Slides evidence; ranks the day; resolves calendar conflicts; prepares meeting work; drafts email; and proposes guarded tracker/document updates.
+A portable Hermes Agent configuration for a Google Workspace chief of staff. It reads bounded Gmail, Calendar, Drive, Docs, Sheets, and Slides evidence; ranks the day; resolves calendar conflicts; prepares meetings; drafts email; and proposes guarded tracker and document updates.
 
-## Included
+This README is the complete setup path for a new machine. [`QUICKSTART.md`](QUICKSTART.md) is a shorter checklist, while [`SETUP_GUIDE.md`](SETUP_GUIDE.md) records the validated Windows procedure, troubleshooting history, and maintainer workflow.
 
-- `SOUL.md` routes natural-language chief-of-staff requests.
-- `skills/productivity/chief-of-staff/` contains decision policy, packet builder, and tests.
-- `skills/productivity/ingest/` contains bounded ingestion, focused actions, verification, and tests.
-- `setup/google-workspace/` contains the portable OAuth helper.
-- `config.example.yaml` documents the minimal recommended tool surface.
-- [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) contains the presentation script and staged demo flow.
-- [`SETUP_GUIDE.md`](SETUP_GUIDE.md) records the validated end-to-end Windows setup, verification, and cleanup procedure.
+## What the reference demo creates
 
-No sessions, OAuth credentials, email/calendar fixtures, account IDs, document IDs, or model files are included.
+The optional seeder creates data in the Google account you authorize:
 
-For the shortest installation path, see [QUICKSTART.md](QUICKSTART.md). Every user must create OAuth credentials and connect their own Google account. The optional reference workspace seeder is documented in [demo/DEMO_SPEC.md](demo/DEMO_SPEC.md).
+- 6 imported Gmail messages, marked Inbox, Unread, and Important.
+- 95 Calendar events across one workweek.
+- A Drive folder containing a 14-row campaign tracker Sheet, a campaign-plan Doc, and a 10-slide executive-review deck.
+- A local state file under `HERMES_HOME` containing only the generated resource IDs needed for reset and cleanup.
 
-## Requirements
+Use a dedicated test or demo Google account if possible. Seeding and cleanup modify real Google Workspace data in the connected account.
 
-- Hermes Agent (tested on v0.20.1; use a recent release).
-- Python 3.11+.
-- A tool-calling model that meets Hermes context requirements.
-- A Google Cloud Desktop OAuth client with Gmail, Calendar, Drive, Docs, Sheets, and Slides APIs enabled.
+## 1. Install prerequisites
 
-Install dependencies:
+You need Git, Python 3.11 or newer, [Hermes Agent](https://hermes-agent.nousresearch.com/docs/getting-started/installation), and a tool-calling model supported by Hermes.
 
-```bash
-PYTHON="$(command -v python3 || command -v python)"
-"$PYTHON" -m pip install -r requirements.txt
+### Windows PowerShell
+
+Install Git and Python if they are not already available:
+
+```powershell
+winget install --id Git.Git --exact --source winget
+winget install --id Python.Python.3.11 --exact --scope user
 ```
 
-## Install into a Hermes profile
+Install Hermes:
+
+```powershell
+iex (irm https://hermes-agent.nousresearch.com/install.ps1)
+```
+
+Close and reopen PowerShell so the new commands are on `PATH`, then verify them:
+
+```powershell
+git --version
+python --version
+hermes --version
+```
+
+If `python` opens the Microsoft Store or is not found, the new PowerShell window is important. If it still fails, turn off the `python.exe` App Installer alias in **Settings > Apps > Advanced app settings > App execution aliases**.
+
+### Linux or macOS
+
+Install Git and Python 3.11+ with your operating system's package manager, then install Hermes:
 
 ```bash
-"$PYTHON" install.py
+curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+```
+
+Open a new terminal if instructed, then verify:
+
+```bash
+git --version
+python3 --version
+hermes --version
+```
+
+## 2. Configure a Hermes model
+
+Run the Hermes model picker and configure a provider/model that supports tool calling:
+
+```bash
+hermes model
+```
+
+If Hermes already has a working model, keep the existing configuration. The reference setup on this project was validated with Hermes 0.20.4; use a current release rather than requiring that exact version.
+
+## 3. Clone the demo branch
+
+The setup fixes are maintained on `demo_updates`. Clone that branch explicitly:
+
+```powershell
+# Windows PowerShell
+git clone --branch demo_updates https://github.com/CalebJKim/chief-of-staff-agent.git
+Set-Location chief-of-staff-agent
+```
+
+```bash
+# Linux/macOS
+git clone --branch demo_updates https://github.com/CalebJKim/chief-of-staff-agent.git
+cd chief-of-staff-agent
+```
+
+Confirm that the branch is correct before making local changes:
+
+```bash
+git branch --show-current
+```
+
+The output must be `demo_updates`.
+
+## 4. Create the project Python environment
+
+Hermes may manage its own Python runtime, but these repository scripts need a normal project environment.
+
+### Windows PowerShell
+
+```powershell
+python -m venv .venv
+$Python = (Resolve-Path .\.venv\Scripts\python.exe).Path
+& $Python -m pip install --upgrade pip
+& $Python -m pip install -r requirements.txt
+$env:HERMES_HOME = Join-Path $env:LOCALAPPDATA "hermes"
+```
+
+Keep this PowerShell window open while completing the setup. In a later window, recreate the two variables with:
+
+```powershell
+$Python = (Resolve-Path .\.venv\Scripts\python.exe).Path
+$env:HERMES_HOME = Join-Path $env:LOCALAPPDATA "hermes"
+```
+
+### Linux or macOS
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+export HERMES_HOME="$HOME/.hermes"
+```
+
+The repository pins `tzdata` because Windows does not include the IANA time-zone database used by the seeder.
+
+## 5. Run the offline tests
+
+Run these before connecting Google Workspace so setup problems are separated from account or API problems.
+
+```powershell
+# Windows PowerShell
+& $Python -m unittest discover -s tests -v
+& $Python -m unittest discover -s skills\productivity\ingest\tests -v
+& $Python -m unittest discover -s skills\productivity\chief-of-staff\tests -v
+```
+
+```bash
+# Linux/macOS
+python -m unittest discover -s tests -v
+python -m unittest discover -s skills/productivity/ingest/tests -v
+python -m unittest discover -s skills/productivity/chief-of-staff/tests -v
+```
+
+Expected result: 16 tests pass across the three suites.
+
+## 6. Install the agent into Hermes
+
+```powershell
+# Windows PowerShell
+& $Python install.py --hermes-home $env:HERMES_HOME
 hermes tools enable skills terminal --platform cli
-hermes tools list --platform cli
+hermes skills list
 ```
-
-The installer uses `HERMES_HOME` when set and otherwise detects the normal
-Hermes profile. It preserves an existing `SOUL.md` and adds only the
-chief-of-staff routing instructions. Configure the user name in the Soul if
-desired. Disable unrelated tools and skills with `hermes tools` and
-`hermes skills config`; do not disable `skills` or `terminal`.
-
-## Connect Google Workspace
-
-Never commit OAuth files. Create a Desktop OAuth client, then run:
 
 ```bash
-"$PYTHON" setup/google-workspace/setup.py --install-deps
-"$PYTHON" setup/google-workspace/setup.py --client-secret /path/to/client-secret.json
-"$PYTHON" setup/google-workspace/setup.py --auth-url
+# Linux/macOS
+python install.py --hermes-home "$HERMES_HOME"
+hermes tools enable skills terminal --platform cli
+hermes skills list
 ```
 
-Open the returned URL and approve access. The `http://localhost:1` redirect may
-show a connection error; this is expected. Copy the full URL from the browser
-address bar, then run:
+Confirm that `chief-of-staff` and `ingest` appear in the skills list. The installer preserves an existing customized `SOUL.md`; either copy this repository's chief-of-staff routing paragraph into that file or rerun the installer with `--overwrite-soul` only if replacement is intentional.
+
+Do not disable the `skills` or `terminal` toolsets. You can optionally use `hermes tools` and `hermes skills config` to disable unrelated capabilities for a lightweight demo profile.
+
+## 7. Create Google OAuth credentials
+
+In [Google Cloud Console](https://console.cloud.google.com/):
+
+1. Create or select a project.
+2. Enable the Gmail API, Google Calendar API, Google Drive API, Google Docs API, Google Sheets API, and Google Slides API.
+3. Configure the OAuth consent screen. If the app is in testing, add the Google account used for the demo as a test user.
+4. Go to **APIs & Services > Credentials > Create credentials > OAuth client ID**.
+5. Choose **Desktop app** as the application type and download the client-secret JSON file.
+
+Never add the downloaded secret, generated token, or generated workspace state file to Git.
+
+## 8. Authorize the Google account
+
+Store the downloaded Desktop client secret and generate an authorization URL.
+
+### Windows PowerShell
+
+Replace the example path with the downloaded file's real path:
+
+```powershell
+& $Python setup\google-workspace\setup.py --client-secret "C:\Users\YOUR_NAME\Downloads\client_secret.json"
+$AuthUrl = & $Python setup\google-workspace\setup.py --auth-url
+Start-Process $AuthUrl
+```
+
+Approve all requested scopes. Google then redirects to a URL beginning with `http://localhost:1/`. The browser may say that it cannot connect; that is expected because no local web server is listening there. Copy the **entire URL from the browser address bar**, including its `state` and `code` parameters, and run:
+
+```powershell
+& $Python setup\google-workspace\setup.py --auth-code "FULL_LOCALHOST_REDIRECT_URL"
+& $Python setup\google-workspace\setup.py --check-live
+& $Python (Join-Path $env:HERMES_HOME "skills\productivity\ingest\scripts\verify.py")
+```
+
+### Linux or macOS
 
 ```bash
-"$PYTHON" setup/google-workspace/setup.py --auth-code "FULL_REDIRECT_URL"
-"$PYTHON" setup/google-workspace/setup.py --check-live
-"$PYTHON" skills/productivity/ingest/scripts/verify.py
+python setup/google-workspace/setup.py --client-secret "/path/to/client_secret.json"
+python setup/google-workspace/setup.py --auth-url
 ```
 
-The resulting google_token.json and google_client_secret.json live under HERMES_HOME and are ignored by git.
+Open the printed URL, approve all scopes, then copy the full `http://localhost:1/...` redirect URL from the browser address bar even if the page fails to load:
 
-## Use
+```bash
+python setup/google-workspace/setup.py --auth-code "FULL_LOCALHOST_REDIRECT_URL"
+python setup/google-workspace/setup.py --check-live
+python "$HERMES_HOME/skills/productivity/ingest/scripts/verify.py"
+```
 
-Start a new Hermes session and say:
+Both checks should succeed for Gmail, Calendar, Drive, Docs, Sheets, and Slides. The resulting `google_client_secret.json` and `google_token.json` stay under the local `HERMES_HOME`.
+
+## 9. Seed the reference workspace
+
+This step writes the fake demo data to the authorized Google account. It is not required if you want the agent to work only with data already in that account.
+
+```powershell
+# Windows PowerShell
+& $Python demo\seed_workspace.py --confirm
+```
+
+```bash
+# Linux/macOS
+python demo/seed_workspace.py --confirm
+```
+
+The command defaults to the current workweek. To seed another week, add a Monday date such as `--week-of 2026-08-17` before `--confirm`.
+
+A successful result reports `"emails": 6`, `"events": 95`, and links for the folder, Sheet, Doc, and Slides deck. It also creates:
+
+- Windows: `%LOCALAPPDATA%\hermes\chief-of-staff-workspace-state.json`
+- Linux/macOS: `$HOME/.hermes/chief-of-staff-workspace-state.json`
+
+Do not manually delete that state file; reset and cleanup need its exact resource IDs. The seeder refuses to create a duplicate while the state file exists.
+
+## 10. Verify the live demo data
+
+```powershell
+# Windows PowerShell
+& $Python (Join-Path $env:HERMES_HOME "skills\productivity\ingest\scripts\verify.py")
+& $Python (Join-Path $env:HERMES_HOME "skills\productivity\ingest\scripts\ingest.py")
+& $Python (Join-Path $env:HERMES_HOME "skills\productivity\chief-of-staff\scripts\brief.py") --max-chars 9000
+```
+
+```bash
+# Linux/macOS
+python "$HERMES_HOME/skills/productivity/ingest/scripts/verify.py"
+python "$HERMES_HOME/skills/productivity/ingest/scripts/ingest.py"
+python "$HERMES_HOME/skills/productivity/chief-of-staff/scripts/brief.py" --max-chars 9000
+```
+
+The commands should report successful service access, a bounded evidence packet, and a ranked brief without Python tracebacks.
+
+## 11. Run the demo
+
+Start Hermes from the repository directory:
+
+```bash
+hermes
+```
+
+At the prompt, say:
 
 > Good morning chief of staff, what should we work on today?
 
-Typical follow-ups:
+Useful follow-ups are:
 
 - Help me prepare for the exec review.
 - What slides should I prepare?
@@ -80,32 +279,63 @@ Typical follow-ups:
 - Apply the approved tracker updates.
 - Draft a follow-up to the owner of this blocked lane.
 
-## Safety behavior
+Use [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) for the complete staged presentation flow. Gmail responses are created as drafts and are never sent by these scripts. While a seeded reference workspace is active, drafts created through the chief-of-staff flow are recorded by exact ID so cleanup can remove them without touching unrelated drafts.
 
-- Broad ingestion is bounded and metadata/snippet-first.
-- Gmail drafts are created but never sent by these scripts.
-- Reference-demo cleanup deletes only drafts explicitly recorded in the local demo state.
-- Docs, Sheets, Slides, and Calendar writes require approval and `--confirm`.
-- Tracker updates preserve Lane/PIC, reject duplicate lanes, and validate statuses.
-- One-time codes are redacted before model context.
+## Reset or remove the demo data
 
-## Tests
+Reset deletes the currently tracked reference data and immediately creates a fresh copy for the current workweek:
 
-```bash
-"$PYTHON" -m unittest discover -s tests -v
-"$PYTHON" -m unittest discover -s skills/productivity/ingest/tests -v
-"$PYTHON" -m unittest discover -s skills/productivity/chief-of-staff/tests -v
+```powershell
+# Windows PowerShell
+& $Python demo\reset_workspace.py
 ```
 
-Live smoke test after OAuth:
-
 ```bash
-"$PYTHON" skills/productivity/ingest/scripts/ingest.py
-"$PYTHON" skills/productivity/chief-of-staff/scripts/brief.py --max-chars 9000
+# Linux/macOS
+python demo/reset_workspace.py
 ```
 
-## Portability and demo data
+Cleanup removes the reference workspace without recreating it:
 
-The agent does not require seeded workspace data for ordinary use. The included reference-workspace seeder recreates the Gmail, Calendar, Drive, Sheet, Doc, and Slides environment used to exercise the complete workflow. On another account, the agent reasons over the Workspace data that actually exists.
+```powershell
+# Windows PowerShell
+& $Python demo\seed_workspace.py --cleanup --confirm
+```
 
-The tracker-specific path currently expects a tab named `Campaign Lanes` with columns A:J matching the demonstrated schema. General Gmail, Calendar, and Drive planning works without that sheet. Supporting arbitrary tracker schemas requires a small schema adapter rather than another hard-coded workbook.
+```bash
+# Linux/macOS
+python demo/seed_workspace.py --cleanup --confirm
+```
+
+On successful cleanup:
+
+- Drafts explicitly recorded in the demo state are deleted; unrelated drafts are untouched.
+- Seeded Gmail messages are moved to Gmail Trash.
+- Seeded Calendar events are deleted.
+- The generated Drive folder, including its Sheet, Doc, and Slides files, is moved to Drive Trash.
+- The local state file is removed only after all tracked cleanup operations succeed.
+
+Gmail and Drive items remain recoverable from their Trash. If cleanup reports a partial failure, keep the state file and rerun cleanup after correcting the error.
+
+## Troubleshooting
+
+- **`Workspace already exists`**: run reset or cleanup. Do not delete the state file unless you have manually removed every generated resource.
+- **`No workspace state` during cleanup**: the script no longer has the IDs needed for safe cleanup. Use [`demo/DEMO_SPEC.md`](demo/DEMO_SPEC.md) to identify the generated data manually.
+- **API not enabled or access denied**: confirm all six APIs are enabled, the OAuth client type is Desktop, the account is an allowed test user, and all requested scopes were approved. Then run `--auth-url` again to begin a fresh authorization flow.
+- **OAuth state mismatch**: generate a new URL with `--auth-url` and submit only the redirect URL produced by that same attempt.
+- **Time-zone error on Windows**: activate the repository environment and rerun `pip install -r requirements.txt`; `tzdata` is required.
+- **Hermes cannot find the skills**: confirm `HERMES_HOME`, rerun `install.py`, then run `hermes skills list`.
+- **Hermes has no usable model**: run `hermes model` and choose a tool-calling provider/model.
+
+## Repository contents and safety
+
+- `SOUL.md` routes natural-language chief-of-staff requests.
+- `skills/productivity/chief-of-staff/` contains decision policy, packet building, and tests.
+- `skills/productivity/ingest/` contains bounded ingestion, focused actions, verification, and tests.
+- `setup/google-workspace/` contains the portable OAuth helper.
+- `demo/` contains the reference-workspace seeder, reset wrapper, specification, and fixtures.
+- `config.example.yaml` documents the recommended tool surface.
+
+No sessions, OAuth credentials, account IDs, generated Workspace IDs, email/calendar fixtures from a real account, or model files are included. Broad ingestion is bounded and metadata/snippet-first; one-time codes are redacted before model context; Docs, Sheets, Slides, and Calendar writes require explicit confirmation; and tracker updates preserve lane ownership and validate statuses.
+
+The tracker-specific update path expects a tab named `Campaign Lanes` with columns A:J matching the demonstrated schema. General Gmail, Calendar, and Drive planning works without that sheet. See [`demo/DEMO_SPEC.md`](demo/DEMO_SPEC.md) for the exact reference data and manual fallback procedure.
