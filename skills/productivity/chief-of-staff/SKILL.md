@@ -1,7 +1,7 @@
 ---
 name: chief-of-staff
 description: Handle "chief of staff" requests using Workspace evidence.
-version: 0.2.0
+version: 0.2.1
 author: NVIDIA, Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -34,7 +34,7 @@ ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
 "$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py" --max-messages 20 && "$PYTHON" "$COS_HOME/skills/productivity/chief-of-staff/scripts/brief.py" --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000
 ```
 
-Use only the compact JSON printed by `brief.py`.
+Use only the compact JSON printed by `brief.py`. After `brief.py` succeeds, answer the user's original request immediately from that JSON. Do not reload this skill or call `skill_view` again in the same turn. A generic greeting or offer to help is not a valid response to a completed scan.
 
 ## Decide
 
