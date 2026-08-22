@@ -8,6 +8,7 @@ import json
 import os
 import sys
 import time
+import uuid
 from datetime import date, datetime, timedelta
 from email.message import EmailMessage
 from email.utils import format_datetime
@@ -294,6 +295,7 @@ def import_mail_request(
     sender: str,
     subject: str,
     body: str,
+    seed_run_id: str,
     index: int,
     received_at: datetime,
     *,
@@ -305,7 +307,7 @@ def import_mail_request(
     message["To"] = account
     message["Subject"] = subject
     message["Date"] = format_datetime(received_at)
-    message["Message-ID"] = f"<{MARKER}-{index}@demo.example>"
+    message["Message-ID"] = seeded_rfc_message_id(seed_run_id, index)
     message.set_content(body + f"\n\n[{MARKER}]")
     raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
     labels = ["INBOX"]
@@ -322,6 +324,10 @@ def import_mail_request(
     )
 
 
+def seeded_rfc_message_id(seed_run_id: str, index: int) -> str:
+    return f"<{MARKER}-{seed_run_id}-{index}@demo.example>"
+
+
 def imported_mail_state(result: dict, role: str, received_at: datetime) -> dict:
     return {
         "id": result["id"],
@@ -330,6 +336,43 @@ def imported_mail_state(result: dict, role: str, received_at: datetime) -> dict:
         "role": role,
         "received_at": received_at.isoformat(),
     }
+
+
+def resolve_imported_messages(gmail, seed_run_id: str, specs: list[dict], attempts: int = 3) -> dict[str, dict]:
+    pending = {f"email-{spec['index']:03d}": spec for spec in specs}
+    resolved: dict[str, dict] = {}
+    for attempt in range(attempts):
+        entries = [
+            (
+                request_id,
+                gmail.users().messages().list(
+                    userId="me",
+                    q=f"rfc822msgid:{seeded_rfc_message_id(seed_run_id, spec['index'])}",
+                    includeSpamTrash=True,
+                    maxResults=2,
+                ),
+            )
+            for request_id, spec in pending.items()
+        ]
+
+        def record_resolution(request_id: str, response: dict) -> None:
+            matches = response.get("messages", [])
+            if len(matches) == 1:
+                resolved[request_id] = matches[0]
+
+        execute_batch_requests(
+            gmail,
+            entries,
+            "Gmail import verification",
+            on_success=record_resolution,
+            batch_size=GMAIL_BATCH_SIZE,
+        )
+        pending = {request_id: spec for request_id, spec in pending.items() if request_id not in resolved}
+        if not pending:
+            return resolved
+        if attempt + 1 < attempts:
+            time.sleep(1)
+    raise RuntimeError(f"Gmail import verification could not resolve {len(pending)} messages")
 
 
 def background_email_specs(reference_time: datetime) -> list[dict]:
@@ -361,7 +404,9 @@ def create_emails(
     doc_url: str,
     demo_day: date,
     created: list[dict] | None = None,
+    seed_run_id: str | None = None,
 ) -> tuple[list[dict], dict[str, str]]:
+    seed_run_id = seed_run_id or uuid.uuid4().hex
     account = gmail.users().getProfile(userId="me").execute()["emailAddress"]
     reference_time = datetime(
         demo_day.year,
@@ -456,6 +501,7 @@ def create_emails(
 
     entries = []
     metadata = {}
+    created_by_request = {}
     for spec in mail_specs:
         request_id = f"email-{spec['index']:03d}"
         metadata[request_id] = spec
@@ -465,6 +511,7 @@ def create_emails(
             spec["sender"],
             spec["subject"],
             spec["body"],
+            seed_run_id,
             spec["index"],
             spec["received_at"],
             unread=spec["unread"],
@@ -476,8 +523,7 @@ def create_emails(
         spec = metadata[request_id]
         item = imported_mail_state(response, spec["role"], spec["received_at"])
         created.append(item)
-        if spec.get("key"):
-            evidence[spec["key"]] = item["url"]
+        created_by_request[request_id] = item
 
     execute_batch_requests(
         gmail,
@@ -486,6 +532,13 @@ def create_emails(
         on_success=record_import,
         batch_size=GMAIL_BATCH_SIZE,
     )
+    resolved = resolve_imported_messages(gmail, seed_run_id, mail_specs)
+    for request_id, result in resolved.items():
+        spec = metadata[request_id]
+        item = created_by_request[request_id]
+        item.update(imported_mail_state(result, spec["role"], spec["received_at"]))
+        if spec.get("key"):
+            evidence[spec["key"]] = item["url"]
     return created, evidence
 
 
@@ -658,7 +711,7 @@ def seed(week_of: date) -> dict:
     svc = services()
     today = local_now().date()
     demo_day = today if week_of <= today <= week_of + timedelta(days=4) else week_of
-    state = {"schema": 2, "marker": MARKER, "week_of": week_of.isoformat(), "demo_day": demo_day.isoformat(), "events": [], "emails": [], "drafts": []}
+    state = {"schema": 3, "marker": MARKER, "seed_run_id": uuid.uuid4().hex, "week_of": week_of.isoformat(), "demo_day": demo_day.isoformat(), "events": [], "emails": [], "drafts": []}
     try:
         state["folder"] = create_folder(svc["drive"])
         state["doc"] = create_doc(svc["docs"], svc["drive"], state["folder"]["id"])
@@ -671,6 +724,7 @@ def seed(week_of: date) -> dict:
             state["doc"]["url"],
             demo_day,
             state["emails"],
+            state["seed_run_id"],
         )
         update_tracker_evidence(svc["sheets"], state, evidence)
         state["events"] = create_calendar(svc["calendar"], week_of, demo_day, state["slides"]["url"], state["doc"]["url"], state["sheet"]["url"])

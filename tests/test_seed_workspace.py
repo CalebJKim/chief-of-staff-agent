@@ -64,6 +64,10 @@ class SeedWorkspaceTests(unittest.TestCase):
             {"id": f"message-{index}", "threadId": f"thread-{index}"}
             for index in range(seed_workspace.MEANINGFUL_EMAIL_COUNT + seed_workspace.BACKGROUND_EMAIL_COUNT)
         ]
+        gmail.users().messages().list.return_value.execute.side_effect = [
+            {"messages": [{"id": f"live-message-{index}", "threadId": f"live-thread-{index}"}]}
+            for index in range(seed_workspace.MEANINGFUL_EMAIL_COUNT + seed_workspace.BACKGROUND_EMAIL_COUNT)
+        ]
         demo_day = datetime(2026, 8, 21).date()
 
         created, _ = seed_workspace.create_emails(
@@ -76,20 +80,27 @@ class SeedWorkspaceTests(unittest.TestCase):
 
         calls = gmail.users().messages().import_.call_args_list
         dates = []
+        message_ids = []
         for call in calls:
             body = call.kwargs["body"]
             labels = body["labelIds"]
             message = message_from_bytes(base64.urlsafe_b64decode(body["raw"]))
             dates.append(parsedate_to_datetime(message["Date"]))
+            message_ids.append(message["Message-ID"])
             self.assertIn("INBOX", labels)
             self.assertIn("UNREAD", labels)
 
         self.assertEqual(106, len(created))
+        self.assertEqual("live-message-0", created[0]["id"])
+        self.assertEqual("live-thread-0", created[0]["thread_id"])
         self.assertEqual(106, len(dates))
         self.assertEqual({demo_day}, {item.date() for item in dates})
         self.assertEqual(106, len(set(dates)))
+        self.assertEqual(106, len(set(message_ids)))
+        self.assertTrue(all(message_id.startswith(f"<{seed_workspace.MARKER}-") for message_id in message_ids))
+        self.assertTrue(all(message_id.endswith("@demo.example>") for message_id in message_ids))
         self.assertGreater(min(dates[:6]), max(dates[6:]))
-        self.assertEqual(6, gmail.new_batch_http_request.call_count)
+        self.assertEqual(12, gmail.new_batch_http_request.call_count)
 
     @patch.object(seed_workspace.time, "sleep")
     def test_batch_retries_only_rate_limited_requests(self, mock_sleep: Mock) -> None:

@@ -237,7 +237,7 @@ The command defaults to the current workweek. To seed another week, add a Monday
 
 A successful result reports `"emails": 106`, `"events": 95`, and links for the folder, Sheet, Doc, and Slides deck. The six meaningful messages are the newest seeded mail; the 100 background messages are older, non-actionable inbox noise. It also creates:
 
-On the validated Windows demo account, two complete trials averaged about 117 seconds to seed and 65 seconds to clean up. The bounded 20-message ingestion averaged about 5.4 seconds. Google API and network conditions will affect these times.
+On the validated Windows demo account, a complete permanent-delete reset and re-seed took 48.26 seconds. The bounded 20-message ingestion previously averaged about 5.4 seconds. Google API and network conditions will affect these times.
 
 - Windows: `%LOCALAPPDATA%\hermes\chief-of-staff-workspace-state.json`
 - Linux/macOS: `$HOME/.hermes/chief-of-staff-workspace-state.json`
@@ -315,7 +315,7 @@ python demo/seed_workspace.py --cleanup --confirm
 On successful cleanup:
 
 - Drafts explicitly recorded in the demo state are deleted; unrelated drafts are untouched.
-- Seeded Gmail messages are permanently deleted by their recorded IDs, so they do not remain as deleted-message placeholders in conversations.
+- Seeded Gmail messages use a unique RFC message ID for every seed cycle and are permanently deleted by their recorded Gmail IDs, so they do not remain as deleted-message placeholders or get deduplicated into reused conversations.
 - Seeded Calendar events are deleted.
 - The generated Drive folder, including its Sheet, Doc, and Slides files, is moved to Drive Trash.
 - The local state file is removed only after all tracked cleanup operations succeed.

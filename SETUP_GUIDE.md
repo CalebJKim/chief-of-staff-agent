@@ -256,12 +256,11 @@ The following checks passed on August 21, 2026:
   focus block, Exec Review evidence, and campaign tracker lanes.
 - A real Hermes prompt using the installed skill and configured local model:
   `Good morning chief of staff, what should we work on today?`
-- Two live 106-message seed/cleanup cycles. Trial 1 took 121.18 seconds to seed,
-  5.26 seconds to ingest, and 63.41 seconds to clean up. Trial 2 took 113.39
-  seconds to seed, 5.44 seconds to ingest, and 65.96 seconds to clean up. Each
-  cleanup reported 106 messages trashed, 95 events deleted, and 1 Drive folder
-  trashed. Final read-back found no seeded Inbox messages, seeded events,
-  active Drive items, source errors, or local state file.
+- A live permanent-delete reset and re-seed took 48.26 seconds. Final Gmail
+  read-back found exactly 106 current seeded messages, no prior-run seeded
+  messages, no seeded messages in Trash, and exact agreement between all 106
+  saved cleanup IDs and live Gmail IDs. Each of the six meaningful threads
+  contained exactly one message.
 - The 14,000-character decision packet retained all 6 meaningful messages,
   all 5 conflict groups, 3 prioritized meetings, and 6 compact tracker rows.
 
@@ -290,7 +289,9 @@ expected top-three priorities and schedule recommendations.
    moved imported messages to Trash and reported failures correctly, but repeated
    seeds then left deleted-message placeholders in reused conversations. Cleanup
    now requests full Gmail access and permanently deletes only the exact imported
-   message IDs recorded in demo state. It still raises on partial failure and
+   message IDs recorded in demo state. Each seed cycle also uses unique RFC
+   message IDs so Gmail cannot deduplicate new imports against a prior cycle.
+   Cleanup still raises on partial failure and
    preserves recovery state until every operation succeeds.
 7. Drafts created during the interactive demo were not represented in the
    seeder state, so cleanup could not identify them. The draft helper now has
