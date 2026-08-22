@@ -490,14 +490,14 @@ def create_emails(
 
 
 EVENTS = [
-    ("08:00", "08:25", "Chief of Staff daily priorities", "Overnight changes, today's decision calendar, stakeholder risks, and executive air cover."),
+    ("08:00", "08:25", "RTX Spark engineering leads sync", "Routine team updates, planned work, and cross-functional dependencies."),
     ("09:00", "09:30", "Agent Runtime engineering stand-up", "Routine engineering progress, test coverage, and owner check-in."),
     ("10:00", "10:45", "RTX Spark integration sync", "Routine integration status and dependency review."),
     ("11:00", "12:00", "Engineering focus block", "Protected time for planned technical work."),
     ("12:00", "13:00", "Team lunch", "Optional team lunch; no preparation required."),
     ("15:15", "15:45", "Evaluation office hours", "Optional questions about completed evaluation methodology and results."),
     ("16:00", "16:30", "Partner demo checklist", "Routine readiness check for next week's partner work."),
-    ("17:00", "17:20", "End-of-day handoff", "Routine owner handoff and next-day planning."),
+    ("17:00", "17:20", "Agent Runtime documentation review", "Review routine documentation edits and collect notes for the next planned revision."),
 ]
 
 WEEKDAY_CODES = ("MO", "TU", "WE", "TH", "FR")
