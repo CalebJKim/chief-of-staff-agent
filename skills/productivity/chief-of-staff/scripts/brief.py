@@ -267,6 +267,8 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
             "signals": reasons,
         })
     ranked_mail.sort(key=lambda m: (-m["signal_score"], -next((x.get("internal_ms", 0) for x in messages if x.get("id") == m.get("id")), 0)))
+    for item in ranked_events + ranked_mail:
+        item.pop("signal_score", None)
 
     recent_files = [
         {k: item.get(k) for k in ("id", "name", "kind", "modified", "url", "starred", "last_editor")}
@@ -282,7 +284,7 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
     }
     packet = {
         "schema": 1,
-        "instruction": "Use evidence, not signal_score alone. Group related mail into one outcome. Output no more than three distinct priorities. stale_timing means relative dates in that mail are historical: call the work unresolved and verify timing; never claim it is due today. ok_empty means success with zero results, not unavailable.",
+        "instruction": "Use evidence to rank. Internal ranking scores are not user-facing; never mention or display them. Group related mail into one outcome. Output no more than three distinct priorities. stale_timing means relative dates in that mail are historical: call the work unresolved and verify timing; never claim it is due today. ok_empty means success with zero results, not unavailable.",
         "freshness": {"generated_at": snapshot.get("generated_at"), "timezone": tz_name, "window": snapshot.get("window")},
         "coverage": coverage,
         "source_status": source_status,

@@ -39,6 +39,7 @@ class BriefTests(unittest.TestCase):
         self.assertEqual(len(packet["conflicts"]), 1)
         self.assertEqual(len(packet["conflicts"][0]["events"]), 3)
         self.assertEqual(packet["mail"][0]["id"], "msg-urgent")
+        self.assertNotIn('"signal_score"', json.dumps(packet))
         self.assertEqual(packet["mail"][0]["url"], "https://mail.google.com/mail/u/0/#all/thread-urgent")
         self.assertEqual(packet["source_status"], {"calendar": "ok", "gmail": "ok", "drive": "ok"})
         exec_event = next(event for event in packet["meetings"] if event["id"] == "evt-exec")

@@ -38,7 +38,7 @@ Use only the compact JSON printed by `brief.py`.
 
 ## Decide
 
-1. Pick up to three **distinct** outcomes that matter now. Group messages, meetings, and files about the same project into one priority. Rank by consequence and timing—not unread count or `signal_score`. A same-day email that moves a decision/exec meeting into today is the default #1 “schedule shock”: say clearly that it moved, why it changes the user's day, and pivot immediately to preparation.
+1. Pick up to three **distinct** outcomes that matter now. Group messages, meetings, and files about the same project into one priority. Rank by consequence and timing—not unread count or internal scores. Never mention or display scores. A same-day email that moves a decision/exec meeting into today is the default #1 “schedule shock”: say clearly that it moved, why it changes the user's day, and pivot immediately to preparation.
 2. For each: state **why today** and the **first action**. Link the supporting email, event, or file.
 3. Resolve every calendar conflict. Prefer decision ownership, customer/external impact, organizer role, and evidence of needed preparation. State uncertainty.
 4. Assign one preparation task to a real `focus_block`. Never invent availability.
