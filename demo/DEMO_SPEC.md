@@ -36,9 +36,9 @@ $HERMES_HOME/chief-of-staff-workspace-state.json
 ```
 
 The reset and cleanup commands use this file to delete tracked demo drafts,
-move imported mail to Gmail Trash, delete imported events, and move the
-generated Drive folder to trash. Ordinary Gmail drafts are never listed or
-deleted.
+permanently delete imported mail by exact message ID, delete imported events,
+and move the generated Drive folder to trash. Ordinary Gmail messages and drafts
+are never listed or deleted.
 
 ## Seed
 
@@ -59,7 +59,7 @@ python demo/seed_workspace.py --week-of 2026-08-17 --confirm
 ```bash
 python demo/reset_workspace.py
 
-# Remove the seeded workspace instead (Gmail and Drive items go to Trash):
+# Remove the seeded workspace instead (Gmail is permanently deleted; Drive goes to Trash):
 python demo/seed_workspace.py --cleanup --confirm
 ```
 

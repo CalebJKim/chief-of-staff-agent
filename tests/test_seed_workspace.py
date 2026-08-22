@@ -207,7 +207,7 @@ class SeedWorkspaceTests(unittest.TestCase):
         self.assertEqual([1, 1, 2, 1, 1], added_by_day)
 
     @patch.object(seed_workspace, "services")
-    def test_cleanup_uses_supported_trash_operations_and_reports_counts(self, mock_services: Mock) -> None:
+    def test_cleanup_permanently_deletes_tracked_mail_and_reports_counts(self, mock_services: Mock) -> None:
         gmail = Mock()
         calendar = Mock()
         drive = Mock()
@@ -223,10 +223,10 @@ class SeedWorkspaceTests(unittest.TestCase):
 
         result = seed_workspace.cleanup(state)
 
-        self.assertEqual({"drafts_deleted": 1, "emails_trashed": 1, "events_deleted": 1, "folders_trashed": 1}, result)
+        self.assertEqual({"drafts_deleted": 1, "emails_deleted": 1, "events_deleted": 1, "folders_trashed": 1}, result)
         gmail.users().drafts().delete.assert_called_once_with(userId="me", id="draft-1")
-        gmail.users().messages().trash.assert_called_once_with(userId="me", id="message-1")
-        gmail.users().messages().delete.assert_not_called()
+        gmail.users().messages().delete.assert_called_once_with(userId="me", id="message-1")
+        gmail.users().messages().trash.assert_not_called()
         self.assertEqual(1, gmail.new_batch_http_request.call_count)
         calendar.events().delete.assert_called_once_with(
             calendarId="primary",
@@ -243,7 +243,7 @@ class SeedWorkspaceTests(unittest.TestCase):
         drive = Mock()
         gmail.new_batch_http_request.side_effect = FakeBatch
         mock_services.return_value = {"gmail": gmail, "calendar": calendar, "drive": drive}
-        gmail.users().messages().trash.return_value.execute.side_effect = RuntimeError("denied")
+        gmail.users().messages().delete.return_value.execute.side_effect = RuntimeError("denied")
 
         with self.assertRaisesRegex(RuntimeError, "email-message-1: denied"):
             seed_workspace.cleanup({"emails": [{"id": "message-1"}]})
@@ -258,11 +258,11 @@ class SeedWorkspaceTests(unittest.TestCase):
         drive = Mock()
         gmail.new_batch_http_request.side_effect = FakeBatch
         mock_services.return_value = {"gmail": gmail, "calendar": calendar, "drive": drive}
-        gmail.users().messages().trash.return_value.execute.side_effect = MissingResource("not found")
+        gmail.users().messages().delete.return_value.execute.side_effect = MissingResource("not found")
 
         result = seed_workspace.cleanup({"emails": [{"id": "message-1"}]})
 
-        self.assertEqual(1, result["emails_trashed"])
+        self.assertEqual(1, result["emails_deleted"])
 
 
 if __name__ == "__main__":

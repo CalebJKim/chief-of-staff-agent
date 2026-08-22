@@ -132,7 +132,9 @@ $AuthUrl = & $Python setup\google-workspace\setup.py --auth-url
 Start-Process $AuthUrl
 ```
 
-Approve all requested scopes. The browser will redirect to
+Approve all requested scopes, including full Gmail access. Full Gmail access is
+required so cleanup can permanently delete the tracked seeded messages without
+leaving deleted-message placeholders in conversations. The browser will redirect to
 `http://localhost:1` and may show a connection error; this is expected. Copy
 the entire URL from the browser address bar and exchange it immediately:
 
@@ -216,8 +218,8 @@ Reset the workspace to its original seeded state:
 & $Python demo\reset_workspace.py
 ```
 
-Delete explicitly tracked demo drafts, move imported messages to Gmail Trash,
-delete imported calendar events, and move the generated Drive folder and its
+Delete explicitly tracked demo drafts, permanently delete imported messages by
+their recorded IDs, delete imported calendar events, and move the generated Drive folder and its
 contents to Trash:
 
 ```powershell
@@ -225,11 +227,11 @@ contents to Trash:
 ```
 
 On success, the command reports exact counts for drafts deleted, messages
-trashed, events deleted, and folders trashed. If any operation fails, cleanup
+permanently deleted, events deleted, and folders trashed. If any operation fails, cleanup
 exits with an error and preserves the state file so the remaining resources
 can be retried. A retry treats already-absent resources as successfully
-cleared. Gmail messages and Drive items remain recoverable from their respective
-Trash views.
+cleared. Gmail deletion is immediate and cannot be undone; Drive items remain
+recoverable from Drive Trash.
 
 Drafts are eligible for cleanup only when the action helper creates them with
 `--track-demo-state` while the reference-workspace state file exists. This
@@ -283,11 +285,13 @@ expected top-three priorities and schedule recommendations.
 5. Generic `hermes verify` detects `pytest` for this repository, while the
    repository intentionally documents `unittest`. Use the three explicit test
    commands above as the authoritative offline verification.
-6. Cleanup used Gmail's permanent-delete endpoint, which was not allowed by
-   the intentionally limited `gmail.modify` scope, and silently ignored the
-   errors. Cleanup now moves imported messages to Gmail Trash, reports exact
-   counts, raises on partial failure, and preserves recovery state until every
-   operation succeeds.
+6. An earlier cleanup used Gmail's permanent-delete endpoint without its
+   required full Gmail scope and silently ignored the errors. The first fix
+   moved imported messages to Trash and reported failures correctly, but repeated
+   seeds then left deleted-message placeholders in reused conversations. Cleanup
+   now requests full Gmail access and permanently deletes only the exact imported
+   message IDs recorded in demo state. It still raises on partial failure and
+   preserves recovery state until every operation succeeds.
 7. Drafts created during the interactive demo were not represented in the
    seeder state, so cleanup could not identify them. The draft helper now has
    explicit demo-state tracking, and cleanup deletes only those recorded draft

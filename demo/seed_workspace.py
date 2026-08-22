@@ -584,7 +584,7 @@ def resource_is_already_absent(exc: Exception) -> bool:
 
 def cleanup(state: dict) -> dict[str, int]:
     svc = services()
-    result = {"drafts_deleted": 0, "emails_trashed": 0, "events_deleted": 0, "folders_trashed": 0}
+    result = {"drafts_deleted": 0, "emails_deleted": 0, "events_deleted": 0, "folders_trashed": 0}
     failures = []
     for item in state.get("drafts", []):
         try:
@@ -598,20 +598,20 @@ def cleanup(state: dict) -> dict[str, int]:
     email_entries = [
         (
             f"email-{item['id']}",
-            svc["gmail"].users().messages().trash(userId="me", id=item["id"]),
+            svc["gmail"].users().messages().delete(userId="me", id=item["id"]),
         )
         for item in state.get("emails", [])
     ]
 
-    def record_trashed_email(_request_id: str, _response) -> None:
-        result["emails_trashed"] += 1
+    def record_deleted_email(_request_id: str, _response) -> None:
+        result["emails_deleted"] += 1
 
     try:
         execute_batch_requests(
             svc["gmail"],
             email_entries,
             "Gmail cleanup",
-            on_success=record_trashed_email,
+            on_success=record_deleted_email,
             accept_exception=resource_is_already_absent,
             batch_size=GMAIL_BATCH_SIZE,
         )

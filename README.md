@@ -14,7 +14,7 @@ The optional seeder creates data in the Google account you authorize:
 - A Drive folder containing a 14-row campaign tracker Sheet, a campaign-plan Doc, and a 10-slide executive-review deck.
 - A local state file under `HERMES_HOME` containing only the generated resource IDs needed for reset and cleanup.
 
-Use a dedicated test or demo Google account if possible. Seeding and cleanup modify real Google Workspace data in the connected account.
+Use a dedicated test or demo Google account. Seeding and cleanup modify real Google Workspace data in the connected account, and cleanup permanently deletes the exact seeded Gmail message IDs.
 
 ## 1. Install prerequisites
 
@@ -194,7 +194,7 @@ $AuthUrl = & $Python setup\google-workspace\setup.py --auth-url
 Start-Process $AuthUrl
 ```
 
-Approve all requested scopes. Google then redirects to a URL beginning with `http://localhost:1/`. The browser may say that it cannot connect; that is expected because no local web server is listening there. Copy the **entire URL from the browser address bar**, including its `state` and `code` parameters, and run:
+Approve all requested scopes, including full Gmail access. That scope is required so reset can permanently delete only the tracked seeded messages instead of leaving deleted-message placeholders in Gmail conversations. Google then redirects to a URL beginning with `http://localhost:1/`. The browser may say that it cannot connect; that is expected because no local web server is listening there. Copy the **entire URL from the browser address bar**, including its `state` and `code` parameters, and run:
 
 ```powershell
 & $Python setup\google-workspace\setup.py --auth-code "FULL_LOCALHOST_REDIRECT_URL"
@@ -315,12 +315,12 @@ python demo/seed_workspace.py --cleanup --confirm
 On successful cleanup:
 
 - Drafts explicitly recorded in the demo state are deleted; unrelated drafts are untouched.
-- Seeded Gmail messages are moved to Gmail Trash.
+- Seeded Gmail messages are permanently deleted by their recorded IDs, so they do not remain as deleted-message placeholders in conversations.
 - Seeded Calendar events are deleted.
 - The generated Drive folder, including its Sheet, Doc, and Slides files, is moved to Drive Trash.
 - The local state file is removed only after all tracked cleanup operations succeed.
 
-Gmail and Drive items remain recoverable from their Trash. If cleanup reports a partial failure, keep the state file and rerun cleanup after correcting the error.
+Gmail deletion is immediate and cannot be undone; unrelated messages are untouched. Drive items remain recoverable from Drive Trash. If cleanup reports a partial failure, keep the state file and rerun cleanup after correcting the error.
 
 ## Troubleshooting
 
