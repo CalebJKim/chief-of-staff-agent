@@ -302,3 +302,7 @@ expected top-three priorities and schedule recommendations.
    fitter discarded mail until only one message remained. Conflict and tracker
    data are now compacted, low-value duplicate context is trimmed first, and
    the normal 14,000-character budget preserves the six highest-signal emails.
+9. The local model occasionally rewrote the multi-line start-of-day command in
+   `SKILL.md`, duplicated the Hermes path, and substituted an unsupported
+   `actions.py gmail threads` call. The exact ingest-and-brief command now lives
+   in `scripts/start_day.sh`; the skill invokes that file with one command.
