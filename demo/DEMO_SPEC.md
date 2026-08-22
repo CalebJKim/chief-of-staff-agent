@@ -6,20 +6,21 @@ The seeder creates a self-contained RTX Spark Agent Runtime workspace in the Goo
 
 - **6 meaningful Gmail messages**, all in Inbox and Unread:
   1. Priya reports a P0 duplicate tool-completion regression and asks to postpone the release review. Important.
-  2. Daniel supplies the replacement slot—Monday at 11:00 AM Pacific—and asks for an unsent confirmation draft to Priya and Daniel. Important.
+  2. Daniel supplies the replacement slot—the next business day at 11:00 AM Pacific—and asks for an unsent confirmation draft to Priya and Daniel. Important.
   3. Mateo says the latency evaluation is complete and ready for review.
   4. Aisha confirms that only the evaluation tracker's status should change.
   5. Elena supplies the exact approved slide-4 headline.
   6. Rafael identifies the Partner Readout deck containing the placeholder.
-- **100 background Gmail messages** from unique fictional people:
-  - Each has a unique sender, subject, timestamp, and harmless low-signal body.
+- **70 background Gmail messages** from unique fictional people:
+  - Each has a unique sender, natural unnumbered subject, timestamp, and harmless low-signal body.
   - They are Inbox and Unread but not Important.
   - They are older than all six meaningful messages.
-  - Ingestion reads only the newest 20 Inbox messages, so it sees all six meaningful messages plus 14 background messages.
+  - The seeder writes them before a final dedicated batch containing the six meaningful messages, keeping all six within Gmail's first 20 in the dedicated demo inbox.
+  - Ingestion scans metadata for up to 120 matching Inbox messages, sorts by `internalDate`, and retains the newest 20, so it sees all six meaningful messages plus 14 background messages.
 - **12 Calendar resources** producing 47 visible meeting instances across one workweek:
   - Eight routine weekday series.
   - Three two-day series that overlap existing meetings at different times.
-  - One Friday `RTX Spark Agent Runtime release review` that action 1 moves to Monday at 11:00 AM Pacific.
+  - One `RTX Spark Agent Runtime release review` on the resolved demo day that action 1 moves to the next business day at 11:00 AM Pacific.
 - **1 Google Sheet**: `RTX Spark Delivery Tracker`
   - Tab: `Campaign Lanes`
   - Columns A:J: Lane, PIC, Status, Latest update, Next action, Due, Dependency/blocker, Evidence, Artifact, Notes.
@@ -54,7 +55,7 @@ That file contains only the resolved operations for the current three ranked wor
    - End every item with its inline Mail link and Calendar, Tracker, or Deck link.
    - Do not show internal ranking scores and do not open a browser.
 2. `Take the action items for the first thing.`
-   - Move the existing release review to Monday at 11:00 AM Pacific without creating a duplicate.
+   - Move the existing release review to the next business day at 11:00 AM Pacific without creating a duplicate.
    - Create an unsent reply draft in Priya's thread with Daniel copied.
 3. `Take the action items for the second thing.`
    - Change only `Agent Runtime Latency Evaluation` from `In progress` to `Ready for review`.
@@ -69,7 +70,8 @@ First connect a dedicated demo Google account as described in `QUICKSTART.md`, t
 python demo/seed_workspace.py --confirm
 ```
 
-To target a particular Monday:
+By default, the demo day is today on weekdays or the upcoming Monday on
+weekends. To target a particular week instead:
 
 ```bash
 python demo/seed_workspace.py --week-of 2026-08-17 --confirm
@@ -94,7 +96,7 @@ Gmail deletion is permanent; the Drive folder goes to Trash. If cleanup is parti
 If an organization policy prevents one resource from being created, reproduce the names and exact action data above. The most important constraints are:
 
 1. Keep the six meaningful messages newer than the background mail, with Priya and Daniel marked Important.
-2. Use one existing release-review event and provide Monday at 11:00 AM Pacific as the new slot.
+2. Use one existing release-review event on the demo day and provide the next business day at 11:00 AM Pacific as the new slot.
 3. Keep the Sheet tab named `Campaign Lanes` with the A:J schema and exact evaluation lane name.
 4. Put the exact placeholder and approved replacement text in the Partner Readout evidence.
 

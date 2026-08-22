@@ -20,6 +20,7 @@ GOOGLE_MIMES = {
 }
 URL_RE = re.compile(r"https?://[^\s<>'\"]+")
 DEFAULT_MAX_MESSAGES = 20
+DEFAULT_MAIL_SCAN_LIMIT = 120
 OTP_RE = re.compile(
     r"(?i)\b(verification(?:\s+code)?|security\s+code|one[- ]time\s+(?:code|password)|otp|code)"
     r"(\s*(?:is|:)?\s*)\d{4,8}\b"
@@ -96,9 +97,16 @@ def _calendar_timezone(calendar_service: Any) -> str:
         return getattr(local, "key", None) or "UTC"
 
 
+def next_demo_weekday(day: date) -> date:
+    """Use the current weekday, or the upcoming Monday on a weekend."""
+    if day.weekday() < 5:
+        return day
+    return day + timedelta(days=7 - day.weekday())
+
+
 def _calendar_window(target: str | None, days_ahead: int, tz_name: str) -> tuple[datetime, datetime]:
     tz = ZoneInfo(tz_name)
-    target_day = date.fromisoformat(target) if target else datetime.now(tz).date()
+    target_day = date.fromisoformat(target) if target else next_demo_weekday(datetime.now(tz).date())
     start = datetime.combine(target_day, time.min, tzinfo=tz)
     return start, start + timedelta(days=days_ahead)
 
@@ -195,29 +203,44 @@ def fetch_calendars(calendar_service: Any, start: datetime, end: datetime, max_e
     return ordered[:max_events], errors
 
 
-def fetch_mail(gmail_service: Any, days_back: int, max_messages: int, query: str | None) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+def fetch_mail(
+    gmail_service: Any,
+    days_back: int,
+    max_messages: int,
+    query: str | None,
+    scan_limit: int = DEFAULT_MAIL_SCAN_LIMIT,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     profile = gmail_service.users().getProfile(userId="me").execute()
     # The chief of staff manages the active inbox, not just mail received in a
     # rolling time window. Older unread/important work remains actionable until
-    # the user clears it. Gmail returns this query newest-first; max_messages keeps
-    # the model-facing workload bounded.
+    # the user clears it. Gmail does not guarantee list order, so scan a broader
+    # bounded set, sort its metadata by internalDate, and only then keep the
+    # model-facing max_messages result.
     gmail_query = query or "in:inbox -category:promotions -category:social"
+    effective_scan_limit = max(max_messages, scan_limit)
     refs: list[dict[str, str]] = []
+    seen_ids: set[str] = set()
     page = None
-    while len(refs) < max_messages:
+    while len(refs) < effective_scan_limit:
         response = gmail_service.users().messages().list(
             userId="me",
             q=gmail_query,
-            maxResults=min(100, max_messages - len(refs)),
+            maxResults=min(100, effective_scan_limit - len(refs)),
             pageToken=page,
         ).execute()
-        refs.extend(response.get("messages", []))
+        for ref in response.get("messages", []):
+            message_id = ref.get("id", "")
+            if message_id and message_id not in seen_ids:
+                refs.append(ref)
+                seen_ids.add(message_id)
+                if len(refs) >= effective_scan_limit:
+                    break
         page = response.get("nextPageToken")
         if not page:
             break
 
     messages: list[dict[str, Any]] = []
-    for ref in refs[:max_messages]:
+    for ref in refs:
         msg = gmail_service.users().messages().get(
             userId="me",
             id=ref["id"],
@@ -243,8 +266,12 @@ def fetch_mail(gmail_service: Any, days_back: int, max_messages: int, query: str
                 "links": _links(snippet),
             }
         )
-    messages.sort(key=lambda m: m.get("internal_ms", 0), reverse=True)
-    return messages, {"email": profile.get("emailAddress", ""), "query": gmail_query}
+    messages.sort(key=lambda m: (m.get("internal_ms", 0), m.get("id", "")), reverse=True)
+    return messages[:max_messages], {
+        "email": profile.get("emailAddress", ""),
+        "query": gmail_query,
+        "mail_scanned": len(refs),
+    }
 
 
 def fetch_drive(drive_service: Any, days_back: int, max_files: int) -> list[dict[str, Any]]:
@@ -333,7 +360,13 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
     except Exception as exc:
         errors.append(f"calendar: {exc}")
     try:
-        messages, identity = fetch_mail(gmail, args.days_back, args.max_messages, args.gmail_query)
+        messages, identity = fetch_mail(
+            gmail,
+            args.days_back,
+            args.max_messages,
+            args.gmail_query,
+            args.mail_scan_limit,
+        )
     except Exception as exc:
         errors.append(f"gmail: {exc}")
     try:
@@ -367,18 +400,34 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Create a bounded Google Workspace snapshot")
-    parser.add_argument("--date", help="Target local date (YYYY-MM-DD); defaults to today")
+    parser.add_argument(
+        "--date",
+        help="Target local date (YYYY-MM-DD); defaults to today on weekdays or the upcoming Monday on weekends",
+    )
     parser.add_argument("--days-ahead", type=int, default=2)
     parser.add_argument("--days-back", type=int, default=30, help="Drive modification lookback; Gmail uses the bounded active inbox")
     parser.add_argument("--max-events", type=int, default=60)
     parser.add_argument("--max-messages", type=int, default=DEFAULT_MAX_MESSAGES)
+    parser.add_argument(
+        "--mail-scan-limit",
+        type=int,
+        default=DEFAULT_MAIL_SCAN_LIMIT,
+        help="Matching message metadata to scan before sorting and retaining --max-messages",
+    )
     parser.add_argument("--max-files", type=int, default=30)
     parser.add_argument("--gmail-query", help="Override the bounded Gmail query")
     parser.add_argument("--output", type=Path, default=default_snapshot_path())
     parser.add_argument("--fixture", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--stdout", choices=("none", "summary", "json"), default="summary")
     args = parser.parse_args()
-    if min(args.days_ahead, args.days_back, args.max_events, args.max_messages, args.max_files) < 1:
+    if min(
+        args.days_ahead,
+        args.days_back,
+        args.max_events,
+        args.max_messages,
+        args.mail_scan_limit,
+        args.max_files,
+    ) < 1:
         parser.error("all numeric bounds must be positive")
 
     try:

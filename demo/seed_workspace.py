@@ -25,7 +25,7 @@ STATE_FILE = "chief-of-staff-workspace-state.json"
 TZ_NAME = os.environ.get("CHIEF_OF_STAFF_WORKSPACE_TZ", "America/Los_Angeles")
 STATUS_VALUES = ["Not started", "In progress", "Ready for review", "On track", "In review", "Awaiting update", "Blocked", "Complete"]
 MEANINGFUL_EMAIL_COUNT = 6
-BACKGROUND_EMAIL_COUNT = 100
+BACKGROUND_EMAIL_COUNT = 70
 EMAIL_REFERENCE_HOUR = 13
 EMAIL_SPACING_MINUTES = 2
 API_BATCH_SIZE = 25
@@ -63,6 +63,56 @@ BACKGROUND_TOPICS = [
     ("Language circle phrase list", "The language circle collected favorite phrases from its last gathering for anyone interested."),
     ("Cafeteria chef profile", "This month's short chef profile is available for casual reading."),
     ("August film club favorites", "The film club collected its favorite titles from August. Participation is entirely optional."),
+    ("Rooftop herb garden photos", "The rooftop garden group shared photos of this season's herbs for casual browsing."),
+    ("Local bakery recommendations", "A few favorite neighborhood bakeries are collected here for anyone interested."),
+    ("Commuter train photography album", "The photography group shared a small album from recent train rides. No response is needed."),
+    ("Desk organization inspiration", "Here are several tidy desk arrangements for casual inspiration."),
+    ("Favorite instrumental playlists", "A few instrumental playlists are available for anyone who enjoys background music."),
+    ("Public park picnic spots", "The social group collected several pleasant public picnic spots for optional use."),
+    ("Origami circle creations", "The origami circle shared photos from its latest gathering. Nothing is expected from recipients."),
+    ("Seasonal fruit guide", "A short guide to seasonal fruit is available for casual reading."),
+    ("Birdwatching sightings near campus", "The birdwatching group shared a few recent sightings near campus."),
+    ("Weekend pottery class photos", "The pottery class shared photos of recent pieces. No response is needed."),
+    ("Community choir recordings", "A few community choir recordings are available for optional listening."),
+    ("Library reading nook photos", "The library group shared several cozy reading nooks for casual inspiration."),
+    ("Homemade bread recipes", "The cooking circle collected a few favorite homemade bread recipes."),
+    ("Office aquarium snapshots", "A few new aquarium snapshots are available for anyone curious about the common area."),
+    ("Walking club trail map", "The walking club collected a simple map of nearby trails for optional use."),
+    ("Street market photo collection", "A small street market photo collection is available for casual browsing."),
+    ("Astronomy club sky chart", "The astronomy club shared a simple seasonal sky chart for anyone interested."),
+    ("Casual chess puzzle collection", "The chess group collected a few light puzzles for optional enjoyment."),
+    ("Tea tasting favorites", "The tea group shared several favorites from its latest gathering."),
+    ("Campus architecture photo walk", "Photos from a recent campus architecture walk are available for casual browsing."),
+    ("Indoor succulent care tips", "A few simple succulent care tips are collected here for anyone interested."),
+    ("Regional food festival photos", "The food club shared photos from a regional festival. No response is needed."),
+    ("Public art walking map", "A small map of nearby public art is available for an optional walk."),
+    ("Weekend watercolor gallery", "The watercolor group shared a small gallery from its weekend session."),
+    ("Vintage poster collection", "A collection of vintage poster images is available for casual browsing."),
+    ("Local history trivia", "The history circle collected a few light local trivia questions for fun."),
+    ("Nature photography favorites", "The photography group shared several favorite nature images."),
+    ("Farmers market seasonal guide", "A brief seasonal guide to the farmers market is available for anyone interested."),
+    ("Piano circle recordings", "The piano circle shared a few informal recordings for optional listening."),
+    ("Textile craft showcase", "The craft group shared photos of recent textile projects. Nothing is expected from recipients."),
+    ("Urban sketching gallery", "The sketching group shared drawings from a recent city walk."),
+    ("Picnic recipe collection", "A small collection of picnic recipes is available for casual reading."),
+    ("Fountain pen samples", "The stationery group shared several fountain pen writing samples for anyone interested."),
+    ("Courtyard gardening photos", "Photos from the courtyard garden are available for casual browsing."),
+    ("Beginner stargazing checklist", "A simple beginner stargazing checklist is available for optional use."),
+    ("Sandwich recipe exchange", "The lunch group collected a few favorite sandwich recipes."),
+    ("Ceramic studio gallery", "The ceramics group shared a gallery of recent pieces. No response is needed."),
+    ("Park bench reading list", "A light reading list is available for anyone planning a quiet afternoon outside."),
+    ("Rainy day photography", "The photography group shared a few favorite rainy day images."),
+    ("Homemade jam flavors", "The recipe circle collected several favorite homemade jam flavors."),
+    ("Weekend kayaking photos", "The kayaking group shared photos from a recent outing. No response is needed."),
+    ("Classic radio recommendations", "A few classic radio programs are collected here for optional listening."),
+    ("Office window sunset photos", "A small set of sunset photos from the office windows is available for casual browsing."),
+    ("Botanical illustration gallery", "The art circle shared several botanical illustrations for anyone interested."),
+    ("Short fiction reading list", "A short fiction reading list is available for optional reading."),
+    ("Neighborhood mural photos", "Photos of neighborhood murals are available for casual browsing."),
+    ("Autumn baking ideas", "The cooking circle shared several autumn baking ideas for anyone interested."),
+    ("Acoustic guitar playlist", "An acoustic guitar playlist is available for optional background listening."),
+    ("Local trail wildflower guide", "A small guide to wildflowers on nearby trails is available for casual use."),
+    ("Community craft fair photos", "The community group shared photos from a recent craft fair. Nothing is expected from recipients."),
 ]
 
 
@@ -83,6 +133,46 @@ def local_now() -> datetime:
 
 def week_monday(day: date) -> date:
     return day - timedelta(days=day.weekday())
+
+
+def next_demo_weekday(day: date) -> date:
+    """Use the current weekday, or the upcoming Monday on a weekend."""
+    if day.weekday() < 5:
+        return day
+    return day + timedelta(days=7 - day.weekday())
+
+
+def default_demo_week(day: date) -> date:
+    return week_monday(next_demo_weekday(day))
+
+
+def demo_day_for_week(week_of: date, today: date) -> date:
+    resolved_day = next_demo_weekday(today)
+    if week_of <= resolved_day <= week_of + timedelta(days=4):
+        return resolved_day
+    return week_of
+
+
+def email_reference_time(demo_day: date, now: datetime | None = None) -> datetime:
+    """Return a non-future inbox time while preserving the logical demo day.
+
+    On weekends the demo story advances to Monday, but Gmail renders imported
+    messages with future Date headers at their common import time. Keep the
+    Monday Calendar/Drive story and date the inbox messages on the current day
+    instead so Gmail displays their deliberately staggered timestamps.
+    """
+    current = (now or local_now()).astimezone(ZoneInfo(TZ_NAME))
+    inbox_day = min(demo_day, current.date())
+    reference = datetime(
+        inbox_day.year,
+        inbox_day.month,
+        inbox_day.day,
+        EMAIL_REFERENCE_HOUR,
+        tzinfo=ZoneInfo(TZ_NAME),
+    )
+    if reference > current:
+        return current.replace(second=0, microsecond=0)
+    return reference
 
 
 def utc_offset() -> str:
@@ -253,10 +343,18 @@ def create_slides(slides, drive, folder_id: str) -> dict:
     return {"id": presentation_id, "url": f"https://docs.google.com/presentation/d/{presentation_id}/edit"}
 
 
-def tracker_rows(slides_url: str, doc_url: str, sheet_url: str, evidence: dict[str, str]) -> list[list[str]]:
+def tracker_rows(
+    slides_url: str,
+    doc_url: str,
+    sheet_url: str,
+    evidence: dict[str, str],
+    demo_day: date,
+) -> list[list[str]]:
+    reschedule_day = next_business_day(demo_day)
+    reschedule_label = reschedule_day.strftime("%A")
     return [
         ["Lane", "PIC", "Status", "Latest update", "Next action", "Due", "Dependency / blocker", "Evidence", "Artifact", "Notes"],
-        ["Agent Runtime regression", "Priya Shah", "Blocked", "The current build duplicates tool-call completions in repeated local runs.", "Move the existing release review to Monday at 11 AM PT and draft Priya and Daniel a confirmation; do not send it.", "Today", "Release review must move while the P0 regression is open.", evidence.get("bug", "Priya's blocker email"), sheet_url, "Calendar and draft follow-up are the immediate coordination actions."],
+        ["Agent Runtime regression", "Priya Shah", "Blocked", "The current build duplicates tool-call completions in repeated local runs.", f"Move the existing release review to {reschedule_label} at 11 AM PT and draft Priya and Daniel a confirmation; do not send it.", "Today", "Release review must move while the P0 regression is open.", evidence.get("bug", "Priya's blocker email"), sheet_url, "Calendar and draft follow-up are the immediate coordination actions."],
         ["Agent Runtime Latency Evaluation", "Mateo Chen", "In progress", "Mateo completed the evaluation report and handed it off for review.", "Change only this lane's status to Ready for review.", "Today", "None; the tracker status is stale.", evidence.get("evaluation", "Mateo's completion email"), doc_url, "Keep the owner, due date, and notes unchanged."],
         ["Partner Readout Deck", "Elena Torres", "Awaiting update", "Communications approved the replacement headline for slide 4.", "Replace APPROVED HEADLINE PLACEHOLDER with “Meet the RTX Spark Agent Runtime: a faster path from intent to completed work.” on slide 4; leave the rest unchanged.", "Next week", "None; intentionally lower priority than today's two actions.", evidence.get("copy", "Elena's approval email"), slides_url, "Optional backup demo; not required today."],
         ["Reliability test matrix", "Noah Williams", "On track", "Routine coverage review completed with no new blockers.", "Continue the planned test pass.", "This week", "None", "Routine team update", sheet_url, "No executive action needed."],
@@ -267,12 +365,12 @@ def tracker_rows(slides_url: str, doc_url: str, sheet_url: str, evidence: dict[s
     ]
 
 
-def create_sheet(sheets, drive, folder_id: str, slides_url: str, doc_url: str) -> dict:
+def create_sheet(sheets, drive, folder_id: str, slides_url: str, doc_url: str, demo_day: date) -> dict:
     result = sheets.spreadsheets().create(body={"properties": {"title": "RTX Spark Delivery Tracker"}, "sheets": [{"properties": {"title": "Campaign Lanes", "gridProperties": {"rowCount": 100, "columnCount": 12, "frozenRowCount": 6, "hideGridlines": True}}}]}).execute()
     spreadsheet_id = result["spreadsheetId"]
     sheet_id = result["sheets"][0]["properties"]["sheetId"]
     sheet_url = result.get("spreadsheetUrl", f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit")
-    rows = [["RTX Spark Delivery Tracker"], ["Decision-ready view of Agent Runtime work"], ["Awaiting updates", "1", "", "Blocked", "1", "", "Active lanes", "8", "Last refreshed", local_now().date().isoformat()], ["Statuses are updated from current owner evidence; use the Artifact column to open the working file or decision source."], [], *tracker_rows(slides_url, doc_url, sheet_url, {})]
+    rows = [["RTX Spark Delivery Tracker"], ["Decision-ready view of Agent Runtime work"], ["Awaiting updates", "1", "", "Blocked", "1", "", "Active lanes", "8", "Last refreshed", demo_day.isoformat()], ["Statuses are updated from current owner evidence; use the Artifact column to open the working file or decision source."], [], *tracker_rows(slides_url, doc_url, sheet_url, {}, demo_day)]
     sheets.spreadsheets().values().update(spreadsheetId=spreadsheet_id, range="'Campaign Lanes'!A1:J14", valueInputOption="USER_ENTERED", body={"values": rows}).execute()
     requests = [
         {"mergeCells": {"range": {"sheetId": sheet_id, "startRowIndex": 0, "endRowIndex": 1, "startColumnIndex": 0, "endColumnIndex": 10}, "mergeType": "MERGE_ALL"}},
@@ -380,14 +478,14 @@ def background_email_specs(reference_time: datetime) -> list[dict]:
     for index in range(BACKGROUND_EMAIL_COUNT):
         first = BACKGROUND_FIRST_NAMES[index // len(BACKGROUND_LAST_NAMES)]
         last = BACKGROUND_LAST_NAMES[index % len(BACKGROUND_LAST_NAMES)]
-        subject, body = BACKGROUND_TOPICS[index % len(BACKGROUND_TOPICS)]
+        subject, body = BACKGROUND_TOPICS[index]
         domain = BACKGROUND_DOMAINS[index % len(BACKGROUND_DOMAINS)]
         received_at = reference_time - timedelta(
             minutes=EMAIL_SPACING_MINUTES * (MEANINGFUL_EMAIL_COUNT + index),
         )
         specs.append({
             "sender": f"{first} {last} <{first.lower()}.{last.lower()}@{domain}>",
-            "subject": f"{subject} - note {index + 1:03d}",
+            "subject": subject,
             "body": body,
             "received_at": received_at,
             "unread": True,
@@ -409,13 +507,7 @@ def create_emails(
 ) -> tuple[list[dict], dict[str, str]]:
     seed_run_id = seed_run_id or uuid.uuid4().hex
     account = gmail.users().getProfile(userId="me").execute()["emailAddress"]
-    reference_time = datetime(
-        demo_day.year,
-        demo_day.month,
-        demo_day.day,
-        EMAIL_REFERENCE_HOUR,
-        tzinfo=ZoneInfo(TZ_NAME),
-    )
+    reference_time = email_reference_time(demo_day)
     follow_up_day = next_business_day(demo_day)
     data = [
         {
@@ -504,10 +596,16 @@ def create_emails(
     for index, spec in enumerate(background_email_specs(reference_time), MEANINGFUL_EMAIL_COUNT + 1):
         mail_specs.append({**spec, "index": index})
 
-    entries = []
+    # Gmail's list endpoint does not promise chronological ordering and, for
+    # imported mail, commonly reflects recent import batches. Insert background
+    # mail first and reserve the final batch for the six meaningful messages so
+    # the dedicated demo inbox also presents the meaningful set near the top.
+    import_specs = [spec for spec in mail_specs if spec["role"] == "background"]
+    import_specs.extend(spec for spec in mail_specs if spec["role"] == "meaningful")
+    entries_by_role = {"background": [], "meaningful": []}
     metadata = {}
     created_by_request = {}
-    for spec in mail_specs:
+    for spec in import_specs:
         request_id = f"email-{spec['index']:03d}"
         metadata[request_id] = spec
         request = import_mail_request(
@@ -522,7 +620,7 @@ def create_emails(
             unread=spec["unread"],
             important=spec["important"],
         )
-        entries.append((request_id, request))
+        entries_by_role[spec["role"]].append((request_id, request))
 
     def record_import(request_id: str, response: dict) -> None:
         spec = metadata[request_id]
@@ -530,13 +628,14 @@ def create_emails(
         created.append(item)
         created_by_request[request_id] = item
 
-    execute_batch_requests(
-        gmail,
-        entries,
-        "Gmail import",
-        on_success=record_import,
-        batch_size=GMAIL_BATCH_SIZE,
-    )
+    for role in ("background", "meaningful"):
+        execute_batch_requests(
+            gmail,
+            entries_by_role[role],
+            f"Gmail {role} import",
+            on_success=record_import,
+            batch_size=GMAIL_BATCH_SIZE,
+        )
     resolved = resolve_imported_messages(gmail, seed_run_id, mail_specs)
     for request_id, result in resolved.items():
         spec = metadata[request_id]
@@ -544,6 +643,7 @@ def create_emails(
         item.update(imported_mail_state(result, spec["role"], spec["received_at"]))
         if spec.get("key"):
             evidence[spec["key"]] = item["url"]
+    created.sort(key=lambda item: item["received_at"], reverse=True)
     return created, evidence
 
 
@@ -632,7 +732,13 @@ def create_calendar(calendar, start_day: date, demo_day: date, deck_url: str, do
 
 def update_tracker_evidence(sheets, state: dict, evidence: dict[str, str]) -> None:
     sheet = state["sheet"]
-    values = tracker_rows(state["slides"]["url"], state["doc"]["url"], sheet["url"], evidence)
+    values = tracker_rows(
+        state["slides"]["url"],
+        state["doc"]["url"],
+        sheet["url"],
+        evidence,
+        date.fromisoformat(state["demo_day"]),
+    )
     sheets.spreadsheets().values().update(spreadsheetId=sheet["id"], range="'Campaign Lanes'!A6:J14", valueInputOption="USER_ENTERED", body={"values": values}).execute()
 
 
@@ -715,13 +821,20 @@ def cleanup(state: dict) -> dict[str, int]:
 def seed(week_of: date) -> dict:
     svc = services()
     today = local_now().date()
-    demo_day = today if week_of <= today <= week_of + timedelta(days=4) else week_of
+    demo_day = demo_day_for_week(week_of, today)
     state = {"schema": 3, "marker": MARKER, "seed_run_id": uuid.uuid4().hex, "week_of": week_of.isoformat(), "demo_day": demo_day.isoformat(), "events": [], "emails": [], "drafts": []}
     try:
         state["folder"] = create_folder(svc["drive"])
         state["doc"] = create_doc(svc["docs"], svc["drive"], state["folder"]["id"])
         state["slides"] = create_slides(svc["slides"], svc["drive"], state["folder"]["id"])
-        state["sheet"] = create_sheet(svc["sheets"], svc["drive"], state["folder"]["id"], state["slides"]["url"], state["doc"]["url"])
+        state["sheet"] = create_sheet(
+            svc["sheets"],
+            svc["drive"],
+            state["folder"]["id"],
+            state["slides"]["url"],
+            state["doc"]["url"],
+            demo_day,
+        )
         state["events"] = create_calendar(svc["calendar"], week_of, demo_day, state["slides"]["url"], state["doc"]["url"], state["sheet"]["url"])
         release_review_url = next(item["url"] for item in state["events"] if item["key"] == "calendar-release-review")
         state["emails"], evidence = create_emails(
@@ -751,7 +864,10 @@ def seed(week_of: date) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Seed, reset, or remove the reference Chief of Staff workspace")
-    parser.add_argument("--week-of", help="Monday date (YYYY-MM-DD); defaults to the current week")
+    parser.add_argument(
+        "--week-of",
+        help="Monday date (YYYY-MM-DD); defaults to the current week on weekdays or the upcoming week on weekends",
+    )
     parser.add_argument("--reset", action="store_true")
     parser.add_argument("--cleanup", action="store_true")
     parser.add_argument("--confirm", action="store_true", help="Required because this writes to Google Workspace")
@@ -765,17 +881,17 @@ def main() -> int:
         path.unlink(missing_ok=True)
         print(json.dumps({"ok": True, "status": "removed", **cleanup_result}))
         return 0
-    chosen_week = date.fromisoformat(args.week_of) if args.week_of else week_monday(local_now().date())
+    chosen_week = date.fromisoformat(args.week_of) if args.week_of else default_demo_week(local_now().date())
     if args.reset:
         if not path.exists(): raise SystemExit(f"No workspace state at {path}")
         previous = json.loads(path.read_text(encoding="utf-8"))
-        chosen_week = date.fromisoformat(args.week_of or previous["week_of"])
+        chosen_week = date.fromisoformat(args.week_of) if args.week_of else default_demo_week(local_now().date())
         cleanup(previous)
         path.unlink(missing_ok=True)
     elif path.exists():
         raise SystemExit(f"Workspace already exists. Run reset or cleanup first: {path}")
     state = seed(chosen_week)
-    print(json.dumps({"ok": True, "state": str(path), "week_of": state["week_of"], "folder": state["folder"], "sheet": state["sheet"], "doc": state["doc"], "slides": state["slides"], "emails": len(state["emails"]), "events": len(state["events"])}, indent=2))
+    print(json.dumps({"ok": True, "state": str(path), "week_of": state["week_of"], "demo_day": state["demo_day"], "folder": state["folder"], "sheet": state["sheet"], "doc": state["doc"], "slides": state["slides"], "emails": len(state["emails"]), "events": len(state["events"])}, indent=2))
     return 0
 
 

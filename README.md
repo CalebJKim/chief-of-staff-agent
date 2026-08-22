@@ -9,7 +9,7 @@ This README is the complete setup path for a new machine. [`QUICKSTART.md`](QUIC
 The optional seeder creates data in the Google account you authorize:
 
 - 6 meaningful Gmail messages, all Inbox and Unread; the two release-blocker messages are Important.
-- 100 older, unread, low-signal messages from fictional people; none are Important.
+- 70 older, unread, low-signal messages from fictional people; none are Important.
 - 12 Calendar resources producing 47 visible meeting instances across one workweek, including three lightly overlapping series.
 - An `RTX Spark Agent Runtime Demo` Drive folder containing a 14-row delivery-tracker Sheet, a latency-evaluation Doc, and a 6-slide partner-readout deck.
 - A local state file under `HERMES_HOME` containing only the generated resource IDs needed for reset and cleanup.
@@ -157,7 +157,7 @@ python -m unittest discover -s skills/productivity/ingest/tests -v
 python -m unittest discover -s skills/productivity/chief-of-staff/tests -v
 ```
 
-Expected result: 33 tests pass across the three suites.
+Expected result: 38 tests pass across the three suites.
 
 ## 6. Install the agent into Hermes
 
@@ -180,6 +180,10 @@ Confirm that `chief-of-staff` and `ingest` appear in the skills list. The instal
 The demo does not require changes to Hermes model/provider defaults or unrelated tool settings. It only requires the installed `chief-of-staff` and `ingest` skills plus the `skills` and `terminal` toolsets.
 
 ## 7. Create Google OAuth credentials
+
+For the current screen-by-screen Google Cloud procedure, including screenshots,
+see [`docs/GOOGLE_DESKTOP_OAUTH.md`](docs/GOOGLE_DESKTOP_OAUTH.md). The concise
+steps below remain the setup checklist.
 
 In [Google Cloud Console](https://console.cloud.google.com/):
 
@@ -208,10 +212,16 @@ Start-Process $AuthUrl
 Approve all requested scopes, including full Gmail access. That scope is required so reset can permanently delete only the tracked seeded messages instead of leaving deleted-message placeholders in Gmail conversations. Google then redirects to a URL beginning with `http://localhost:1/`. The browser may say that it cannot connect; that is expected because no local web server is listening there. Copy the **entire URL from the browser address bar**, including its `state` and `code` parameters, and run:
 
 ```powershell
-& $Python setup\google-workspace\setup.py --auth-code "FULL_LOCALHOST_REDIRECT_URL"
+$RedirectSecure = Read-Host "Paste the full localhost redirect URL" -AsSecureString
+$RedirectUrl = [System.Net.NetworkCredential]::new("", $RedirectSecure).Password
+& $Python setup\google-workspace\setup.py --auth-code $RedirectUrl
+Remove-Variable RedirectUrl, RedirectSecure
 & $Python setup\google-workspace\setup.py --check-live
 & $Python (Join-Path $env:HERMES_HOME "skills\productivity\ingest\scripts\verify.py")
 ```
+
+Secure input masks the one-time redirect URL and keeps it out of PowerShell
+command history.
 
 ### Linux or macOS
 
@@ -230,6 +240,12 @@ python "$HERMES_HOME/skills/productivity/ingest/scripts/verify.py"
 
 Both checks should succeed for Gmail, Calendar, Drive, Docs, Sheets, and Slides. The resulting `google_client_secret.json` and `google_token.json` stay under the local `HERMES_HOME`.
 
+If the demo may switch between a primary and backup Google account, add both as
+OAuth test users before demo day. Changing accounts does not automatically
+change the active workspace-state file. Follow
+[`Switch or fail over to another Google account`](docs/GOOGLE_DESKTOP_OAUTH.md#8-switch-or-fail-over-to-another-google-account)
+for the planned cleanup flow and the suspended-account archive fallback.
+
 ## 9. Seed the reference workspace
 
 This step writes the fake demo data to the authorized Google account. It is not required if you want the agent to work only with data already in that account.
@@ -244,9 +260,20 @@ This step writes the fake demo data to the authorized Google account. It is not 
 python demo/seed_workspace.py --confirm
 ```
 
-The command defaults to the current workweek. To seed another week, add its Monday date as `--week-of YYYY-MM-DD` before `--confirm`. When setting up on a weekend, use the upcoming Monday so the demo's action meeting is not placed in the past.
+The command resolves a consistent demo day automatically: it uses the current
+day on Monday through Friday and the upcoming Monday on Saturday or Sunday. The
+release-review meeting is created on that demo day, and its proposed replacement
+slot is the next business day at 11:00 AM Pacific. To seed another week, add its
+Monday date as `--week-of YYYY-MM-DD` before `--confirm`.
 
-A successful result reports `"emails": 106`, `"events": 12`, and links for the folder, Sheet, Doc, and Slides deck. The 12 Calendar resources render as 47 meeting instances across the week. The six meaningful messages are the newest seeded mail; the 100 background messages are older, non-actionable inbox noise.
+A successful result reports `"emails": 76`, `"events": 12`, the resolved
+`"demo_day"`, and links for the folder, Sheet, Doc, and Slides deck. The 12
+Calendar resources render as 47 meeting instances across the week. The six
+meaningful messages have the newest seeded timestamps; the 70 background
+messages are older, non-actionable inbox noise with natural, unnumbered subject
+lines. The seeder writes the background set first and the six meaningful
+messages in a final dedicated batch so they also appear within Gmail's first 20
+in the dedicated demo inbox.
 
 - Windows: `%LOCALAPPDATA%\hermes\chief-of-staff-workspace-state.json`
 - Linux/macOS: `$HOME/.hermes/chief-of-staff-workspace-state.json`
@@ -271,7 +298,26 @@ python "$HERMES_HOME/skills/productivity/chief-of-staff/scripts/brief.py" --max-
 
 The commands should report successful service access, a bounded evidence packet, and a ranked brief without Python tracebacks.
 
-Gmail ingestion is capped at the newest 20 matching Inbox messages. With the reference data, that scan contains all six meaningful messages plus 14 background messages; the packet builder ranks eight candidates and preserves the six highest-signal messages within its bounded model context.
+Ingestion uses the same automatic weekday/weekend rule, so a weekend verification
+reads the upcoming Monday without an extra flag. If you seeded an explicitly
+chosen week with `--week-of`, point ingestion at the `demo_day` reported by the
+seeder:
+
+```powershell
+# Needed only for an explicitly selected week; replace with its reported demo_day.
+& $Python (Join-Path $env:HERMES_HOME "skills\productivity\ingest\scripts\ingest.py") --date 2026-08-24
+& $Python (Join-Path $env:HERMES_HOME "skills\productivity\chief-of-staff\scripts\brief.py") --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000
+```
+
+The resulting action plan should contain three workstreams. The first should
+have a `calendar_move_and_draft` action; a missing first action usually means
+the selected Calendar window did not include the release-review meeting.
+
+Gmail does not guarantee the order returned by `messages.list`. Ingestion scans
+metadata for up to 120 matching Inbox messages, sorts that bounded set by
+Gmail's `internalDate`, and then retains only the newest 20 for the snapshot.
+With the 76-message reference workspace, that keeps all six meaningful messages
+plus 14 background messages while preserving a bounded model context.
 
 ## 11. Run the demo
 
@@ -287,7 +333,7 @@ At the prompt, say:
 
 The expected top three, in order, are the Agent Runtime regression, the completed latency evaluation, and the Partner Readout deck. Each item includes inline links to its supporting mail and action target. Continue with:
 
-- `Take the action items for the first thing.` This moves the existing release review to Monday at 11:00 AM PT and creates an unsent threaded draft to Priya with Daniel copied.
+- `Take the action items for the first thing.` This moves the existing release review to the next business day at 11:00 AM PT and creates an unsent threaded draft to Priya with Daniel copied.
 - `Take the action items for the second thing.` This changes only the `Agent Runtime Latency Evaluation` tracker status to `Ready for review`.
 - Optional backup: `Take the action items for the third thing.` This replaces only the slide-4 placeholder with Elena's approved headline.
 
@@ -295,7 +341,10 @@ Use [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) for the complete staged presentation flow
 
 ## Reset or remove the demo data
 
-Reset deletes the currently tracked reference data and immediately creates a fresh copy for the current workweek:
+Reset deletes the currently tracked reference data and immediately creates a
+fresh copy aligned to today on weekdays or the upcoming Monday on weekends. Run
+it before a demo on a different day so the release-review story follows that
+day:
 
 ```powershell
 # Windows PowerShell
@@ -331,7 +380,40 @@ Gmail deletion is immediate and cannot be undone; unrelated messages are untouch
 
 ## Troubleshooting
 
-- **`Workspace already exists`**: run reset or cleanup. Do not delete the state file unless you have manually removed every generated resource.
+- **`Workspace already exists` even though the connected account looks empty**:
+  the local state file can remain after switching OAuth accounts or clients. It
+  records exact resource IDs and is intentionally account-independent. Do not
+  delete it manually. Run cleanup first; resources that are already absent are
+  treated as cleared, and the state file is removed only after cleanup succeeds:
+
+  ```powershell
+  & $Python demo\seed_workspace.py --cleanup --confirm
+  & $Python demo\seed_workspace.py --confirm
+  ```
+
+  If cleanup reports a partial failure, keep the state file. A Drive 403 with
+  `insufficientFilePermissions` means the recorded folder belongs to another
+  account. Either reconnect that original account and rerun cleanup, or archive
+  the stale state locally before seeding the new account. Archiving unblocks the
+  new account but does not delete resources in the old account:
+
+  ```powershell
+  $StatePath = Join-Path $env:HERMES_HOME "chief-of-staff-workspace-state.json"
+  $State = Get-Content -LiteralPath $StatePath -Raw | ConvertFrom-Json
+  $ArchiveName = "chief-of-staff-workspace-state.stale-{0}-{1}.json" -f `
+      (Get-Date -Format "yyyyMMdd-HHmmss"), $State.seed_run_id
+  $ArchivePath = Join-Path $env:HERMES_HOME $ArchiveName
+  if (Test-Path -LiteralPath $ArchivePath) { throw "Archive already exists: $ArchivePath" }
+  Move-Item -LiteralPath $StatePath -Destination $ArchivePath
+  Write-Output "Archived stale state at $ArchivePath"
+  ```
+
+  Preserve that archive until the original account has been cleaned up. Do not
+  run a new seed while the active state path still exists. If the original
+  account is suspended, archive the state rather than repeatedly attempting
+  cleanup; use the archive for cleanup only if access to that account is later
+  restored.
+
 - **`No workspace state` during cleanup**: the script no longer has the IDs needed for safe cleanup. Use [`demo/DEMO_SPEC.md`](demo/DEMO_SPEC.md) to identify the generated data manually.
 - **API not enabled or access denied**: confirm all six APIs are enabled, the OAuth client type is Desktop, the account is an allowed test user, and all requested scopes were approved. Then run `--auth-url` again to begin a fresh authorization flow.
 - **`disabled_client`**: verify the client and its secret under Google Auth Platform > Clients. If the console already says Enabled, wait briefly and rerun `--check-live`; status propagation can lag. Enable the client/secret or replace it only if the error persists.

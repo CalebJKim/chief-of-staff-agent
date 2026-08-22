@@ -158,12 +158,13 @@ for Gmail, Calendar, Drive, Docs, Sheets, and Slides.
 ## 7. Seed the reference workspace
 
 The seeder writes demo content to the connected Google account. It creates six
-meaningful Gmail messages, 100 older low-signal messages, 12 Calendar resources
+meaningful Gmail messages, 70 older low-signal messages, 12 Calendar resources
 (47 visible weekly meeting instances), and an `RTX Spark Agent Runtime Demo`
 Drive folder with a delivery-tracker Sheet, latency-evaluation Doc, and
-partner-readout deck. Gmail ingestion reads only the newest 20 matching Inbox
-messages, which keeps all six meaningful messages in scope. Seed the current
-workweek with:
+partner-readout deck. Gmail ingestion scans metadata for up to 120 matching
+Inbox messages, sorts by Gmail's `internalDate`, and retains the newest 20,
+which keeps all six meaningful messages in scope. Seed the automatic demo day
+with:
 
 ```powershell
 & $Python demo\seed_workspace.py --confirm
@@ -197,6 +198,11 @@ interactive reference demo, the Chief of Staff skill applies this flag when it
 detects the active state file.
 
 After seeding, repeat the live verifier and build a decision packet:
+
+On Monday through Friday, both the seeder and ingestion use the current day as
+the demo day. On Saturday and Sunday, both use the upcoming Monday. If you used
+an explicit `--week-of`, add `--date YYYY-MM-DD` to ingestion with the
+`demo_day` reported by the seeder.
 
 ```powershell
 & $Python skills\productivity\ingest\scripts\verify.py
@@ -245,28 +251,38 @@ state file is needed to identify the resources created by the seeder.
 
 ## Validation record
 
-The following checks passed on August 21, 2026:
+The original full acceptance checks passed on August 21, 2026:
 
 - Google OAuth token exchange and a live API call.
 - Gmail, Calendar, Drive, Docs, Sheets, and Slides service verification.
-- Creation and read-back of 106 demo messages (6 meaningful and 100
+- Creation and read-back of 76 demo messages (6 meaningful and 70
   background), 12 calendar resources producing 47 visible weekly instances,
   one Agent Runtime folder, one 14-row delivery tracker, one latency-evaluation
   Doc, and one 6-slide partner-readout deck.
-- Bounded ingestion of the newest 20 Inbox messages with all 6 meaningful
-  messages present and no source errors.
 - Decision-packet generation with three grouped workstreams in the expected
   regression, evaluation, and deck order, plus inline Mail and action links.
 - A real Hermes prompt using the installed skill and configured local model:
   `Hey chief of staff, what should we work on today?`
 - The final acceptance reset/reseed took 42.2 seconds. The complete four-prompt
   Hermes flow then took 5 minutes 3 seconds, excluding reset. Final Gmail
-  read-back found exactly 106 current seeded messages, no prior-run seeded
-  messages, no seeded messages in Trash, and exact agreement between all 106
+  read-back found exactly 76 current seeded messages, no prior-run seeded
+  messages, no seeded messages in Trash, and exact agreement between all 76
   saved cleanup IDs and live Gmail IDs. Each of the six meaningful threads
   contained exactly one message.
 - The 14,000-character decision packet retained all 6 meaningful messages and
   the three action-ready workstreams.
+
+The Gmail ordering and automatic demo-day update was revalidated live on August
+22, 2026. Ingestion scanned all 76 matching messages, sorted before retaining
+20, placed all 6 meaningful subjects first, selected the upcoming Monday on the
+weekend, and generated the same three ordered workstreams without source errors.
+A clean reset then confirmed that Gmail's raw positions 1–6 were the six
+meaningful messages, all 76 mailbox messages belonged to the current seed, all
+76 subjects were unique, and no subject contained either the old `note NNN`
+suffix or the temporary `FYI`/`Optional` variants. The measured migration reset
+from the prior 106-message seed to this 76-message seed took 54.5 seconds; the
+representative 76-to-76 reset took 46.1 seconds, and the bounded live ingestion
+took 20.7 seconds.
 
 The first one-shot response from the 35B local model took approximately two
 minutes while the command buffered output. `ollama ps` showed the model loaded

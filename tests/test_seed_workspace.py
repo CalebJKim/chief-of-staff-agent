@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import importlib.util
 import unittest
-from datetime import datetime
+from datetime import date, datetime
 from email import message_from_bytes
 from email.utils import parsedate_to_datetime
 from pathlib import Path
@@ -36,16 +36,60 @@ class FakeBatch:
 
 
 class SeedWorkspaceTests(unittest.TestCase):
+    def test_default_demo_week_uses_current_weekday_and_next_monday_on_weekends(self) -> None:
+        self.assertEqual(date(2026, 8, 17), seed_workspace.default_demo_week(date(2026, 8, 20)))
+        self.assertEqual(date(2026, 8, 24), seed_workspace.default_demo_week(date(2026, 8, 22)))
+        self.assertEqual(date(2026, 8, 24), seed_workspace.default_demo_week(date(2026, 8, 23)))
+
+    def test_demo_day_is_each_current_weekday_or_next_monday_on_weekends(self) -> None:
+        week_of = date(2026, 8, 17)
+        for offset in range(5):
+            current = date(2026, 8, 17 + offset)
+            with self.subTest(current=current):
+                self.assertEqual(current, seed_workspace.demo_day_for_week(week_of, current))
+
+        upcoming_week = date(2026, 8, 24)
+        self.assertEqual(upcoming_week, seed_workspace.demo_day_for_week(upcoming_week, date(2026, 8, 22)))
+        self.assertEqual(upcoming_week, seed_workspace.demo_day_for_week(upcoming_week, date(2026, 8, 23)))
+
+    def test_email_reference_time_uses_current_day_for_a_future_demo_day(self) -> None:
+        now = datetime(2026, 8, 22, 13, 5, tzinfo=ZoneInfo("America/Los_Angeles"))
+
+        result = seed_workspace.email_reference_time(date(2026, 8, 24), now)
+
+        self.assertEqual(
+            datetime(2026, 8, 22, 13, 0, tzinfo=ZoneInfo("America/Los_Angeles")),
+            result,
+        )
+
+    def test_email_reference_time_never_uses_a_future_time_today(self) -> None:
+        now = datetime(2026, 8, 20, 9, 37, 42, tzinfo=ZoneInfo("America/Los_Angeles"))
+
+        result = seed_workspace.email_reference_time(date(2026, 8, 20), now)
+
+        self.assertEqual(
+            datetime(2026, 8, 20, 9, 37, tzinfo=ZoneInfo("America/Los_Angeles")),
+            result,
+        )
+
+    def test_tracker_reschedules_to_the_next_business_day(self) -> None:
+        thursday = seed_workspace.tracker_rows("slides", "doc", "sheet", {}, date(2026, 8, 20))
+        friday = seed_workspace.tracker_rows("slides", "doc", "sheet", {}, date(2026, 8, 21))
+
+        self.assertIn("Friday at 11 AM PT", thursday[1][4])
+        self.assertIn("Monday at 11 AM PT", friday[1][4])
+
     def test_background_mail_is_low_signal_unread_and_on_one_day(self) -> None:
         reference = datetime(2026, 8, 21, 12, 0, tzinfo=ZoneInfo("America/Los_Angeles"))
         background = seed_workspace.background_email_specs(reference)
 
-        self.assertEqual(100, len(background))
-        self.assertEqual(100, len({item["sender"] for item in background}))
-        self.assertEqual(100, len({item["subject"] for item in background}))
+        self.assertEqual(seed_workspace.BACKGROUND_EMAIL_COUNT, len(background))
+        self.assertEqual(seed_workspace.BACKGROUND_EMAIL_COUNT, len({item["sender"] for item in background}))
+        self.assertEqual(seed_workspace.BACKGROUND_EMAIL_COUNT, len({item["subject"] for item in background}))
+        self.assertTrue(all("note " not in item["subject"].casefold() for item in background))
         self.assertTrue(all(item["received_at"] < reference for item in background))
         self.assertEqual({reference.date()}, {item["received_at"].date() for item in background})
-        self.assertEqual(100, len({item["received_at"] for item in background}))
+        self.assertEqual(seed_workspace.BACKGROUND_EMAIL_COUNT, len({item["received_at"] for item in background}))
         self.assertTrue(all(item["unread"] and not item["important"] for item in background))
         prohibited = (
             "urgent", "blocker", "deadline", "decision", "approve", "approval",
@@ -93,22 +137,58 @@ class SeedWorkspaceTests(unittest.TestCase):
             self.assertIn("INBOX", labels)
             self.assertIn("UNREAD", labels)
 
-        self.assertEqual(106, len(created))
+        total_messages = seed_workspace.MEANINGFUL_EMAIL_COUNT + seed_workspace.BACKGROUND_EMAIL_COUNT
+        self.assertEqual(total_messages, len(created))
         self.assertEqual("live-message-0", created[0]["id"])
         self.assertEqual("live-thread-0", created[0]["thread_id"])
-        self.assertEqual(106, len(dates))
+        self.assertEqual(total_messages, len(dates))
         self.assertEqual({demo_day}, {item.date() for item in dates})
-        self.assertEqual(106, len(set(dates)))
-        self.assertEqual(106, len(set(message_ids)))
+        self.assertEqual(total_messages, len(set(dates)))
+        self.assertEqual(total_messages, len(set(message_ids)))
         self.assertTrue(all(message_id.startswith(f"<{seed_workspace.MARKER}-") for message_id in message_ids))
         self.assertTrue(all(message_id.endswith("@demo.example>") for message_id in message_ids))
-        self.assertGreater(min(dates[:6]), max(dates[6:]))
-        self.assertTrue(all("IMPORTANT" in labels for _, labels in messages[:2]))
-        self.assertTrue(all("IMPORTANT" not in labels for _, labels in messages[2:]))
-        for message, _ in messages[:2]:
+        meaningful_subjects = {
+            "BLOCKER: Agent Runtime duplicates tool-call completions",
+            "New slot for the Agent Runtime release review",
+            "READY: Agent Runtime latency evaluation",
+            "Tracker confirmation for the completed evaluation",
+            "For next week: approved Partner Readout headline",
+            "Partner Readout file for next week's copy pass",
+        }
+        meaningful_positions = [
+            index for index, (message, _labels) in enumerate(messages)
+            if message["Subject"] in meaningful_subjects
+        ]
+        self.assertEqual(
+            list(range(seed_workspace.BACKGROUND_EMAIL_COUNT, total_messages)),
+            meaningful_positions,
+        )
+        meaningful_dates = [dates[index] for index in meaningful_positions]
+        background_dates = [item for index, item in enumerate(dates) if index not in meaningful_positions]
+        self.assertGreater(min(meaningful_dates), max(background_dates))
+        labels_by_subject = {message["Subject"]: labels for message, labels in messages}
+        self.assertIn("IMPORTANT", labels_by_subject["BLOCKER: Agent Runtime duplicates tool-call completions"])
+        self.assertIn("IMPORTANT", labels_by_subject["New slot for the Agent Runtime release review"])
+        self.assertTrue(all(
+            "IMPORTANT" not in labels
+            for subject, labels in labels_by_subject.items()
+            if subject not in {
+                "BLOCKER: Agent Runtime duplicates tool-call completions",
+                "New slot for the Agent Runtime release review",
+            }
+        ))
+        for message, _ in messages[
+            seed_workspace.BACKGROUND_EMAIL_COUNT:seed_workspace.BACKGROUND_EMAIL_COUNT + 2
+        ]:
             text = message.get_payload(decode=True).decode("utf-8")
             self.assertGreater(text.index("https://calendar.example.test/release-review"), 200)
-        self.assertEqual(12, gmail.new_batch_http_request.call_count)
+        batches = lambda count: (count + seed_workspace.GMAIL_BATCH_SIZE - 1) // seed_workspace.GMAIL_BATCH_SIZE
+        expected_batches = (
+            batches(seed_workspace.BACKGROUND_EMAIL_COUNT)
+            + batches(seed_workspace.MEANINGFUL_EMAIL_COUNT)
+            + batches(total_messages)
+        )
+        self.assertEqual(expected_batches, gmail.new_batch_http_request.call_count)
 
     @patch.object(seed_workspace.time, "sleep")
     def test_batch_retries_only_rate_limited_requests(self, mock_sleep: Mock) -> None:
@@ -147,6 +227,7 @@ class SeedWorkspaceTests(unittest.TestCase):
             "folder-1",
             "https://example.test/slides",
             "https://example.test/doc",
+            date(2026, 8, 20),
         )
 
         self.assertEqual("sheet-1", result["id"])

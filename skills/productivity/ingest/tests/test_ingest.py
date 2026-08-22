@@ -9,6 +9,7 @@ import json
 import tempfile
 import unittest
 from contextlib import redirect_stdout
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,8 +36,66 @@ class IngestTests(unittest.TestCase):
         self.assertEqual(snapshot["coverage"]["events"], 4)
         self.assertLessEqual(len(snapshot["messages"]), ingest.DEFAULT_MAX_MESSAGES)
 
-    def test_default_mail_scan_is_twenty_messages(self):
+    def test_mail_output_stays_at_twenty_after_broader_scan(self):
         self.assertEqual(20, ingest.DEFAULT_MAX_MESSAGES)
+        self.assertEqual(120, ingest.DEFAULT_MAIL_SCAN_LIMIT)
+
+    def test_weekday_demo_date_uses_today_and_weekend_uses_next_monday(self):
+        self.assertEqual(date(2026, 8, 20), ingest.next_demo_weekday(date(2026, 8, 20)))
+        self.assertEqual(date(2026, 8, 24), ingest.next_demo_weekday(date(2026, 8, 22)))
+        self.assertEqual(date(2026, 8, 24), ingest.next_demo_weekday(date(2026, 8, 23)))
+
+    def test_mail_is_sorted_after_scanning_beyond_the_output_limit(self):
+        class Request:
+            def __init__(self, value):
+                self.value = value
+
+            def execute(self):
+                return self.value
+
+        metadata = {
+            "background-1": 1000,
+            "background-2": 2000,
+            "priority-1": 5000,
+            "priority-2": 4000,
+        }
+
+        class Messages:
+            def list(self, **kwargs):
+                if kwargs.get("pageToken") == "page-2":
+                    return Request({"messages": [{"id": "priority-1"}, {"id": "priority-2"}]})
+                return Request({
+                    "messages": [{"id": "background-1"}, {"id": "background-2"}],
+                    "nextPageToken": "page-2",
+                })
+
+            def get(self, **kwargs):
+                message_id = kwargs["id"]
+                return Request({
+                    "id": message_id,
+                    "threadId": f"thread-{message_id}",
+                    "internalDate": str(metadata[message_id]),
+                    "labelIds": ["INBOX"],
+                    "payload": {"headers": [{"name": "Subject", "value": message_id}]},
+                })
+
+        messages = Messages()
+
+        class Users:
+            def getProfile(self, **_kwargs):
+                return Request({"emailAddress": "demo@example.test"})
+
+            def messages(self):
+                return messages
+
+        class Api:
+            def users(self):
+                return Users()
+
+        result, identity = ingest.fetch_mail(Api(), 30, 2, None, scan_limit=4)
+
+        self.assertEqual(["priority-1", "priority-2"], [item["id"] for item in result])
+        self.assertEqual(4, identity["mail_scanned"])
 
     def test_cloud_mutation_requires_confirmation(self):
         with self.assertRaisesRegex(RuntimeError, "without --confirm"):

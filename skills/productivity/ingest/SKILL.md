@@ -44,14 +44,18 @@ fi
 "$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py"
 ```
 
-The snapshot is written to `$COS_HOME/chief-of-staff/snapshot.json`. The command prints only counts and connector errors.
+The snapshot is written to `$COS_HOME/chief-of-staff/snapshot.json`. The command
+prints only counts and connector errors. On weekdays its default Calendar window
+starts today; on weekends it starts on the upcoming Monday. Gmail scans a
+bounded 120-message metadata set, sorts by `internalDate`, and retains 20 by
+default.
 
 ## Quick Reference
 
 ```bash
 if [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="${HERMES_HOME:-$LOCALAPPDATA/hermes}"; COS_HOME="${COS_HOME//\\//}"; PYTHON="${LOCALAPPDATA//\\//}/hermes/hermes-agent/venv/Scripts/python.exe"; else COS_HOME="${HERMES_HOME:-$HOME/.hermes}"; PYTHON="$(command -v python3 || command -v python)"; fi
 
-# Today plus tomorrow; active inbox and recent Drive files
+# Today plus tomorrow (or Monday plus Tuesday on weekends); active inbox and recent Drive files
 "$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py"
 
 # Explicit local day and tighter bounds

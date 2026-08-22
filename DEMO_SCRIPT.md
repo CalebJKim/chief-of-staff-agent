@@ -8,7 +8,7 @@ The demo changes no Hermes model/provider defaults. It uses the repo-installed `
 
 ## Opening
 
-The dedicated demo account contains a busy fictional RTX Spark Agent Runtime workweek, 106 unread Inbox messages, and a Drive tracker/report/deck. Only six messages contain meaningful work. The chief of staff should cut through that noise and identify three grouped outcomes across Mail, Calendar, and Drive.
+The dedicated demo account contains a busy fictional RTX Spark Agent Runtime workweek, 76 unread Inbox messages, and a Drive tracker/report/deck. Only six messages contain meaningful work. The chief of staff should cut through that noise and identify three grouped outcomes across Mail, Calendar, and Drive.
 
 ## Query 1 — Morning priorities
 
@@ -20,7 +20,7 @@ The dedicated demo account contains a busy fictional RTX Spark Agent Runtime wor
 
 Exactly three succinct numbered items, with no heading, scores, inbox inventory, or closing question:
 
-1. **Agent Runtime regression** — Priya's P0 duplicate-completion blocker. Next: move the existing release review to Monday at 11:00 AM PT and draft Priya and Daniel a confirmation. Inline Mail and Calendar links.
+1. **Agent Runtime regression** — Priya's P0 duplicate-completion blocker. Next: move the existing release review to the next business day at 11:00 AM PT and draft Priya and Daniel a confirmation. Inline Mail and Calendar links.
 2. **Agent Runtime Latency Evaluation** — Mateo completed it while the tracker remains `In progress`. Next: change only that lane to `Ready for review`. Inline Mail and Tracker links.
 3. **Partner Readout Deck** — Elena approved the exact slide-4 headline. Next: replace only the placeholder. Inline Mail and Deck links.
 
@@ -34,7 +34,7 @@ Point out that each priority groups evidence and the action target instead of li
 
 **Expected result**
 
-- The existing `RTX Spark Agent Runtime release review` moves to Monday at 11:00 AM Pacific; no duplicate event is created.
+- The existing `RTX Spark Agent Runtime release review` moves to the next business day at 11:00 AM Pacific; no duplicate event is created.
 - An unsent reply draft is created in Priya's original thread with Daniel copied.
 - The response is one short confirmation with inline Calendar and Draft links.
 
