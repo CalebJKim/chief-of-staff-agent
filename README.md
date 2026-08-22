@@ -97,7 +97,7 @@ The output must be `demo_updates`.
 
 ## 4. Create the project Python environment
 
-Hermes may manage its own Python runtime, but these repository scripts need a normal project environment.
+These repository scripts use a project environment for setup, seeding, and tests. On Windows, the live installed skills use Hermes' bundled Python rather than relying on the desktop process's `PATH`.
 
 ### Windows PowerShell
 
@@ -146,7 +146,7 @@ python -m unittest discover -s skills/productivity/ingest/tests -v
 python -m unittest discover -s skills/productivity/chief-of-staff/tests -v
 ```
 
-Expected result: 19 tests pass across the three suites.
+Expected result: 24 tests pass across the three suites.
 
 ## 6. Install the agent into Hermes
 

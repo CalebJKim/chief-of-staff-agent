@@ -66,8 +66,9 @@ $BootstrapPython = Join-Path $env:LOCALAPPDATA "hermes\hermes-agent\venv\Scripts
 & $BootstrapPython -m venv .venv
 ```
 
-A standalone Python should still be installed because the Chief of Staff skill
-invokes `python` from Hermes terminal sessions.
+The project environment is used for setup, seeding, and tests. On Windows, the
+live Chief of Staff skill uses Hermes' bundled Python so it does not depend on
+the desktop process inheriting a separately installed Python from `PATH`.
 
 ## 3. Create the project environment
 
@@ -91,7 +92,7 @@ calendar event offsets.
 & $Python -m unittest discover -s skills/productivity/chief-of-staff/tests -v
 ```
 
-Expected result: 19 tests pass across the three suites.
+Expected result: 24 tests pass across the three suites.
 
 ## 5. Install the skills into Hermes
 

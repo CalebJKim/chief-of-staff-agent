@@ -33,14 +33,14 @@ Pull a bounded, metadata-first Workspace snapshot for planning. It deliberately 
 Use `terminal` with the active profile root:
 
 ```bash
-if [ -n "${HERMES_HOME:-}" ]; then
-  COS_HOME="$HERMES_HOME"
-elif [ -n "${LOCALAPPDATA:-}" ]; then
-  COS_HOME="$LOCALAPPDATA/hermes"
+if [ -n "${LOCALAPPDATA:-}" ]; then
+  COS_HOME="${HERMES_HOME:-$LOCALAPPDATA/hermes}"
+  COS_HOME="${COS_HOME//\\//}"
+  PYTHON="${LOCALAPPDATA//\\//}/hermes/hermes-agent/venv/Scripts/python.exe"
 else
-  COS_HOME="$HOME/.hermes"
+  COS_HOME="${HERMES_HOME:-$HOME/.hermes}"
+  PYTHON="$(command -v python3 || command -v python)"
 fi
-PYTHON="$(command -v python3 || command -v python)"
 "$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py"
 ```
 
@@ -49,8 +49,7 @@ The snapshot is written to `$COS_HOME/chief-of-staff/snapshot.json`. The command
 ## Quick Reference
 
 ```bash
-if [ -n "${HERMES_HOME:-}" ]; then COS_HOME="$HERMES_HOME"; elif [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="$LOCALAPPDATA/hermes"; else COS_HOME="$HOME/.hermes"; fi
-PYTHON="$(command -v python3 || command -v python)"
+if [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="${HERMES_HOME:-$LOCALAPPDATA/hermes}"; COS_HOME="${COS_HOME//\\//}"; PYTHON="${LOCALAPPDATA//\\//}/hermes/hermes-agent/venv/Scripts/python.exe"; else COS_HOME="${HERMES_HOME:-$HOME/.hermes}"; PYTHON="$(command -v python3 || command -v python)"; fi
 
 # Today plus tomorrow; active inbox and recent Drive files
 "$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py"

@@ -22,14 +22,14 @@ Address the user by their configured name when available. The inbox is a work qu
 Run both steps in **one terminal call**. Do not narrate setup or tool use.
 
 ```bash
-if [ -n "${HERMES_HOME:-}" ]; then
-  COS_HOME="$HERMES_HOME"
-elif [ -n "${LOCALAPPDATA:-}" ]; then
-  COS_HOME="$LOCALAPPDATA/hermes"
+if [ -n "${LOCALAPPDATA:-}" ]; then
+  COS_HOME="${HERMES_HOME:-$LOCALAPPDATA/hermes}"
+  COS_HOME="${COS_HOME//\\//}"
+  PYTHON="${LOCALAPPDATA//\\//}/hermes/hermes-agent/venv/Scripts/python.exe"
 else
-  COS_HOME="$HOME/.hermes"
+  COS_HOME="${HERMES_HOME:-$HOME/.hermes}"
+  PYTHON="$(command -v python3 || command -v python)"
 fi
-PYTHON="$(command -v python3 || command -v python)"
 ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
 "$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py" --max-messages 20 && "$PYTHON" "$COS_HOME/skills/productivity/chief-of-staff/scripts/brief.py" --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000
 ```
@@ -70,8 +70,7 @@ Under 220 words. No preamble, inbox inventory, generic advice, or fourth priorit
 Use the focused action helper; do not rerun broad ingest unless data is stale.
 
 ```bash
-if [ -n "${HERMES_HOME:-}" ]; then COS_HOME="$HERMES_HOME"; elif [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="$LOCALAPPDATA/hermes"; else COS_HOME="$HOME/.hermes"; fi
-PYTHON="$(command -v python3 || command -v python)"
+if [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="${HERMES_HOME:-$LOCALAPPDATA/hermes}"; COS_HOME="${COS_HOME//\\//}"; PYTHON="${LOCALAPPDATA//\\//}/hermes/hermes-agent/venv/Scripts/python.exe"; else COS_HOME="${HERMES_HOME:-$HOME/.hermes}"; PYTHON="$(command -v python3 || command -v python)"; fi
 ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
 DRAFT_TRACKING=""
 if [ -f "$COS_HOME/chief-of-staff-workspace-state.json" ]; then DRAFT_TRACKING="--track-demo-state"; fi
@@ -91,8 +90,7 @@ if [ -f "$COS_HOME/chief-of-staff-workspace-state.json" ]; then DRAFT_TRACKING="
 ## Guarded Writes
 
 ```bash
-if [ -n "${HERMES_HOME:-}" ]; then COS_HOME="$HERMES_HOME"; elif [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="$LOCALAPPDATA/hermes"; else COS_HOME="$HOME/.hermes"; fi
-PYTHON="$(command -v python3 || command -v python)"
+if [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="${HERMES_HOME:-$LOCALAPPDATA/hermes}"; COS_HOME="${COS_HOME//\\//}"; PYTHON="${LOCALAPPDATA//\\//}/hermes/hermes-agent/venv/Scripts/python.exe"; else COS_HOME="${HERMES_HOME:-$HOME/.hermes}"; PYTHON="$(command -v python3 || command -v python)"; fi
 ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
 "$PYTHON" "$ACTION" docs append DOCUMENT_ID --text TEXT --confirm
 "$PYTHON" "$ACTION" docs replace-text DOCUMENT_ID --find OLD --replace NEW --confirm
