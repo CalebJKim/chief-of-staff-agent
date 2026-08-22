@@ -24,11 +24,20 @@ def install_soul(source: Path, target: Path, overwrite: bool) -> str:
         return "installed"
 
     existing = target.read_text(encoding="utf-8")
-    if ROUTING_START in existing:
-        return "preserved; chief-of-staff routing already present"
-
     routing_start = source_text.index(ROUTING_START)
-    routing = source_text[routing_start:].strip()
+    routing_end = source_text.find("\n\n", routing_start)
+    routing = source_text[routing_start:routing_end if routing_end >= 0 else None].strip()
+    if ROUTING_START in existing:
+        existing_start = existing.index(ROUTING_START)
+        existing_end = existing.find("\n\n", existing_start)
+        existing_end = len(existing) if existing_end < 0 else existing_end
+        current_routing = existing[existing_start:existing_end].strip()
+        if current_routing == routing:
+            return "preserved; chief-of-staff routing already present"
+        updated = f"{existing[:existing_start]}{routing}{existing[existing_end:]}"
+        target.write_text(updated, encoding="utf-8")
+        return "preserved; chief-of-staff routing updated"
+
     target.write_text(f"{existing.rstrip()}\n\n{routing}\n", encoding="utf-8")
     return "preserved; chief-of-staff routing added"
 
@@ -47,6 +56,7 @@ def main() -> int:
         if destination.exists():
             shutil.rmtree(destination)
         shutil.copytree(source / "skills" / "productivity" / name, destination, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    shutil.copy2(source / "cos.sh", target / "cos.sh")
     soul = target / "SOUL.md"
     soul_status = install_soul(source / "SOUL.md", soul, args.overwrite_soul)
     print(f"Installed skills into {skills_target}")

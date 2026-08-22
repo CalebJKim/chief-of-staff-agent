@@ -106,7 +106,9 @@ python -m venv .venv
 $Python = (Resolve-Path .\.venv\Scripts\python.exe).Path
 & $Python -m pip install --upgrade pip
 & $Python -m pip install -r requirements.txt
-$env:HERMES_HOME = Join-Path $env:LOCALAPPDATA "hermes"
+$ProfileName = "chief-of-staff-demo"
+$HermesRoot = Join-Path $env:LOCALAPPDATA "hermes"
+$env:HERMES_HOME = Join-Path $HermesRoot "profiles\$ProfileName"
 ```
 
 On Windows ARM, if the standalone Python cannot install a binary dependency,
@@ -124,7 +126,9 @@ Keep this PowerShell window open while completing the setup. In a later window, 
 
 ```powershell
 $Python = (Resolve-Path .\.venv\Scripts\python.exe).Path
-$env:HERMES_HOME = Join-Path $env:LOCALAPPDATA "hermes"
+$ProfileName = "chief-of-staff-demo"
+$HermesRoot = Join-Path $env:LOCALAPPDATA "hermes"
+$env:HERMES_HOME = Join-Path $HermesRoot "profiles\$ProfileName"
 ```
 
 ### Linux or macOS
@@ -134,12 +138,43 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-export HERMES_HOME="$HOME/.hermes"
+export PROFILE_NAME="chief-of-staff-demo"
+export HERMES_ROOT="$HOME/.hermes"
+export HERMES_HOME="$HERMES_ROOT/profiles/$PROFILE_NAME"
 ```
 
 The repository pins `tzdata` because Windows does not include the IANA time-zone database used by the seeder.
 
-## 5. Run the offline tests
+## 5. Create an isolated Hermes demo profile
+
+Use a dedicated profile so the demo exposes only its two skills and two required
+toolsets. This avoids routing competition from unrelated skills and does not
+change the model, provider, skills, or tools in the default profile.
+
+Create the profile once on Windows:
+
+```powershell
+hermes profile create $ProfileName --no-skills --description "Isolated Chief of Staff demo"
+Copy-Item -LiteralPath (Join-Path $HermesRoot "config.yaml") -Destination (Join-Path $env:HERMES_HOME "config.yaml")
+hermes -p $ProfileName config set platform_toolsets.cli '["skills","terminal"]' --force
+```
+
+Or on Linux/macOS:
+
+```bash
+hermes profile create "$PROFILE_NAME" --no-skills --description "Isolated Chief of Staff demo"
+cp "$HERMES_ROOT/config.yaml" "$HERMES_HOME/config.yaml"
+hermes -p "$PROFILE_NAME" config set platform_toolsets.cli '["skills","terminal"]' --force
+```
+
+`--no-skills` creates a `.no-bundled-skills` marker so future Hermes updates do
+not repopulate the profile with unrelated bundled skills. If the profile already
+exists, do not recreate it; set the variables above and continue. The copied
+configuration preserves the selected model. If that provider uses a secret in
+the default profile's `.env`, configure it separately with
+`hermes -p chief-of-staff-demo model`; do not commit or publish profile secrets.
+
+## 6. Run the offline tests
 
 Run these before connecting Google Workspace so setup problems are separated from account or API problems.
 
@@ -157,29 +192,30 @@ python -m unittest discover -s skills/productivity/ingest/tests -v
 python -m unittest discover -s skills/productivity/chief-of-staff/tests -v
 ```
 
-Expected result: 38 tests pass across the three suites.
+Expected result: all tests pass across the three suites.
 
-## 6. Install the agent into Hermes
+## 7. Install the agent into Hermes
 
 ```powershell
 # Windows PowerShell
-& $Python install.py --hermes-home $env:HERMES_HOME
-hermes tools enable skills terminal --platform cli
-hermes skills list
+& $Python install.py --hermes-home $env:HERMES_HOME --overwrite-soul
+hermes -p $ProfileName skills list
 ```
 
 ```bash
 # Linux/macOS
-python install.py --hermes-home "$HERMES_HOME"
-hermes tools enable skills terminal --platform cli
-hermes skills list
+python install.py --hermes-home "$HERMES_HOME" --overwrite-soul
+hermes -p "$PROFILE_NAME" skills list
 ```
 
-Confirm that `chief-of-staff` and `ingest` appear in the skills list. The installer preserves an existing customized `SOUL.md` and adds the chief-of-staff routing paragraph when it is absent. Use `--overwrite-soul` only when replacing the existing file is intentional.
+Confirm that `chief-of-staff` and `ingest` are the only skills in the profile.
+`--overwrite-soul` is intentional here because this is a dedicated profile. In a
+shared profile, the installer instead preserves a customized `SOUL.md` and adds
+the chief-of-staff routing paragraph when it is absent.
 
 The demo does not require changes to Hermes model/provider defaults or unrelated tool settings. It only requires the installed `chief-of-staff` and `ingest` skills plus the `skills` and `terminal` toolsets.
 
-## 7. Create Google OAuth credentials
+## 8. Create Google OAuth credentials
 
 For the current screen-by-screen Google Cloud procedure, including screenshots,
 see [`docs/GOOGLE_DESKTOP_OAUTH.md`](docs/GOOGLE_DESKTOP_OAUTH.md). The concise
@@ -195,7 +231,7 @@ In [Google Cloud Console](https://console.cloud.google.com/):
 
 Never add the downloaded secret, generated token, or generated workspace state file to Git.
 
-## 8. Authorize the Google account
+## 9. Authorize the Google account
 
 Store the downloaded Desktop client secret and generate an authorization URL.
 
@@ -240,13 +276,34 @@ python "$HERMES_HOME/skills/productivity/ingest/scripts/verify.py"
 
 Both checks should succeed for Gmail, Calendar, Drive, Docs, Sheets, and Slides. The resulting `google_client_secret.json` and `google_token.json` stay under the local `HERMES_HOME`.
 
+If this same Google account was already authorized and seeded in the default
+profile, migrate its local credentials and state instead of authorizing or
+seeding again. Close Hermes first, then on Windows run:
+
+```powershell
+$ExistingHome = $HermesRoot
+foreach ($Name in @("google_client_secret.json", "google_token.json", "chief-of-staff-workspace-state.json")) {
+    $Source = Join-Path $ExistingHome $Name
+    if (Test-Path -LiteralPath $Source) {
+        Copy-Item -LiteralPath $Source -Destination (Join-Path $env:HERMES_HOME $Name)
+    }
+}
+& $Python setup\google-workspace\setup.py --check-live
+& $Python (Join-Path $env:HERMES_HOME "skills\productivity\ingest\scripts\verify.py")
+```
+
+Copy the workspace-state file only with the OAuth token for the account that
+owns those seeded resources. For a different or suspended account, follow the
+account-switch procedure instead; pairing old state with a new token causes the
+expected Drive permission failure.
+
 If the demo may switch between a primary and backup Google account, add both as
 OAuth test users before demo day. Changing accounts does not automatically
 change the active workspace-state file. Follow
 [`Switch or fail over to another Google account`](docs/GOOGLE_DESKTOP_OAUTH.md#8-switch-or-fail-over-to-another-google-account)
 for the planned cleanup flow and the suspended-account archive fallback.
 
-## 9. Seed the reference workspace
+## 10. Seed the reference workspace
 
 This step writes the fake demo data to the authorized Google account. It is not required if you want the agent to work only with data already in that account.
 
@@ -275,12 +332,12 @@ lines. The seeder writes the background set first and the six meaningful
 messages in a final dedicated batch so they also appear within Gmail's first 20
 in the dedicated demo inbox.
 
-- Windows: `%LOCALAPPDATA%\hermes\chief-of-staff-workspace-state.json`
-- Linux/macOS: `$HOME/.hermes/chief-of-staff-workspace-state.json`
+- Windows: `%LOCALAPPDATA%\hermes\profiles\chief-of-staff-demo\chief-of-staff-workspace-state.json`
+- Linux/macOS: `$HOME/.hermes/profiles/chief-of-staff-demo/chief-of-staff-workspace-state.json`
 
 Do not manually delete that state file; reset and cleanup need its exact resource IDs. The seeder refuses to create a duplicate while the state file exists.
 
-## 10. Verify the live demo data
+## 11. Verify the live demo data
 
 ```powershell
 # Windows PowerShell
@@ -319,21 +376,34 @@ Gmail's `internalDate`, and then retains only the newest 20 for the snapshot.
 With the 76-message reference workspace, that keeps all six meaningful messages
 plus 14 background messages while preserving a bounded model context.
 
-## 11. Run the demo
+## 12. Run the demo
 
-Start Hermes from the repository directory:
+For CLI rehearsal, start Hermes from the repository directory without changing
+the active Desktop profile:
 
 ```bash
-hermes
+hermes -p chief-of-staff-demo
 ```
+
+For Hermes Desktop, select the profile before launching the app:
+
+```powershell
+hermes profile use chief-of-staff-demo
+```
+
+Restart Hermes Desktop and confirm the active profile is
+`chief-of-staff-demo`. After the demo, restore the normal profile with
+`hermes profile use default` and restart Desktop. This selection changes only
+which profile Desktop opens; it does not alter the default profile's files.
 
 At the prompt, say:
 
 > Hey chief of staff, what should we work on today?
 
-The expected top three, in order, are the Agent Runtime regression, the completed latency evaluation, and the Partner Readout deck. Each item includes inline links to its supporting mail and action target. Continue with:
+The reply begins with a summary of today's workload in no more than three sentences. The expected top three, in order, are the Agent Runtime regression, the completed latency evaluation, and the Partner Readout deck. Each item includes inline links to its supporting mail and action target followed by a `Recommended action item(s):` sub-bullet. Continue with:
 
 - `Take the action items for the first thing.` This moves the existing release review to the next business day at 11:00 AM PT and creates an unsent threaded draft to Priya with Daniel copied.
+- Natural wording such as `Can you take care of the first item on the list for me?` follows the same direct action path; it must not rerun Start of Day or probe for Google tooling.
 - `Take the action items for the second thing.` This changes only the `Agent Runtime Latency Evaluation` tracker status to `Ready for review`.
 - Optional backup: `Take the action items for the third thing.` This replaces only the slide-4 placeholder with Elena's approved headline.
 
@@ -419,7 +489,7 @@ Gmail deletion is immediate and cannot be undone; unrelated messages are untouch
 - **`disabled_client`**: verify the client and its secret under Google Auth Platform > Clients. If the console already says Enabled, wait briefly and rerun `--check-live`; status propagation can lag. Enable the client/secret or replace it only if the error persists.
 - **OAuth state mismatch**: generate a new URL with `--auth-url` and submit only the redirect URL produced by that same attempt.
 - **Time-zone error on Windows**: activate the repository environment and rerun `pip install -r requirements.txt`; `tzdata` is required.
-- **Hermes cannot find the skills**: confirm `HERMES_HOME`, rerun `install.py`, then run `hermes skills list`.
+- **Hermes cannot find the skills**: confirm `HERMES_HOME`, rerun `install.py`, then run `hermes -p chief-of-staff-demo skills list`.
 - **Hermes has no usable model**: run `hermes model` and choose a tool-calling provider/model.
 
 ## Repository contents and safety

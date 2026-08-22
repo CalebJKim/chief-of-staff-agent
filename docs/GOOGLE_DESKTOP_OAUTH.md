@@ -7,6 +7,11 @@ events, and create or update Drive, Docs, Sheets, and Slides files.
 
 This procedure was validated end to end on Windows on August 22, 2026.
 
+The recommended installation uses the isolated `chief-of-staff-demo` Hermes
+profile. Before running any command in this guide, set `HERMES_HOME` to that
+profile as shown in README step 4. OAuth credentials, tokens, and workspace
+state are profile-scoped; they do not change the default Hermes profile.
+
 The Google Cloud free-trial prompt is unrelated to this setup. You do not need
 to start the trial to configure OAuth or use these Google Workspace APIs.
 
@@ -187,6 +192,13 @@ should still remain outside the checkout.
 The commands below assume that the project environment and `HERMES_HOME` were
 configured as described in the main README.
 
+Confirm the target before authorizing on Windows:
+
+```powershell
+Write-Output $env:HERMES_HOME
+# Expected suffix: \hermes\profiles\chief-of-staff-demo
+```
+
 ### Windows PowerShell
 
 Replace the example path with the downloaded JSON's real path:
@@ -280,6 +292,8 @@ The OAuth token and `chief-of-staff-workspace-state.json` both live under the
 active `HERMES_HOME`, but changing the OAuth account does not automatically
 replace or remove the previous account's workspace state. A stale state file
 therefore blocks a second seed even when the newly connected account is empty.
+The same rule applies inside the isolated demo profile: always clean or archive
+that profile's state before pairing it with a different account.
 
 Before demo day:
 

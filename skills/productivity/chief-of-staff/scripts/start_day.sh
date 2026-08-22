@@ -10,5 +10,5 @@ else
   PYTHON="$(command -v python3 || command -v python)"
 fi
 
-"$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py" --max-messages 20 \
-  && "$PYTHON" "$COS_HOME/skills/productivity/chief-of-staff/scripts/brief.py" --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000
+"$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py" --max-messages 20 >/dev/null \
+  && "$PYTHON" "$COS_HOME/skills/productivity/chief-of-staff/scripts/brief.py" --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000 --reply-only

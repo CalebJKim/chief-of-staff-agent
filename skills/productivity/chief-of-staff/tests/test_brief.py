@@ -44,7 +44,8 @@ class BriefTests(unittest.TestCase):
         self.assertNotIn('"signal_score"', json.dumps(packet))
         self.assertEqual(packet["mail"][0]["url"], "https://mail.google.com/mail/u/0/#all/thread-urgent")
         self.assertEqual(packet["source_status"], {"calendar": "ok", "gmail": "ok", "drive": "ok"})
-        self.assertIn("at most 65 words", packet["instruction"])
+        self.assertIn("no more than three sentences", packet["instruction"])
+        self.assertIn("Recommended action item(s):", packet["instruction"])
         self.assertIn("inline links", packet["instruction"])
         self.assertIn("workstreams[0:3]", packet["instruction"])
         self.assertIn("never split", packet["instruction"])
@@ -103,10 +104,19 @@ class BriefTests(unittest.TestCase):
         self.assertEqual("msg-urgent", workstreams[0]["supporting_mail"]["id"])
         self.assertEqual("evt-exec", workstreams[0]["target"]["id"])
         self.assertNotIn("action_command", workstreams[0])
-        self.assertTrue(workstreams[1]["action_command"].endswith("workstream 2 --confirm"))
-        self.assertTrue(workstreams[2]["action_command"].endswith("workstream 3 --confirm"))
+        self.assertEqual('bash "$HERMES_HOME/cos.sh" 2', workstreams[1]["action_command"])
+        self.assertEqual('bash "$HERMES_HOME/cos.sh" 3', workstreams[2]["action_command"])
         self.assertEqual("tracker_status", plan["workstreams"][1]["action"]["kind"])
         self.assertEqual("slides_replace_text", plan["workstreams"][2]["action"]["kind"])
+
+        reply = brief.render_initial_reply(packet)
+        self.assertTrue(reply.startswith("Today's workload centers on "))
+        self.assertEqual(3, reply.count("Recommended action item(s):"))
+        self.assertEqual(1, reply.count("[Calendar]("))
+        self.assertEqual(1, reply.count("[Tracker]("))
+        self.assertEqual(1, reply.count("[Deck]("))
+        self.assertNotIn("action_command", reply)
+        self.assertNotIn("cos.sh", reply)
 
     def test_calendar_action_plan_resolves_move_and_threaded_draft(self):
         tz = ZoneInfo("America/Los_Angeles")
@@ -148,6 +158,8 @@ class BriefTests(unittest.TestCase):
         self.assertEqual("2026-08-17T12:00:00-07:00", action["steps"][0][6])
         self.assertEqual("message-priya", action["steps"][1][3])
         self.assertEqual("daniel@example.test", action["steps"][1][5])
+        self.assertTrue(action["steps"][1][7].endswith("\n\nThanks"))
+        self.assertNotIn("\n\nBest", action["steps"][1][7])
 
     def test_packet_respects_context_budget(self):
         snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))

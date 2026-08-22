@@ -1,6 +1,6 @@
 ---
 name: chief-of-staff
-description: Plan the day from Google Workspace evidence and complete the resulting Gmail, Calendar, Drive, Sheets, Docs, and Slides follow-ups.
+description: Build a Google Workspace-backed daily top-three plan and execute numbered follow-ups from that plan.
 version: 0.5.0
 author: NVIDIA, Hermes Agent
 license: MIT
@@ -13,7 +13,14 @@ metadata:
 
 # Chief of Staff
 
-For any request asking what to work on today, immediately run the Start of Day command below with the terminal tool. It works from Hermes CLI and is the only source for that briefing. Never inspect the current folder, Git state, dependencies, or cron jobs, and never use `execute_code` for this request.
+## Turn Router
+
+Choose exactly one path after this skill is loaded:
+
+- **Fresh daily plan:** Run `bash "$HERMES_HOME/skills/productivity/chief-of-staff/scripts/start_day.sh"` as the only terminal command, then return its preformatted Markdown verbatim as the entire answer.
+- **Numbered follow-up:** When the user asks to act on the first, second, or third priority from the current conversation, run `bash "$HERMES_HOME/cos.sh" N` as the only tool call, replacing `N` with the matching item number, then report its verified result.
+
+Never combine paths. For a numbered follow-up, do not load another skill, rerun Start of Day, inspect artifacts or help, run setup, use `execute_code`, or search the filesystem.
 
 Use the returned, bounded Workspace evidence to recommend the day and complete approved follow-ups. This skill continues to own follow-up requests in the same conversation, including “do the first item,” “put that in Gmail,” and tracker or deck updates.
 
@@ -23,29 +30,23 @@ Never launch Chrome or use browser/computer tools to open Workspace links. Retur
 
 ## Start of Day
 
-Make exactly one terminal tool call, passing the command below verbatim as its entire command. It already reports failures: do not add redirection, fallbacks, diagnostics, pipes, or extra commands. Then answer immediately from its compact JSON. Do not reload this skill, rerun the scan, inspect the snapshot, or call another tool in the same turn.
+For the fresh-plan path, answer immediately with the command's output and no added preamble, heading, explanation, question, or closing. It already reports failures, so do not add redirection, fallbacks, diagnostics, pipes, or extra commands. Do not rerun the scan or inspect its snapshot.
 
-```bash
-bash "$HERMES_HOME/skills/productivity/chief-of-staff/scripts/start_day.sh"
-```
-
-When the packet has three data-ranked `workstreams`, use them in order. Render each exactly once; never split a workstream's related mail, meeting, and files into separate priorities. Otherwise rank up to three distinct outcomes from the remaining evidence. Give the reason, first action, and supplied inline links. Resolve relevant calendar conflicts and use only real availability. Never expose internal scores or turn stale relative dates into current deadlines.
+The script dynamically ranks Workspace evidence and preformats each grouped workstream exactly once; never rewrite, split, merge, or re-rank its output. Never expose internal scores, raw IDs, helper commands, or OAuth diagnostics.
 
 ## Initial Reply
 
-Use exactly three numbered items and at most 65 words total. No heading, preamble, tables, inbox inventory, skipped-item list, separate conflict section, approval section, closing question, or detailed rationale. End immediately after item 3. Each item ends with exactly two links: one supporting `[Mail]` link and one action-target `[Calendar]`, `[Tracker]`, or `[Deck]` link. For scheduling, use the matching meeting's `calendar_url`, never a link extracted from mail.
+`brief.py` owns this presentation contract: a one-sentence workload summary with no heading, followed by exactly three numbered items. Each item has a bold outcome line, one evidence sentence ending with exactly two links, and an indented action sub-bullet labeled `Recommended action item(s):`. The script uses the matching meeting's Calendar URL for scheduling and ends after item 3. Return that text verbatim.
 
-1. **Outcome** — why now. **Next:** action. [Mail](URL) [Calendar or Drive](URL)
-2. ...
-3. ...
+1. **Outcome**
+   Why this matters now. [Mail](URL) [Calendar or Drive](URL)
+   - **Recommended action item(s):** Take the specific next action.
 
 Recommend only; never claim an action happened before a successful write.
 
 ## Follow-ups
 
-Use evidence already present in the packet; do not rerun broad ingest unless it is stale. A direct request to take the actions for the first, second, or third item authorizes that workstream's specific mutation.
-
-Each executable workstream has an `action_command`. Immediately copy that command verbatim into exactly one terminal tool call as its entire command. Do not reload this skill, read the thread or artifact, translate the command, use `execute_code`, inspect `--help`, or run setup. The command already contains the resolved IDs and exact values and verifies every write. After success, report the verified result and returned inline URLs in one sentence under 30 words.
+Use evidence already present in the packet; do not rerun broad ingest unless it is stale. A direct request to take the actions for a ranked item authorizes that workstream's specific mutation. The packet persists resolved IDs in `chief-of-staff/action-plan.json`; the launcher resolves and verifies the selected workstream. After success, report the verified result and returned inline URLs in one sentence under 30 words.
 
 For a supported follow-up that is not one of the ranked workstreams, use the focused helper directly. Read a full thread or artifact only when an exact value is genuinely missing. Never use `execute_code`, run setup, inspect `--help`, or load the generic Google Workspace skill.
 

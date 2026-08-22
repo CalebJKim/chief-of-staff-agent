@@ -44,6 +44,20 @@ class InstallSoulTests(unittest.TestCase):
         self.assertEqual("preserved; chief-of-staff routing already present", status)
         self.assertEqual(first, self.target.read_text(encoding="utf-8"))
 
+    def test_updates_existing_routing_without_replacing_custom_soul(self) -> None:
+        self.target.write_text(
+            'My custom Soul.\n\nWhen the user addresses you as "chief of staff", load the skill.\n\nKeep this too.\n',
+            encoding="utf-8",
+        )
+
+        status = install_soul(self.source, self.target, overwrite=False)
+        installed = self.target.read_text(encoding="utf-8")
+
+        self.assertEqual("preserved; chief-of-staff routing updated", status)
+        self.assertTrue(installed.startswith("My custom Soul.\n\n"))
+        self.assertIn("follows up on a numbered priority", installed)
+        self.assertTrue(installed.endswith("\n\nKeep this too.\n"))
+
 
 if __name__ == "__main__":
     unittest.main()

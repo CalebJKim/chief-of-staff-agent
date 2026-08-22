@@ -1,7 +1,8 @@
 # Quick setup
 
-For the complete validated Windows procedure, troubleshooting notes, live
-checks, and cleanup workflow, see [SETUP_GUIDE.md](SETUP_GUIDE.md).
+For the complete current procedure, troubleshooting notes, live checks, and
+cleanup workflow, see [README.md](README.md). The screen-by-screen OAuth flow
+is in [docs/GOOGLE_DESKTOP_OAUTH.md](docs/GOOGLE_DESKTOP_OAUTH.md).
 
 ## 1. Install prerequisites
 
@@ -17,7 +18,9 @@ Set-Location chief-of-staff-agent
 python -m venv .venv
 $Python = (Resolve-Path .\.venv\Scripts\python.exe).Path
 & $Python -m pip install -r requirements.txt
-$env:HERMES_HOME = Join-Path $env:LOCALAPPDATA "hermes"
+$ProfileName = "chief-of-staff-demo"
+$HermesRoot = Join-Path $env:LOCALAPPDATA "hermes"
+$env:HERMES_HOME = Join-Path $HermesRoot "profiles\$ProfileName"
 ```
 
 Linux/macOS:
@@ -28,28 +31,37 @@ cd chief-of-staff-agent
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-export HERMES_HOME="$HOME/.hermes"
+export PROFILE_NAME="chief-of-staff-demo"
+export HERMES_ROOT="$HOME/.hermes"
+export HERMES_HOME="$HERMES_ROOT/profiles/$PROFILE_NAME"
 ```
 
 On PowerShell, use `& $Python` wherever the remaining examples begin with
 `python`. The repository pins `tzdata` because Windows does not provide the
 IANA time-zone database used by the demo seeder.
 
-## 2. Install the agent
+## 2. Create the isolated profile and install the agent
 
 ```powershell
 # Windows PowerShell
-& $Python install.py --hermes-home $env:HERMES_HOME
-hermes tools enable skills terminal --platform cli
+hermes profile create $ProfileName --no-skills --description "Isolated Chief of Staff demo"
+Copy-Item -LiteralPath (Join-Path $HermesRoot "config.yaml") -Destination (Join-Path $env:HERMES_HOME "config.yaml")
+hermes -p $ProfileName config set platform_toolsets.cli '["skills","terminal"]' --force
+& $Python install.py --hermes-home $env:HERMES_HOME --overwrite-soul
 ```
 
 ```bash
 # Linux/macOS
-python install.py --hermes-home "$HERMES_HOME"
-hermes tools enable skills terminal --platform cli
+hermes profile create "$PROFILE_NAME" --no-skills --description "Isolated Chief of Staff demo"
+cp "$HERMES_ROOT/config.yaml" "$HERMES_HOME/config.yaml"
+hermes -p "$PROFILE_NAME" config set platform_toolsets.cli '["skills","terminal"]' --force
+python install.py --hermes-home "$HERMES_HOME" --overwrite-soul
 ```
 
-If Hermes already has a customized `SOUL.md`, the installer preserves it. Copy the chief-of-staff routing paragraph from this repository into the existing Soul manually, or rerun with `--overwrite-soul` if replacement is intended.
+The dedicated profile contains only `chief-of-staff` and `ingest`; `--no-skills`
+prevents later Hermes updates from repopulating unrelated bundled skills. The
+default profile remains unchanged. If the profile already exists, do not run
+the create command again.
 
 ## 3. Connect your own Google account
 
@@ -121,6 +133,11 @@ python demo/seed_workspace.py --cleanup --confirm
 See [demo/DEMO_SPEC.md](demo/DEMO_SPEC.md) for the reference workspace specification, manual fallback instructions, and troubleshooting.
 
 ## 5. Start a new Hermes chat
+
+For CLI testing, run `hermes -p chief-of-staff-demo`. For Hermes Desktop, run
+`hermes profile use chief-of-staff-demo`, restart Desktop, and confirm the demo
+profile is active. Restore the normal profile afterward with
+`hermes profile use default` and restart Desktop.
 
 Say:
 

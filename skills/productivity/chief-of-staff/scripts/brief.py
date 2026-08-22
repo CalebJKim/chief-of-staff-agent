@@ -311,7 +311,7 @@ def workstream_action(
             body = (
                 f"Hi {recipients},\n\n"
                 f"I moved the {target.get('name')} to {when} PT. "
-                "The event details are unchanged.\n\nBest"
+                "The event details are unchanged.\n\nThanks"
             )
             return {
                 "kind": "calendar_move_and_draft",
@@ -449,10 +449,7 @@ def prepare_action_plan(packet: dict[str, Any]) -> dict[str, Any]:
             "action": action,
         })
         if action:
-            workstream["action_command"] = (
-                'bash "$HERMES_HOME/skills/productivity/chief-of-staff/scripts/action.sh" '
-                f"workstream {index} --confirm"
-            )
+            workstream["action_command"] = f'bash "$HERMES_HOME/cos.sh" {index}'
     return plan
 
 
@@ -461,6 +458,38 @@ def write_action_plan(plan: dict[str, Any], path: Path) -> None:
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     os.replace(temporary, path)
+
+
+def render_initial_reply(packet: dict[str, Any]) -> str:
+    """Render ranked workstreams without exposing action commands or internal IDs."""
+    workstreams = packet.get("workstreams", [])[:3]
+    if len(workstreams) != 3:
+        raise ValueError("A preformatted brief requires exactly three ranked workstreams")
+
+    def display_text(value: Any) -> str:
+        return str(value).strip().replace("\u2018", "'").replace("\u2019", "'").replace("\u201c", '"').replace("\u201d", '"')
+
+    outcomes = [display_text(item.get("outcome") or "Untitled priority") for item in workstreams]
+    lines = [f"Today's workload centers on {outcomes[0]}, {outcomes[1]}, and {outcomes[2]}."]
+    for index, item in enumerate(workstreams, start=1):
+        latest = display_text(item.get("latest") or "This priority needs attention")
+        if latest[-1:] not in ".!?:":
+            latest += "."
+        next_action = display_text(item.get("next") or "Review the available evidence and choose the next action.")
+        supporting_mail = item.get("supporting_mail") or {}
+        target = item.get("target") or {}
+        mail_url = supporting_mail.get("url")
+        target_url = target.get("url")
+        target_label = target.get("label")
+        if not mail_url or not target_url or not target_label:
+            raise ValueError(f"Workstream {index} is missing its supporting mail or action-target link")
+        lines.extend([
+            "",
+            f"{index}. **{outcomes[index - 1]}**",
+            f"   {latest} [Mail]({mail_url}) [{target_label}]({target_url})",
+            f"   - **Recommended action item(s):** {next_action}",
+        ])
+    return "\n".join(lines)
 
 
 def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
@@ -550,7 +579,7 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
     }
     packet = {
         "schema": 1,
-        "instruction": "When workstreams has three items, render workstreams[0:3] exactly once and in order; never split, merge, or re-rank them. Otherwise rank up to three distinct outcomes from the remaining evidence. Answer now in at most 65 words: exactly three numbered items using each workstream's outcome, latest, and next. End each item with exactly two inline links: its supporting_mail URL as Mail and target URL with the supplied label. No heading, preamble, tables, extra sections, approval bullets, closing question, scores, browser launches, or more tools; end after item 3. stale_timing means historical timing: verify it and never call it due today. ok_empty means success with zero results.",
+        "instruction": "When workstreams has three items, render workstreams[0:3] exactly once and in order; never split, merge, or re-rank them. Otherwise rank up to three distinct outcomes from the remaining evidence. Begin with a very short plain-text summary of today's workload in no more than three sentences and no heading. Then render exactly three numbered items. Each item must have a bold outcome line, one concise evidence sentence using latest and ending with exactly two inline links (supporting_mail as Mail and target with its supplied label), and an indented sub-bullet labeled exactly `Recommended action item(s):` using next. No tables, inbox inventory, extra sections, closing question, scores, browser launches, or more tools; end after item 3's action sub-bullet. stale_timing means historical timing: verify it and never call it due today. ok_empty means success with zero results.",
         "freshness": {"generated_at": snapshot.get("generated_at"), "timezone": tz_name, "window": snapshot.get("window")},
         "coverage": coverage,
         "source_status": source_status,
@@ -631,6 +660,7 @@ def main() -> int:
     parser.add_argument("--work-start", type=int, default=8)
     parser.add_argument("--work-end", type=int, default=18)
     parser.add_argument("--min-focus-minutes", type=int, default=30)
+    parser.add_argument("--reply-only", action="store_true", help="Print the preformatted top-three reply")
     args = parser.parse_args()
     if not args.snapshot.exists():
         print(json.dumps({"ok": False, "error": f"Snapshot not found: {args.snapshot}"}), file=sys.stderr)
@@ -639,7 +669,7 @@ def main() -> int:
         snapshot = json.loads(args.snapshot.read_text(encoding="utf-8"))
         packet = build_packet(snapshot, args)
         write_action_plan(prepare_action_plan(packet), args.action_plan)
-        print(fit_packet(packet, args.max_chars))
+        print(render_initial_reply(packet) if args.reply_only else fit_packet(packet, args.max_chars))
         return 0
     except Exception as exc:
         print(json.dumps({"ok": False, "error": str(exc)}), file=sys.stderr)
