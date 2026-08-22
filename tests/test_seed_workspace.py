@@ -75,16 +75,19 @@ class SeedWorkspaceTests(unittest.TestCase):
             "https://example.test/deck",
             "https://example.test/sheet",
             "https://example.test/doc",
+            "https://calendar.example.test/release-review",
             demo_day,
         )
 
         calls = gmail.users().messages().import_.call_args_list
         dates = []
         message_ids = []
+        messages = []
         for call in calls:
             body = call.kwargs["body"]
             labels = body["labelIds"]
             message = message_from_bytes(base64.urlsafe_b64decode(body["raw"]))
+            messages.append((message, labels))
             dates.append(parsedate_to_datetime(message["Date"]))
             message_ids.append(message["Message-ID"])
             self.assertIn("INBOX", labels)
@@ -100,6 +103,11 @@ class SeedWorkspaceTests(unittest.TestCase):
         self.assertTrue(all(message_id.startswith(f"<{seed_workspace.MARKER}-") for message_id in message_ids))
         self.assertTrue(all(message_id.endswith("@demo.example>") for message_id in message_ids))
         self.assertGreater(min(dates[:6]), max(dates[6:]))
+        self.assertTrue(all("IMPORTANT" in labels for _, labels in messages[:2]))
+        self.assertTrue(all("IMPORTANT" not in labels for _, labels in messages[2:]))
+        for message, _ in messages[:2]:
+            text = message.get_payload(decode=True).decode("utf-8")
+            self.assertGreater(text.index("https://calendar.example.test/release-review"), 200)
         self.assertEqual(12, gmail.new_batch_http_request.call_count)
 
     @patch.object(seed_workspace.time, "sleep")
@@ -145,6 +153,9 @@ class SeedWorkspaceTests(unittest.TestCase):
         update = sheets.spreadsheets().values().update.call_args.kwargs
         self.assertEqual("'Campaign Lanes'!A1:J14", update["range"])
         self.assertEqual(14, len(update["body"]["values"]))
+        partner_row = next(row for row in update["body"]["values"] if row and row[0] == "Partner Readout Deck")
+        self.assertIn("APPROVED HEADLINE PLACEHOLDER", partner_row[4])
+        self.assertIn("Meet the RTX Spark Agent Runtime", partner_row[4])
         validation_request = next(
             request["setDataValidation"]
             for request in sheets.spreadsheets().batchUpdate.call_args.kwargs["body"]["requests"]

@@ -256,9 +256,9 @@ def create_slides(slides, drive, folder_id: str) -> dict:
 def tracker_rows(slides_url: str, doc_url: str, sheet_url: str, evidence: dict[str, str]) -> list[list[str]]:
     return [
         ["Lane", "PIC", "Status", "Latest update", "Next action", "Due", "Dependency / blocker", "Evidence", "Artifact", "Notes"],
-        ["Agent Runtime regression", "Priya Shah", "Blocked", "The current build duplicates tool-call completions in repeated local runs.", "Patch and validate the regression before holding the release review.", "Today", "Release review must move while the P0 regression is open.", evidence.get("bug", "Priya's blocker email"), sheet_url, "Calendar and draft follow-up are the immediate coordination actions."],
+        ["Agent Runtime regression", "Priya Shah", "Blocked", "The current build duplicates tool-call completions in repeated local runs.", "Move the existing release review to Monday at 11 AM PT and draft Priya and Daniel a confirmation; do not send it.", "Today", "Release review must move while the P0 regression is open.", evidence.get("bug", "Priya's blocker email"), sheet_url, "Calendar and draft follow-up are the immediate coordination actions."],
         ["Agent Runtime Latency Evaluation", "Mateo Chen", "In progress", "Mateo completed the evaluation report and handed it off for review.", "Change only this lane's status to Ready for review.", "Today", "None; the tracker status is stale.", evidence.get("evaluation", "Mateo's completion email"), doc_url, "Keep the owner, due date, and notes unchanged."],
-        ["Partner Readout Deck", "Elena Torres", "Awaiting update", "Communications approved the replacement headline for slide 4.", "Replace the exact placeholder with the approved copy.", "Next week", "None; intentionally lower priority than today's two actions.", evidence.get("copy", "Elena's approval email"), slides_url, "Optional backup demo; not required today."],
+        ["Partner Readout Deck", "Elena Torres", "Awaiting update", "Communications approved the replacement headline for slide 4.", "Replace APPROVED HEADLINE PLACEHOLDER with “Meet the RTX Spark Agent Runtime: a faster path from intent to completed work.” on slide 4; leave the rest unchanged.", "Next week", "None; intentionally lower priority than today's two actions.", evidence.get("copy", "Elena's approval email"), slides_url, "Optional backup demo; not required today."],
         ["Reliability test matrix", "Noah Williams", "On track", "Routine coverage review completed with no new blockers.", "Continue the planned test pass.", "This week", "None", "Routine team update", sheet_url, "No executive action needed."],
         ["Developer guide refresh", "Maya Patel", "In review", "The draft is with technical writing for routine review.", "Wait for consolidated comments.", "Next week", "None", "Routine team update", doc_url, "No action needed today."],
         ["Partner demo checklist", "Jordan Lee", "On track", "Venue and equipment checks remain on schedule.", "Continue normal preparation.", "Next week", "None", "Routine team update", slides_url, "No action needed today."],
@@ -402,6 +402,7 @@ def create_emails(
     deck_url: str,
     sheet_url: str,
     doc_url: str,
+    release_review_url: str,
     demo_day: date,
     created: list[dict] | None = None,
     seed_run_id: str | None = None,
@@ -422,8 +423,10 @@ def create_emails(
             "sender": "Priya Shah <priya.shah@nvidia.example>",
             "subject": "BLOCKER: Agent Runtime duplicates tool-call completions",
             "body": (
-                "Hi,\n\nI reproduced a P0 regression in the latest fictional RTX Spark Agent Runtime build: completed tool calls are emitted twice in 8 of 10 repeated local runs. The release candidate should not advance until the patch passes the same matrix cleanly.\n\n"
+                "P0 regression: tool-call completions duplicate in 8 of 10 runs. Postpone today's 2 PM release review.\n\n"
+                "Hi,\n\nI reproduced the issue in the latest fictional RTX Spark Agent Runtime build. The release candidate should not advance until the patch passes the same matrix cleanly.\n\n"
                 f"Please postpone the RTX Spark Agent Runtime release review scheduled for {display_date(demo_day)}. Daniel is checking the next available slot.\n\n"
+                f"Event: {release_review_url}\n"
                 f"Tracker: {sheet_url}\n\n— Priya"
             ),
             "unread": True,
@@ -434,7 +437,9 @@ def create_emails(
             "sender": "Daniel Cho <daniel.cho@nvidia.example>",
             "subject": "New slot for the Agent Runtime release review",
             "body": (
-                f"I can host the postponed release review on {display_date(follow_up_day)} at 11:00 AM Pacific. Please move the existing event rather than create a duplicate, keep its current details, and draft a confirmation to Priya and me. Do not send the email yet.\n\n"
+                f"Move the existing release review to {display_date(follow_up_day)} at 11:00 AM Pacific. Draft a confirmation to Priya and me; do not send it.\n\n"
+                "Keep the event's current details and move it rather than creating a duplicate.\n\n"
+                f"Event: {release_review_url}\n\n"
                 "— Daniel"
             ),
             "unread": True,
@@ -450,7 +455,7 @@ def create_emails(
                 f"Delivery tracker: {sheet_url}\n\n— Mateo"
             ),
             "unread": True,
-            "important": True,
+            "important": False,
         },
         {
             "key": "tracker",
@@ -461,7 +466,7 @@ def create_emails(
                 f"Delivery tracker: {sheet_url}\n\n— Aisha"
             ),
             "unread": True,
-            "important": True,
+            "important": False,
         },
         {
             "key": "copy",
@@ -550,7 +555,7 @@ EVENTS = [
     ("12:00", "13:00", "Team lunch", "Optional team lunch; no preparation required."),
     ("15:15", "15:45", "Evaluation office hours", "Optional questions about completed evaluation methodology and results."),
     ("16:00", "16:30", "Partner demo checklist", "Routine readiness check for next week's partner work."),
-    ("17:00", "17:20", "Agent Runtime documentation review", "Review routine documentation edits and collect notes for the next planned revision."),
+    ("17:00", "17:20", "Developer guide editorial pass", "Review routine documentation edits and collect notes for the next planned revision."),
 ]
 
 WEEKDAY_CODES = ("MO", "TU", "WE", "TH", "FR")
@@ -612,8 +617,8 @@ def create_calendar(calendar, start_day: date, demo_day: date, deck_url: str, do
     )
     entries.append(("calendar-release-review", release_review))
 
-    def record_event(_request_id: str, response: dict) -> None:
-        created.append({"id": response["id"], "url": response.get("htmlLink", "")})
+    def record_event(request_id: str, response: dict) -> None:
+        created.append({"key": request_id, "id": response["id"], "url": response.get("htmlLink", "")})
 
     execute_batch_requests(
         calendar,
@@ -717,17 +722,19 @@ def seed(week_of: date) -> dict:
         state["doc"] = create_doc(svc["docs"], svc["drive"], state["folder"]["id"])
         state["slides"] = create_slides(svc["slides"], svc["drive"], state["folder"]["id"])
         state["sheet"] = create_sheet(svc["sheets"], svc["drive"], state["folder"]["id"], state["slides"]["url"], state["doc"]["url"])
+        state["events"] = create_calendar(svc["calendar"], week_of, demo_day, state["slides"]["url"], state["doc"]["url"], state["sheet"]["url"])
+        release_review_url = next(item["url"] for item in state["events"] if item["key"] == "calendar-release-review")
         state["emails"], evidence = create_emails(
             svc["gmail"],
             state["slides"]["url"],
             state["sheet"]["url"],
             state["doc"]["url"],
+            release_review_url,
             demo_day,
             state["emails"],
             state["seed_run_id"],
         )
         update_tracker_evidence(svc["sheets"], state, evidence)
-        state["events"] = create_calendar(svc["calendar"], week_of, demo_day, state["slides"]["url"], state["doc"]["url"], state["sheet"]["url"])
         state_path().parent.mkdir(parents=True, exist_ok=True)
         state_path().write_text(json.dumps(state, indent=2), encoding="utf-8")
         return state

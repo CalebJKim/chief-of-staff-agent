@@ -75,6 +75,9 @@ class IngestTests(unittest.TestCase):
                 captured.update(kwargs["body"])
                 return Request({"id": "draft-1", "message": {"id": "message-1"}})
 
+            def get(self, **_kwargs):
+                return Request({"id": "draft-1", "message": {"id": "message-1"}})
+
         class Users:
             def messages(self):
                 return Messages()
@@ -119,6 +122,9 @@ class IngestTests(unittest.TestCase):
 
         class Drafts:
             def create(self, **_kwargs):
+                return Request({"id": "draft-1", "message": {"id": "message-1"}})
+
+            def get(self, **_kwargs):
                 return Request({"id": "draft-1", "message": {"id": "message-1"}})
 
         class Users:
@@ -180,6 +186,133 @@ class IngestTests(unittest.TestCase):
                     actions.gmail_draft(args)
             finally:
                 actions.hermes_home = original_home
+
+    def test_calendar_move_preserves_event_and_verifies_time(self):
+        captured = {}
+
+        class Request:
+            def __init__(self, value):
+                self.value = value
+
+            def execute(self):
+                return self.value
+
+        moved = {
+            "id": "event-1",
+            "summary": "Release review",
+            "start": {"dateTime": "2026-08-24T11:00:00-07:00", "timeZone": "America/Los_Angeles"},
+            "end": {"dateTime": "2026-08-24T12:00:00-07:00", "timeZone": "America/Los_Angeles"},
+            "htmlLink": "https://calendar.google.com/event?eid=event-1",
+        }
+
+        class Events:
+            calls = 0
+
+            def get(self, **_kwargs):
+                self.calls += 1
+                if self.calls == 1:
+                    return Request({
+                        "id": "event-1",
+                        "summary": "Release review",
+                        "start": {"dateTime": "2026-08-21T14:00:00-07:00", "timeZone": "America/Los_Angeles"},
+                        "end": {"dateTime": "2026-08-21T15:00:00-07:00", "timeZone": "America/Los_Angeles"},
+                    })
+                return Request(moved)
+
+            def patch(self, **kwargs):
+                captured.update(kwargs)
+                return Request(moved)
+
+        events = Events()
+
+        class Api:
+            def events(self):
+                return events
+
+        original_service = actions.service
+        actions.service = lambda *_args: Api()
+        try:
+            args = argparse.Namespace(
+                calendar="primary",
+                event_id="event-1",
+                start="2026-08-24T11:00:00-07:00",
+                end="2026-08-24T12:00:00-07:00",
+                send_updates="none",
+                confirm=True,
+            )
+            output = io.StringIO()
+            with redirect_stdout(output):
+                actions.calendar_move(args)
+        finally:
+            actions.service = original_service
+
+        self.assertEqual({"start", "end"}, set(captured["body"]))
+        self.assertNotIn("summary", captured["body"])
+        self.assertTrue(json.loads(output.getvalue())["verified"])
+
+    def test_lane_update_preserves_unspecified_cells(self):
+        captured = {}
+
+        class Request:
+            def __init__(self, value):
+                self.value = value
+
+            def execute(self):
+                return self.value
+
+        class Values:
+            def get(self, **_kwargs):
+                return Request({"values": [
+                    ["Lane", "PIC", "Status", "Latest", "Next", "Due", "Blocker", "Evidence"],
+                    ["Evaluation", "Mateo", "In progress", "Done", "Review", "Today", "None", "Mail"],
+                ]})
+
+            def batchUpdate(self, **kwargs):
+                captured.update(kwargs["body"])
+                return Request({"totalUpdatedRows": 1, "totalUpdatedCells": 6})
+
+            def batchGet(self, **_kwargs):
+                return Request({"valueRanges": [{"values": [["Ready for review", "Done", "Review", "Today", "None", "Mail"]]}]})
+
+        values = Values()
+
+        class Spreadsheets:
+            def values(self):
+                return values
+
+        class Api:
+            def spreadsheets(self):
+                return Spreadsheets()
+
+        original_service = actions.service
+        actions.service = lambda *_args: Api()
+        try:
+            args = argparse.Namespace(
+                spreadsheet_id="sheet-1",
+                sheet="Campaign Lanes",
+                updates='[{"lane":"Evaluation","status":"Ready for review"}]',
+                lane=None,
+                status=None,
+                confirm=True,
+            )
+            with redirect_stdout(io.StringIO()):
+                actions.sheets_update_lanes(args)
+        finally:
+            actions.service = original_service
+
+        self.assertEqual(
+            [["Ready for review", "Done", "Review", "Today", "None", "Mail"]],
+            captured["data"][0]["values"],
+        )
+
+    def test_lane_update_accepts_single_lane_flags(self):
+        args = actions.build_parser().parse_args([
+            "sheets", "update-lanes", "sheet-1",
+            "--lane", "Evaluation", "--status", "Ready for review", "--confirm",
+        ])
+        self.assertEqual("Evaluation", args.lane)
+        self.assertEqual("Ready for review", args.status)
+        self.assertIsNone(args.updates)
 
 
 if __name__ == "__main__":

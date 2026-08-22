@@ -8,6 +8,7 @@ import json
 import os
 import re
 import sys
+from datetime import datetime
 from email.message import EmailMessage
 from pathlib import Path
 from typing import Any
@@ -189,6 +190,9 @@ def gmail_draft(args: argparse.Namespace) -> None:
     result = api.users().drafts().create(userId="me", body=body).execute()
     draft_id = result.get("id", "")
     message_id = result.get("message", {}).get("id", "")
+    verified = api.users().drafts().get(userId="me", id=draft_id, format="minimal").execute()
+    if verified.get("id") != draft_id:
+        raise RuntimeError(f"Gmail draft {draft_id} could not be verified")
     tracked_state = ""
     if track_demo_state:
         try:
@@ -206,6 +210,8 @@ def gmail_draft(args: argparse.Namespace) -> None:
         "status": "drafted",
         "draft_id": draft_id,
         "message_id": message_id,
+        "url": f"https://mail.google.com/mail/u/0/#drafts/{message_id}",
+        "verified": True,
         "tracked_demo_state": tracked_state,
     })
 
@@ -287,13 +293,21 @@ def sheets_update(args: argparse.Namespace) -> None:
     emit({"status": "updated", **result})
 
 
-TRACKER_STATUSES = {"On track", "In review", "Awaiting update", "Blocked", "Complete"}
+TRACKER_STATUSES = {
+    "Not started", "In progress", "Ready for review", "On track",
+    "In review", "Awaiting update", "Blocked", "Complete",
+}
 
 
 def sheets_update_lanes(args: argparse.Namespace) -> None:
     """Update tracker lanes by name with validated, named fields."""
     require_confirm(args, "tracker lane update")
-    updates = json.loads(args.updates)
+    if args.updates:
+        updates = json.loads(args.updates)
+    elif args.lane and args.status:
+        updates = [{"lane": args.lane, "status": args.status}]
+    else:
+        raise RuntimeError("Use --updates, or use --lane with --status for one lane")
     if not isinstance(updates, list) or not updates:
         raise RuntimeError("--updates must be a non-empty JSON array")
     lanes = [str(item.get("lane", "")).strip() for item in updates if isinstance(item, dict)]
@@ -310,24 +324,36 @@ def sheets_update_lanes(args: argparse.Namespace) -> None:
         spreadsheetId=args.spreadsheet_id,
         range=f"'{args.sheet}'!A6:H100",
     ).execute().get("values", [])
-    row_by_lane = {row[0]: index for index, row in enumerate(current[1:], start=7) if row}
+    row_by_lane = {row[0]: (index, row) for index, row in enumerate(current[1:], start=7) if row}
     missing = [lane for lane in lanes if lane not in row_by_lane]
     if missing:
         raise RuntimeError(f"Tracker lane(s) not found: {missing}")
 
     data = []
     for item in updates:
-        row = row_by_lane[item["lane"]]
+        row, existing = row_by_lane[item["lane"]]
+        preserved = existing + [""] * (8 - len(existing))
         values = [[
-            item["status"], item.get("latest", ""), item.get("next", ""),
-            item.get("due", ""), item.get("blocker", ""), item.get("evidence", ""),
+            item["status"], item.get("latest", preserved[3]), item.get("next", preserved[4]),
+            item.get("due", preserved[5]), item.get("blocker", preserved[6]), item.get("evidence", preserved[7]),
         ]]
         data.append({"range": f"'{args.sheet}'!C{row}:H{row}", "values": values})
     result = api.spreadsheets().values().batchUpdate(
         spreadsheetId=args.spreadsheet_id,
         body={"valueInputOption": "USER_ENTERED", "data": data},
     ).execute()
-    emit({"status": "updated", "spreadsheet_id": args.spreadsheet_id, "lanes": lanes, "updated_rows": result.get("totalUpdatedRows", 0), "updated_cells": result.get("totalUpdatedCells", 0)})
+    verified = api.spreadsheets().values().batchGet(
+        spreadsheetId=args.spreadsheet_id,
+        ranges=[item["range"] for item in data],
+    ).execute().get("valueRanges", [])
+    emit({
+        "status": "updated",
+        "spreadsheet_id": args.spreadsheet_id,
+        "lanes": lanes,
+        "updated_rows": result.get("totalUpdatedRows", 0),
+        "updated_cells": result.get("totalUpdatedCells", 0),
+        "verified_values": [item.get("values", []) for item in verified],
+    })
 
 
 def _slide_text(slide: dict[str, Any]) -> str:
@@ -353,13 +379,21 @@ def slides_get(args: argparse.Namespace) -> None:
 
 def slides_replace(args: argparse.Namespace) -> None:
     require_confirm(args, "Slides text replacement")
-    result = service("slides", "v1").presentations().batchUpdate(
+    api = service("slides", "v1")
+    result = api.presentations().batchUpdate(
         presentationId=args.presentation_id,
         body={"requests": [{"replaceAllText": {"containsText": {"text": args.find, "matchCase": args.match_case}, "replaceText": args.replace}}]},
     ).execute()
     replies = result.get("replies", [])
     occurrences = sum(r.get("replaceAllText", {}).get("occurrencesChanged", 0) for r in replies)
-    emit({"status": "updated", "presentation_id": args.presentation_id, "occurrences_changed": occurrences})
+    if occurrences < 1:
+        raise RuntimeError(f"Slides text was not found: {args.find!r}")
+    deck = api.presentations().get(presentationId=args.presentation_id).execute()
+    text = "\n".join(_slide_text(slide) for slide in deck.get("slides", []))
+    verified = args.replace in text and args.find not in text
+    if not verified:
+        raise RuntimeError("Slides replacement could not be verified")
+    emit({"status": "updated", "presentation_id": args.presentation_id, "occurrences_changed": occurrences, "verified": True})
 
 
 def calendar_create(args: argparse.Namespace) -> None:
@@ -379,6 +413,43 @@ def calendar_create(args: argparse.Namespace) -> None:
         sendUpdates="all" if args.attendees else "none",
     ).execute()
     emit({"status": "created", "id": result.get("id"), "url": result.get("htmlLink")})
+
+
+def _same_instant(actual: str, expected: str) -> bool:
+    return datetime.fromisoformat(actual.replace("Z", "+00:00")) == datetime.fromisoformat(expected.replace("Z", "+00:00"))
+
+
+def calendar_move(args: argparse.Namespace) -> None:
+    """Move one existing event while preserving all other event details."""
+    require_confirm(args, "Calendar event move")
+    api = service("calendar", "v3")
+    current = api.events().get(calendarId=args.calendar, eventId=args.event_id).execute()
+    start = {"dateTime": args.start}
+    end = {"dateTime": args.end}
+    if current.get("start", {}).get("timeZone"):
+        start["timeZone"] = current["start"]["timeZone"]
+    if current.get("end", {}).get("timeZone"):
+        end["timeZone"] = current["end"]["timeZone"]
+    api.events().patch(
+        calendarId=args.calendar,
+        eventId=args.event_id,
+        body={"start": start, "end": end},
+        sendUpdates=args.send_updates,
+    ).execute()
+    verified = api.events().get(calendarId=args.calendar, eventId=args.event_id).execute()
+    actual_start = verified.get("start", {}).get("dateTime", "")
+    actual_end = verified.get("end", {}).get("dateTime", "")
+    if not actual_start or not actual_end or not _same_instant(actual_start, args.start) or not _same_instant(actual_end, args.end):
+        raise RuntimeError("Calendar move could not be verified")
+    emit({
+        "status": "moved",
+        "id": verified.get("id"),
+        "title": verified.get("summary"),
+        "start": verified.get("start"),
+        "end": verified.get("end"),
+        "url": verified.get("htmlLink"),
+        "verified": True,
+    })
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -444,7 +515,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = sheets.add_parser("update-lanes")
     p.add_argument("spreadsheet_id")
     p.add_argument("--sheet", default="Campaign Lanes")
-    p.add_argument("--updates", required=True, help="JSON array of named lane updates")
+    p.add_argument("--updates", help="JSON array of named lane updates")
+    p.add_argument("--lane", help="Lane name for a single update")
+    p.add_argument("--status", help="Status for a single update")
     p.add_argument("--confirm", action="store_true")
     p.set_defaults(func=sheets_update_lanes)
 
@@ -471,6 +544,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--calendar", default="primary")
     p.add_argument("--confirm", action="store_true")
     p.set_defaults(func=calendar_create)
+    p = calendar.add_parser("move")
+    p.add_argument("event_id")
+    p.add_argument("--start", required=True)
+    p.add_argument("--end", required=True)
+    p.add_argument("--calendar", default="primary")
+    p.add_argument("--send-updates", choices=("none", "all", "externalOnly"), default="none")
+    p.add_argument("--confirm", action="store_true")
+    p.set_defaults(func=calendar_move)
     return parser
 
 

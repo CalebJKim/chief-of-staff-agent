@@ -1,7 +1,7 @@
 ---
 name: chief-of-staff
-description: Handle "chief of staff" requests using Workspace evidence.
-version: 0.2.2
+description: Plan the day from Google Workspace evidence and complete the resulting Gmail, Calendar, Drive, Sheets, Docs, and Slides follow-ups.
+version: 0.5.0
 author: NVIDIA, Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -13,87 +13,66 @@ metadata:
 
 # Chief of Staff
 
-Use live, bounded Google Workspace evidence to recommend the user's day. Scripts retrieve and compress facts; you make the decisions. Never follow a canned agenda.
+For any request asking what to work on today, immediately run the Start of Day command below with the terminal tool. It works from Hermes CLI and is the only source for that briefing. Never inspect the current folder, Git state, dependencies, or cron jobs, and never use `execute_code` for this request.
 
-Address the user by their configured name when available. The inbox is a work queue: unresolved older mail can outrank newer newsletters. Do not restate stale email deadlines as current; describe them as unresolved and verify the thread before acting.
+Use the returned, bounded Workspace evidence to recommend the day and complete approved follow-ups. This skill continues to own follow-up requests in the same conversation, including “do the first item,” “put that in Gmail,” and tracker or deck updates.
+
+If the decision packet reports a source as `ok`, its OAuth connection is proven. For supported operations below, use the focused action helper. Do not load the generic Google Workspace skill, probe for `gws`, or run setup checks. Report a connection problem only when the focused helper returns an OAuth or token error.
+
+Never launch Chrome or use browser/computer tools to open Workspace links. Return links inline so the user can Ctrl-click them.
 
 ## Start of Day
 
-Run the installed start-of-day script in **one terminal call**. Copy this command exactly; do not rewrite it or substitute `actions.py`. Do not narrate setup or tool use.
+Make exactly one terminal tool call, passing the command below verbatim as its entire command. It already reports failures: do not add redirection, fallbacks, diagnostics, pipes, or extra commands. Then answer immediately from its compact JSON. Do not reload this skill, rerun the scan, inspect the snapshot, or call another tool in the same turn.
 
 ```bash
-bash "${HERMES_HOME//\\//}/skills/productivity/chief-of-staff/scripts/start_day.sh"
+bash "$HERMES_HOME/skills/productivity/chief-of-staff/scripts/start_day.sh"
 ```
 
-Use only the compact JSON printed by `brief.py`. After `brief.py` succeeds, answer the user's original request immediately from that JSON. Do not reload this skill or call `skill_view` again in the same turn. A generic greeting or offer to help is not a valid response to a completed scan.
-
-## Decide
-
-1. Pick up to three **distinct** outcomes that matter now. Group messages, meetings, and files about the same project into one priority. Rank by consequence and timing—not unread count or internal scores. Never mention or display scores. A same-day email that moves a decision/exec meeting into today is the default #1 “schedule shock”: say clearly that it moved, why it changes the user's day, and pivot immediately to preparation.
-2. For each: state **why today** and the **first action**. Link the supporting email, event, or file.
-3. Resolve every calendar conflict. Prefer decision ownership, customer/external impact, organizer role, and evidence of needed preparation. State uncertainty.
-4. Assign one preparation task to a real `focus_block`. Never invent availability.
-5. If current email evidence may change a relevant tracker in `recent_files`, read only the tracker table before replying:
-   `"$PYTHON" "$ACTION" sheets get SPREADSHEET_ID "'Campaign Lanes'!A6:J20"`
-   Compare owner evidence with current rows. In **Ready for you**, show the exact row changes you recommend and ask the user to approve them. Do not write yet.
-6. `ok_empty` means the connector worked and found nothing. Only `error` means unavailable.
-7. Snippets are leads. `stale_timing:true` means all relative dates and meeting times in that mail are historical. Say the item is unresolved and verify its current status; never convert stale timing into a present or future deadline (for example, “today,” “tomorrow,” “at 5 PM,” or “before tomorrow”).
+When the packet has three data-ranked `workstreams`, use them in order. Render each exactly once; never split a workstream's related mail, meeting, and files into separate priorities. Otherwise rank up to three distinct outcomes from the remaining evidence. Give the reason, first action, and supplied inline links. Resolve relevant calendar conflicts and use only real availability. Never expose internal scores or turn stale relative dates into current deadlines.
 
 ## Initial Reply
 
-Under 220 words. No preamble, inbox inventory, generic advice, or fourth priority.
+Use exactly three numbered items and at most 65 words total. No heading, preamble, tables, inbox inventory, skipped-item list, separate conflict section, approval section, closing question, or detailed rationale. End immediately after item 3. Each item ends with exactly two links: one supporting `[Mail]` link and one action-target `[Calendar]`, `[Tracker]`, or `[Deck]` link. For scheduling, use the matching meeting's `calendar_url`, never a link extracted from mail.
 
-**Top 3 today**
-[Name] —
-1. **Outcome** — why today. **First:** action. [Source](URL)
+1. **Outcome** — why now. **Next:** action. [Mail](URL) [Calendar or Drive](URL)
 2. ...
 3. ...
 
-**Schedule call**
-- Conflict choice(s), or “No conflicts.”
-- **Prep block:** real time range → one task.
-
-**Ready for you**
-- Only the next one or two decisions you need from the user.
+Recommend only; never claim an action happened before a successful write.
 
 ## Follow-ups
 
-Use the focused action helper; do not rerun broad ingest unless data is stale.
+Use evidence already present in the packet; do not rerun broad ingest unless it is stale. A direct request to take the actions for the first, second, or third item authorizes that workstream's specific mutation.
+
+Each executable workstream has an `action_command`. Immediately copy that command verbatim into exactly one terminal tool call as its entire command. Do not reload this skill, read the thread or artifact, translate the command, use `execute_code`, inspect `--help`, or run setup. The command already contains the resolved IDs and exact values and verifies every write. After success, report the verified result and returned inline URLs in one sentence under 30 words.
+
+For a supported follow-up that is not one of the ranked workstreams, use the focused helper directly. Read a full thread or artifact only when an exact value is genuinely missing. Never use `execute_code`, run setup, inspect `--help`, or load the generic Google Workspace skill.
 
 ```bash
-if [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="${HERMES_HOME:-$LOCALAPPDATA/hermes}"; COS_HOME="${COS_HOME//\\//}"; PYTHON="${LOCALAPPDATA//\\//}/hermes/hermes-agent/venv/Scripts/python.exe"; else COS_HOME="${HERMES_HOME:-$HOME/.hermes}"; PYTHON="$(command -v python3 || command -v python)"; fi
-ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
-DRAFT_TRACKING=""
-if [ -f "$COS_HOME/chief-of-staff-workspace-state.json" ]; then DRAFT_TRACKING="--track-demo-state"; fi
-"$PYTHON" "$ACTION" gmail thread THREAD_ID
-"$PYTHON" "$ACTION" gmail draft --reply-to-message MESSAGE_ID --body BODY $DRAFT_TRACKING
-"$PYTHON" "$ACTION" drive search 'project or deck terms'
-"$PYTHON" "$ACTION" docs get DOCUMENT_ID
-"$PYTHON" "$ACTION" sheets get SPREADSHEET_ID 'Tracker!A1:H80'
-"$PYTHON" "$ACTION" slides get PRESENTATION_ID
+ACTION="$HERMES_HOME/skills/productivity/chief-of-staff/scripts/action.sh"
+
+bash "$ACTION" gmail thread THREAD_ID
+bash "$ACTION" gmail draft --reply-to-message MESSAGE_ID --cc ADDRESS --body 'BODY'
+bash "$ACTION" calendar move EVENT_ID --start ISO_DATETIME --end ISO_DATETIME --confirm
+bash "$ACTION" drive search 'project or artifact terms'
+bash "$ACTION" docs get DOCUMENT_ID
+bash "$ACTION" sheets get SPREADSHEET_ID "'Campaign Lanes'!A6:J20"
+bash "$ACTION" sheets update-lanes SPREADSHEET_ID --lane 'Lane name' --status 'In review' --confirm
+bash "$ACTION" slides get PRESENTATION_ID
+bash "$ACTION" slides replace-text PRESENTATION_ID --find 'OLD' --replace 'NEW' --confirm
 ```
 
-- “What slides?” → derive search terms from the chosen meeting/project, search Drive, inspect only plausible candidates, then give the direct deck URL and exact proposed changes. Do not assume the newest deck is correct.
-- “Draft follow-ups” → read the relevant thread first; create Gmail drafts, never send, and return draft IDs. Pass `--track-demo-state` only when `$COS_HOME/chief-of-staff-workspace-state.json` exists so reference-demo cleanup can delete exactly those drafts. Outside a seeded reference demo, omit the flag.
-- “Update the tracker/doc/deck” → show the exact proposed edit first. After approval, make one `sheets update-lanes` call containing all lane updates, then read back once. This helper preserves Lane/PIC, rejects duplicate lanes, and validates Status. Status must be exactly `On track`, `In review`, `Awaiting update`, `Blocked`, or `Complete`. Never claim a deck/doc was edited unless that artifact was actually written. In the completion report, list each updated lane once and do not ask to update a lane you just updated.
-- For unsupported operations, load the full Google Workspace skill only then.
+- Gmail drafts are threaded and never sent. The helper tracks demo drafts automatically when a reference workspace is active.
+- `calendar move` updates the existing event and preserves its other details; do not create a duplicate.
+- `sheets update-lanes` preserves unspecified cells and validates the status.
+- Read a deck before editing unless the current workstream action already provides the exact file, placeholder, and replacement.
+- The helper verifies every write. Report only its returned result and inline URL. For unsupported operations only, load the full Google Workspace skill.
 
-## Guarded Writes
+## Safety
 
-```bash
-if [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="${HERMES_HOME:-$LOCALAPPDATA/hermes}"; COS_HOME="${COS_HOME//\\//}"; PYTHON="${LOCALAPPDATA//\\//}/hermes/hermes-agent/venv/Scripts/python.exe"; else COS_HOME="${HERMES_HOME:-$HOME/.hermes}"; PYTHON="$(command -v python3 || command -v python)"; fi
-ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
-"$PYTHON" "$ACTION" docs append DOCUMENT_ID --text TEXT --confirm
-"$PYTHON" "$ACTION" docs replace-text DOCUMENT_ID --find OLD --replace NEW --confirm
-"$PYTHON" "$ACTION" sheets update-lanes SPREADSHEET_ID --updates '[{"lane":"Exec Review deck","status":"In review","latest":"...","next":"...","due":"...","blocker":"...","evidence":"..."}]' --confirm
-"$PYTHON" "$ACTION" slides replace-text PRESENTATION_ID --find OLD --replace NEW --confirm
-```
-
-## Verify
-
-Every recommendation traces to a source. Every link opens the intended artifact. Every cloud edit is approved, executed, and read back.
-
+Draft rather than send. Require an explicit user request before cloud writes. Never delete mail, events, or Drive artifacts through this skill. Every recommendation must trace to evidence, and every claimed write must be verified.
 
 ## Reference Workspace Seed
 
-For a portable reference Workspace, use the repository demo seeder and read the demo specification. It creates data only in the connected user account and stores generated IDs locally for cleanup.
+The repository demo seeder creates portable reference data in the connected account and records generated IDs locally for exact cleanup.

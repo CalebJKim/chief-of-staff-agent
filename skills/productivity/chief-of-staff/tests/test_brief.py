@@ -5,7 +5,9 @@ import importlib.util
 import json
 import tempfile
 import unittest
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "tests" / "fixtures" / "workspace.json"
@@ -42,8 +44,110 @@ class BriefTests(unittest.TestCase):
         self.assertNotIn('"signal_score"', json.dumps(packet))
         self.assertEqual(packet["mail"][0]["url"], "https://mail.google.com/mail/u/0/#all/thread-urgent")
         self.assertEqual(packet["source_status"], {"calendar": "ok", "gmail": "ok", "drive": "ok"})
+        self.assertIn("at most 65 words", packet["instruction"])
+        self.assertIn("inline links", packet["instruction"])
+        self.assertIn("workstreams[0:3]", packet["instruction"])
+        self.assertIn("never split", packet["instruction"])
         exec_event = next(event for event in packet["meetings"] if event["id"] == "evt-exec")
         self.assertTrue(any(item["id"] == "deck-1" for item in exec_event["related"]["files"]))
+
+    def test_tracker_workstreams_are_grouped_ranked_and_linked(self):
+        snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        snapshot["trackers"] = [{
+            "id": "sheet-1",
+            "name": "Product launch tracker",
+            "url": "https://docs.google.com/spreadsheets/d/sheet-1/edit",
+            "rows": [
+                {
+                    "row": 7,
+                    "lane": "Exec launch decision",
+                    "pic": "CEO",
+                    "status": "Blocked",
+                    "latest": "A release blocker is open.",
+                    "next": "Move the exec launch decision meeting.",
+                    "blocker": "The meeting must move.",
+                    "evidence": "https://mail.google.com/mail/u/0/#all/thread-urgent",
+                    "artifact": "https://docs.google.com/spreadsheets/d/sheet-1/edit",
+                },
+                {
+                    "row": 8,
+                    "lane": "Launch readiness",
+                    "pic": "PM",
+                    "status": "In progress",
+                    "latest": "The work is ready.",
+                    "next": "Change only this lane's status to Ready for review.",
+                    "blocker": "None",
+                    "evidence": "https://mail.google.com/mail/u/0/#all/thread-customer",
+                    "artifact": "https://docs.google.com/document/d/doc-1/edit",
+                },
+                {
+                    "row": 9,
+                    "lane": "Launch positioning deck",
+                    "pic": "Owner",
+                    "status": "Awaiting update",
+                    "latest": "The headline is approved.",
+                    "next": "Replace APPROVED HEADLINE PLACEHOLDER with “Meet the launch: a faster path to completed work.” on slide 4.",
+                    "blocker": "None",
+                    "evidence": "https://mail.google.com/mail/u/0/#all/thread-urgent",
+                    "artifact": "https://docs.google.com/presentation/d/deck-1/edit",
+                },
+            ],
+        }]
+
+        packet = brief.build_packet(snapshot, self.args())
+        workstreams = packet["workstreams"]
+        plan = brief.prepare_action_plan(packet)
+
+        self.assertEqual(["Exec launch decision", "Launch readiness", "Launch positioning deck"], [item["outcome"] for item in workstreams])
+        self.assertEqual(["Calendar", "Tracker", "Deck"], [item["target"]["label"] for item in workstreams])
+        self.assertEqual("msg-urgent", workstreams[0]["supporting_mail"]["id"])
+        self.assertEqual("evt-exec", workstreams[0]["target"]["id"])
+        self.assertNotIn("action_command", workstreams[0])
+        self.assertTrue(workstreams[1]["action_command"].endswith("workstream 2 --confirm"))
+        self.assertTrue(workstreams[2]["action_command"].endswith("workstream 3 --confirm"))
+        self.assertEqual("tracker_status", plan["workstreams"][1]["action"]["kind"])
+        self.assertEqual("slides_replace_text", plan["workstreams"][2]["action"]["kind"])
+
+    def test_calendar_action_plan_resolves_move_and_threaded_draft(self):
+        tz = ZoneInfo("America/Los_Angeles")
+        row = {
+            "lane": "Release gate",
+            "status": "Blocked",
+            "latest": "The release is blocked.",
+            "next": "Move the existing release review to Monday at 11 AM PT and draft Priya and Daniel a confirmation; do not send it.",
+        }
+        target = {
+            "label": "Calendar",
+            "id": "event-1",
+            "name": "Release review",
+            "start": "2026-08-14T14:00:00-07:00",
+            "end": "2026-08-14T15:00:00-07:00",
+        }
+        supporting = {"id": "message-priya", "from": "Priya Shah <priya@example.test>"}
+        related = [
+            supporting,
+            {
+                "id": "message-daniel",
+                "from": "Daniel Cho <daniel@example.test>",
+                "subject": "New slot for the release review",
+                "snippet": "Draft Priya and me a confirmation.",
+            },
+        ]
+
+        action = brief.workstream_action(
+            row,
+            target,
+            supporting,
+            related,
+            datetime(2026, 8, 14, 9, 0, tzinfo=tz),
+            tz,
+        )
+
+        self.assertEqual("calendar_move_and_draft", action["kind"])
+        self.assertEqual("2026-08-17T11:00:00-07:00", action["steps"][0][4])
+        self.assertEqual("2026-08-17T12:00:00-07:00", action["steps"][0][6])
+        self.assertEqual("message-priya", action["steps"][1][3])
+        self.assertEqual("daniel@example.test", action["steps"][1][5])
 
     def test_packet_respects_context_budget(self):
         snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))

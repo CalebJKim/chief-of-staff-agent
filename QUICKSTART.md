@@ -12,7 +12,7 @@ Windows PowerShell:
 ```powershell
 winget install --id Python.Python.3.11 --exact --scope user
 # Open a new PowerShell window after Python finishes installing.
-git clone https://github.com/CalebJKim/chief-of-staff-agent.git
+git clone --branch demo_updates https://github.com/CalebJKim/chief-of-staff-agent.git
 Set-Location chief-of-staff-agent
 python -m venv .venv
 $Python = (Resolve-Path .\.venv\Scripts\python.exe).Path
@@ -23,7 +23,7 @@ $env:HERMES_HOME = Join-Path $env:LOCALAPPDATA "hermes"
 Linux/macOS:
 
 ```bash
-git clone https://github.com/CalebJKim/chief-of-staff-agent.git
+git clone --branch demo_updates https://github.com/CalebJKim/chief-of-staff-agent.git
 cd chief-of-staff-agent
 python3 -m venv .venv
 source .venv/bin/activate
@@ -88,7 +88,7 @@ Credentials remain under your local `HERMES_HOME`. Never commit them.
 
 ## 4. Optional: populate the reference workspace
 
-After OAuth is verified, create the same realistic workspace in your own account: 6 meaningful Gmail messages, 100 older low-signal messages, Calendar data, a campaign folder, a Sheet, a Doc, and a Slides deck. Gmail ingestion reads only the newest 20 matching Inbox messages.
+After OAuth is verified, create the same realistic workspace in your own account: 6 meaningful Gmail messages, 100 older low-signal messages, 12 Calendar resources (47 visible weekly instances), and an RTX Spark Agent Runtime folder containing a delivery-tracker Sheet, latency-evaluation Doc, and partner-readout deck. Gmail ingestion reads only the newest 20 matching Inbox messages.
 
 ```powershell
 # Windows PowerShell
@@ -124,17 +124,6 @@ See [demo/DEMO_SPEC.md](demo/DEMO_SPEC.md) for the reference workspace specifica
 
 Say:
 
-> Good morning chief of staff, what should we work on today?
+> Hey chief of staff, what should we work on today?
 
-The agent will use the Gmail, Calendar, and Drive data from the account you connected.
-
-## Optional: dedicated lightweight profile
-
-Keep only the `skills` and `terminal` toolsets enabled, and disable unrelated skills with:
-
-```bash
-hermes tools
-hermes skills config
-```
-
-Do not disable `chief-of-staff`, `skills`, or `terminal`.
+The agent will use the Gmail, Calendar, and Drive data from the account you connected. No changes to Hermes model/provider defaults or unrelated tools are required.

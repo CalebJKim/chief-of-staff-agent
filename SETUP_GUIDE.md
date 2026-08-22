@@ -92,7 +92,7 @@ calendar event offsets.
 & $Python -m unittest discover -s skills/productivity/chief-of-staff/tests -v
 ```
 
-Expected result: 24 tests pass across the three suites.
+Expected result: 33 tests pass across the three suites.
 
 ## 5. Install the skills into Hermes
 
@@ -158,10 +158,12 @@ for Gmail, Calendar, Drive, Docs, Sheets, and Slides.
 ## 7. Seed the reference workspace
 
 The seeder writes demo content to the connected Google account. It creates six
-meaningful Gmail messages, 100 older low-signal messages, 95 Calendar events,
-a Drive folder, a campaign Sheet, a plan Doc, and an executive-review Slides
-deck. Gmail ingestion reads only the newest 20 matching Inbox messages, which
-keeps all six meaningful messages in scope. Seed the current workweek with:
+meaningful Gmail messages, 100 older low-signal messages, 12 Calendar resources
+(47 visible weekly meeting instances), and an `RTX Spark Agent Runtime Demo`
+Drive folder with a delivery-tracker Sheet, latency-evaluation Doc, and
+partner-readout deck. Gmail ingestion reads only the newest 20 matching Inbox
+messages, which keeps all six meaningful messages in scope. Seed the current
+workweek with:
 
 ```powershell
 & $Python demo\seed_workspace.py --confirm
@@ -206,9 +208,9 @@ After seeding, repeat the live verifier and build a decision packet:
 
 Start a new Hermes session and say:
 
-> Good morning chief of staff, what should we work on today?
+> Hey chief of staff, what should we work on today?
 
-Useful follow-ups are listed in `DEMO_SCRIPT.md`.
+Then say `Take the action items for the first thing.` and `Take the action items for the second thing.` The optional third-item action is documented in `DEMO_SCRIPT.md`.
 
 ## 9. Reset or remove the reference data
 
@@ -248,21 +250,23 @@ The following checks passed on August 21, 2026:
 - Google OAuth token exchange and a live API call.
 - Gmail, Calendar, Drive, Docs, Sheets, and Slides service verification.
 - Creation and read-back of 106 demo messages (6 meaningful and 100
-  background), 95 calendar events, one campaign folder, one 14-row tracker
-  Sheet, one campaign Doc, and one 10-slide deck.
+  background), 12 calendar resources producing 47 visible weekly instances,
+  one Agent Runtime folder, one 14-row delivery tracker, one latency-evaluation
+  Doc, and one 6-slide partner-readout deck.
 - Bounded ingestion of the newest 20 Inbox messages with all 6 meaningful
-  messages present, 19 same-day events, 4 Drive items, and no source errors.
-- Decision-packet generation with the expected conflict groups, 30-minute
-  focus block, Exec Review evidence, and campaign tracker lanes.
+  messages present and no source errors.
+- Decision-packet generation with three grouped workstreams in the expected
+  regression, evaluation, and deck order, plus inline Mail and action links.
 - A real Hermes prompt using the installed skill and configured local model:
-  `Good morning chief of staff, what should we work on today?`
-- A live permanent-delete reset and re-seed took 48.26 seconds. Final Gmail
+  `Hey chief of staff, what should we work on today?`
+- The final acceptance reset/reseed took 42.2 seconds. The complete four-prompt
+  Hermes flow then took 5 minutes 3 seconds, excluding reset. Final Gmail
   read-back found exactly 106 current seeded messages, no prior-run seeded
   messages, no seeded messages in Trash, and exact agreement between all 106
   saved cleanup IDs and live Gmail IDs. Each of the six meaningful threads
   contained exactly one message.
-- The 14,000-character decision packet retained all 6 meaningful messages,
-  all 5 conflict groups, 3 prioritized meetings, and 6 compact tracker rows.
+- The 14,000-character decision packet retained all 6 meaningful messages and
+  the three action-ready workstreams.
 
 The first one-shot response from the 35B local model took approximately two
 minutes while the command buffered output. `ollama ps` showed the model loaded
@@ -306,3 +310,16 @@ expected top-three priorities and schedule recommendations.
    `SKILL.md`, duplicated the Hermes path, and substituted an unsupported
    `actions.py gmail threads` call. The exact ingest-and-brief command now lives
    in `scripts/start_day.sh`; the skill invokes that file with one command.
+10. Follow-up runs still improvised Sheets and Slides command syntax. The
+    decision-packet builder now saves a data-derived action plan and exposes one
+    short `workstream N` command per ranked item. The demo helper executes and
+    verifies those exact steps without changing Hermes defaults.
+11. `disabled_client` is not a seeder or Hermes error. In the final run, Google
+    returned it briefly even though the console showed the Desktop client as
+    enabled; a later `--check-live` succeeded without replacing credentials.
+    Verify both the client and secret status, allow for propagation, and replace
+    credentials only if the error persists.
+12. The final live action audit verified one moved release-review event with no
+    duplicate, one unsent threaded Priya draft with Daniel copied, only the
+    evaluation status changed in Sheets, and only the slide-4 placeholder
+    changed in Slides.

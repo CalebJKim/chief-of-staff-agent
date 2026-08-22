@@ -2,16 +2,16 @@
 
 A portable Hermes Agent configuration for a Google Workspace chief of staff. It reads bounded Gmail, Calendar, Drive, Docs, Sheets, and Slides evidence; ranks the day; resolves calendar conflicts; prepares meetings; drafts email; and proposes guarded tracker and document updates.
 
-This README is the complete setup path for a new machine. [`QUICKSTART.md`](QUICKSTART.md) is a shorter checklist, while [`SETUP_GUIDE.md`](SETUP_GUIDE.md) records the validated Windows procedure, troubleshooting history, and maintainer workflow.
+This README is the complete setup path for a new machine. [`QUICKSTART.md`](QUICKSTART.md) is a shorter checklist, while [`SETUP_GUIDE.md`](SETUP_GUIDE.md) provides the detailed Windows procedure, troubleshooting guidance, and maintainer workflow.
 
 ## What the reference demo creates
 
 The optional seeder creates data in the Google account you authorize:
 
-- 6 meaningful Gmail messages, marked Inbox, Unread, and Important.
-- 100 older background messages from fictional people, marked read and not Important.
-- 95 Calendar events across one workweek.
-- A Drive folder containing a 14-row campaign tracker Sheet, a campaign-plan Doc, and a 10-slide executive-review deck.
+- 6 meaningful Gmail messages, all Inbox and Unread; the two release-blocker messages are Important.
+- 100 older, unread, low-signal messages from fictional people; none are Important.
+- 12 Calendar resources producing 47 visible meeting instances across one workweek, including three lightly overlapping series.
+- An `RTX Spark Agent Runtime Demo` Drive folder containing a 14-row delivery-tracker Sheet, a latency-evaluation Doc, and a 6-slide partner-readout deck.
 - A local state file under `HERMES_HOME` containing only the generated resource IDs needed for reset and cleanup.
 
 Use a dedicated test or demo Google account. Seeding and cleanup modify real Google Workspace data in the connected account, and cleanup permanently deletes the exact seeded Gmail message IDs.
@@ -69,7 +69,7 @@ Run the Hermes model picker and configure a provider/model that supports tool ca
 hermes model
 ```
 
-If Hermes already has a working model, keep the existing configuration. The reference setup on this project was validated with Hermes 0.20.4; use a current release rather than requiring that exact version.
+If Hermes already has a working model, keep the existing configuration. Use a current Hermes release rather than requiring one exact version.
 
 ## 3. Clone the demo branch
 
@@ -109,6 +109,17 @@ $Python = (Resolve-Path .\.venv\Scripts\python.exe).Path
 $env:HERMES_HOME = Join-Path $env:LOCALAPPDATA "hermes"
 ```
 
+On Windows ARM, if the standalone Python cannot install a binary dependency,
+use Hermes' bundled interpreter to create the project environment instead:
+
+```powershell
+$BootstrapPython = Join-Path $env:LOCALAPPDATA "hermes\hermes-agent\venv\Scripts\python.exe"
+& $BootstrapPython -m venv .venv
+$Python = (Resolve-Path .\.venv\Scripts\python.exe).Path
+& $Python -m pip install --upgrade pip
+& $Python -m pip install -r requirements.txt
+```
+
 Keep this PowerShell window open while completing the setup. In a later window, recreate the two variables with:
 
 ```powershell
@@ -146,7 +157,7 @@ python -m unittest discover -s skills/productivity/ingest/tests -v
 python -m unittest discover -s skills/productivity/chief-of-staff/tests -v
 ```
 
-Expected result: 24 tests pass across the three suites.
+Expected result: 33 tests pass across the three suites.
 
 ## 6. Install the agent into Hermes
 
@@ -164,9 +175,9 @@ hermes tools enable skills terminal --platform cli
 hermes skills list
 ```
 
-Confirm that `chief-of-staff` and `ingest` appear in the skills list. The installer preserves an existing customized `SOUL.md`; either copy this repository's chief-of-staff routing paragraph into that file or rerun the installer with `--overwrite-soul` only if replacement is intentional.
+Confirm that `chief-of-staff` and `ingest` appear in the skills list. The installer preserves an existing customized `SOUL.md` and adds the chief-of-staff routing paragraph when it is absent. Use `--overwrite-soul` only when replacing the existing file is intentional.
 
-Do not disable the `skills` or `terminal` toolsets. You can optionally use `hermes tools` and `hermes skills config` to disable unrelated capabilities for a lightweight demo profile.
+The demo does not require changes to Hermes model/provider defaults or unrelated tool settings. It only requires the installed `chief-of-staff` and `ingest` skills plus the `skills` and `terminal` toolsets.
 
 ## 7. Create Google OAuth credentials
 
@@ -233,11 +244,9 @@ This step writes the fake demo data to the authorized Google account. It is not 
 python demo/seed_workspace.py --confirm
 ```
 
-The command defaults to the current workweek. To seed another week, add a Monday date such as `--week-of 2026-08-17` before `--confirm`.
+The command defaults to the current workweek. To seed another week, add its Monday date as `--week-of YYYY-MM-DD` before `--confirm`. When setting up on a weekend, use the upcoming Monday so the demo's action meeting is not placed in the past.
 
-A successful result reports `"emails": 106`, `"events": 95`, and links for the folder, Sheet, Doc, and Slides deck. The six meaningful messages are the newest seeded mail; the 100 background messages are older, non-actionable inbox noise. It also creates:
-
-On the validated Windows demo account, a complete permanent-delete reset and re-seed took 48.26 seconds. The bounded 20-message ingestion previously averaged about 5.4 seconds. Google API and network conditions will affect these times.
+A successful result reports `"emails": 106`, `"events": 12`, and links for the folder, Sheet, Doc, and Slides deck. The 12 Calendar resources render as 47 meeting instances across the week. The six meaningful messages are the newest seeded mail; the 100 background messages are older, non-actionable inbox noise.
 
 - Windows: `%LOCALAPPDATA%\hermes\chief-of-staff-workspace-state.json`
 - Linux/macOS: `$HOME/.hermes/chief-of-staff-workspace-state.json`
@@ -274,15 +283,13 @@ hermes
 
 At the prompt, say:
 
-> Good morning chief of staff, what should we work on today?
+> Hey chief of staff, what should we work on today?
 
-Useful follow-ups are:
+The expected top three, in order, are the Agent Runtime regression, the completed latency evaluation, and the Partner Readout deck. Each item includes inline links to its supporting mail and action target. Continue with:
 
-- Help me prepare for the exec review.
-- What slides should I prepare?
-- Compare the latest email updates with the campaign tracker.
-- Apply the approved tracker updates.
-- Draft a follow-up to the owner of this blocked lane.
+- `Take the action items for the first thing.` This moves the existing release review to Monday at 11:00 AM PT and creates an unsent threaded draft to Priya with Daniel copied.
+- `Take the action items for the second thing.` This changes only the `Agent Runtime Latency Evaluation` tracker status to `Ready for review`.
+- Optional backup: `Take the action items for the third thing.` This replaces only the slide-4 placeholder with Elena's approved headline.
 
 Use [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) for the complete staged presentation flow. Gmail responses are created as drafts and are never sent by these scripts. While a seeded reference workspace is active, drafts created through the chief-of-staff flow are recorded by exact ID so cleanup can remove them without touching unrelated drafts.
 
@@ -327,6 +334,7 @@ Gmail deletion is immediate and cannot be undone; unrelated messages are untouch
 - **`Workspace already exists`**: run reset or cleanup. Do not delete the state file unless you have manually removed every generated resource.
 - **`No workspace state` during cleanup**: the script no longer has the IDs needed for safe cleanup. Use [`demo/DEMO_SPEC.md`](demo/DEMO_SPEC.md) to identify the generated data manually.
 - **API not enabled or access denied**: confirm all six APIs are enabled, the OAuth client type is Desktop, the account is an allowed test user, and all requested scopes were approved. Then run `--auth-url` again to begin a fresh authorization flow.
+- **`disabled_client`**: verify the client and its secret under Google Auth Platform > Clients. If the console already says Enabled, wait briefly and rerun `--check-live`; status propagation can lag. Enable the client/secret or replace it only if the error persists.
 - **OAuth state mismatch**: generate a new URL with `--auth-url` and submit only the redirect URL produced by that same attempt.
 - **Time-zone error on Windows**: activate the repository environment and rerun `pip install -r requirements.txt`; `tzdata` is required.
 - **Hermes cannot find the skills**: confirm `HERMES_HOME`, rerun `install.py`, then run `hermes skills list`.
@@ -341,6 +349,6 @@ Gmail deletion is immediate and cannot be undone; unrelated messages are untouch
 - `demo/` contains the reference-workspace seeder, reset wrapper, specification, and fixtures.
 - `config.example.yaml` documents the recommended tool surface.
 
-No sessions, OAuth credentials, account IDs, generated Workspace IDs, email/calendar fixtures from a real account, or model files are included. Broad ingestion is bounded and metadata/snippet-first; one-time codes are redacted before model context; Docs, Sheets, Slides, and Calendar writes require explicit confirmation; and tracker updates preserve lane ownership and validate statuses.
+No sessions, OAuth credentials, account IDs, generated Workspace IDs, email/calendar fixtures from a real account, or model files are included. Broad ingestion is bounded and metadata/snippet-first; one-time codes are redacted before model context; ranked workstreams save a local data-derived action plan; Docs, Sheets, Slides, and Calendar writes require explicit confirmation; and tracker updates preserve lane ownership and validate statuses.
 
 The tracker-specific update path expects a tab named `Campaign Lanes` with columns A:J matching the demonstrated schema. General Gmail, Calendar, and Drive planning works without that sheet. See [`demo/DEMO_SPEC.md`](demo/DEMO_SPEC.md) for the exact reference data and manual fallback procedure.

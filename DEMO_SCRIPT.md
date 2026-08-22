@@ -1,190 +1,73 @@
 # Chief of Staff Agent demo script
 
-## Core value proposition
+## Goal
 
-Everyone gets a chief of staff to help manage their life.
+Show a succinct, evidence-backed morning brief followed by two safe cross-Workspace actions. The third workstream remains available as an optional backup. The interactive flow should finish within six minutes after the workspace is seeded.
 
-The chief of staff protects attention, prioritizes, chases down non-focus
-threads, and proactively watches for things falling through the cracks. This
-gives users more time and focus for their best work while taking away stress.
-
-The Chief of Staff Agent runs best locally on RTX Spark. It connects to your
-apps for context. Personal data stays on the device for inference: the agent
-uses a local model rather than a cloud LLM, with tools running in an OpenShell
-sandbox.
+The demo changes no Hermes model/provider defaults. It uses the repo-installed `chief-of-staff` and `ingest` skills with terminal access. Workspace links appear inline for Ctrl-clicking; the agent never opens Chrome.
 
 ## Opening
 
-Many of us are very busy. When we open our laptops in the morning, we are
-flooded by email and Slack messages. We often have busy schedules with lots of
-meetings. It is hard to focus.
+The dedicated demo account contains a busy fictional RTX Spark Agent Runtime workweek, 106 unread Inbox messages, and a Drive tracker/report/deck. Only six messages contain meaningful work. The chief of staff should cut through that noise and identify three grouped outcomes across Mail, Calendar, and Drive.
 
-I am already behind and multitasking. The chief of staff gives me immense
-mental peace.
-
-We are going to show how agents can act as your personal chief of staff:
-cutting through the noise to tell you only what you need to know right now,
-helping you identify which projects have to be done today and when, and even
-taking on some of the less complicated work.
-
-## Query 1 — Morning brief and protecting attention
-
-On this RTX Spark, I have set up Hermes with local models. I have already
-configured everything it needs to be my chief of staff, including access to my
-tools and instructions for how I like to do things. Let's get started.
+## Query 1 — Morning priorities
 
 **Prompt**
 
-> Good morning Chief of Staff — what should we work on today?
+> Hey chief of staff, what should we work on today?
 
-**Intended response**
+**Expected structure**
 
-> Hi Abhi!
->
-> Here's what you need to know right now:
->
-> - The Exec Review meeting moved from Thursday to today at 10:00 a.m.
-> - We received the updated performance numbers for the new inference feature.
-> - The new DeepSeek Flash model came out. It is 200B and great for two DGX
->   Sparks.
-> - There is an email update on the status of OpenShell that you should read.
->   [Link]
->
-> Here are the three things you need to get done today:
->
-> 1. Finish and send the Agent Security PRD to Engineering. You can skip your
->    1:00–2:00 p.m. meeting to do it, then catch up from the meeting notes.
-> 2. Your VP wants to review the Hermes partner-meeting slides. I can set up a
->    review from 4:30–5:00 p.m. today if you want.
-> 3. Update the marketing documents with the new inference performance numbers.
->
-> There are also several emails we need to answer. I can start preparing draft
-> responses if you want.
+Exactly three succinct numbered items, with no heading, scores, inbox inventory, or closing question:
 
-As you can see, I have set up my chief of staff to be succinct and help me cut
-through the noise. But how do we know the answers are correct?
+1. **Agent Runtime regression** — Priya's P0 duplicate-completion blocker. Next: move the existing release review to Monday at 11:00 AM PT and draft Priya and Daniel a confirmation. Inline Mail and Calendar links.
+2. **Agent Runtime Latency Evaluation** — Mateo completed it while the tracker remains `In progress`. Next: change only that lane to `Ready for review`. Inline Mail and Tracker links.
+3. **Partner Readout Deck** — Elena approved the exact slide-4 headline. Next: replace only the placeholder. Inline Mail and Deck links.
 
-It knows what to prioritize because I have given the agent access to a popular
-technique called a second brain. It reads my email and Slack messages, and it
-can see my prioritized projects in Obsidian. With that context, it can make
-smart recommendations. You can see how the graph of nodes looks in Obsidian.
+Point out that each priority groups evidence and the action target instead of listing Mail, Calendar, and Drive as separate tasks.
 
-*Show Obsidian.*
-
-## Query 2 — Meeting preparation
-
-Let me show you a couple more things it can do. We have an executive review at
-10:00 a.m. that moved to today, and I have not prepared for it. I have not met
-with the team, and I need to gather all the project updates. Let's have our
-chief of staff help us.
+## Query 2 — Mail plus Calendar action
 
 **Prompt**
 
-> Help me prepare for the Exec Review.
+> Take the action items for the first thing.
 
-**Intended response**
+**Expected result**
 
-> Here are the slides we prepared.
->
-> We have received updates that may be relevant to the content:
->
-> - We received the performance numbers overnight. We need to update slide 4.
-> - We received feedback to cut slide 6 and cover that material on slide 7.
-> - Your manager recommended moving quickly through the intro so we can spend
->   time on slide 10. [Link]
->
-> The key decisions we were trying to get from the meeting were:
->
-> - Approval of our proposed keynote storyline.
-> - Alignment on the demos for IFA.
+- The existing `RTX Spark Agent Runtime release review` moves to Monday at 11:00 AM Pacific; no duplicate event is created.
+- An unsent reply draft is created in Priya's original thread with Daniel copied.
+- The response is one short confirmation with inline Calendar and Draft links.
 
-## Query 3 — Project tracking
+If presenting the UI, Ctrl-click the returned links yourself. The agent should not launch a browser.
 
-Another useful thing our chief of staff can do is help track project status. A
-major launch like RTX Spark has many moving pieces, and chasing people for
-updates is always a pain.
-
-This is an example campaign tracker with several items that need updates. Let's
-ask the chief of staff to help.
+## Query 3 — Mail plus Sheet action
 
 **Prompt**
 
-> Update the status of the RTX Spark campaign tracker.
+> Take the action items for the second thing.
 
-**Intended response**
+**Expected result**
 
-> On it…
->
-> Reading email and Slack messages…
->
-> Updating Google Sheets…
->
-> Done! I updated the tracker. We have not received updates for two lanes, and
-> one lane is blocked.
+- Only the `Agent Runtime Latency Evaluation` status changes from `In progress` to `Ready for review`.
+- Owner, latest update, next action, due date, blocker, evidence, artifact, and notes remain unchanged.
+- The response is one short verified confirmation with the inline Tracker link.
+
+## Optional backup — Mail plus Slides action
 
 **Prompt**
 
-> Let's ask Rafael and Grant for updates on those two lanes. Prepare drafts.
+> Take the action items for the third thing.
 
-**Intended response**
+**Expected result**
 
-> Drafting…
->
-> The drafts are ready for you to review.
+- Only `APPROVED HEADLINE PLACEHOLDER` on slide 4 becomes `Meet the RTX Spark Agent Runtime: a faster path from intent to completed work.`
+- The rest of slide 4 and the other five slides remain unchanged.
+- The response is one short verified confirmation with the inline Deck link.
 
-**Prompt**
+## Reset before another run
 
-> Thanks! What's wrong with the blocked lane?
+```powershell
+& $Python demo\reset_workspace.py
+```
 
-**Intended response**
-
-> There is an issue with the marketing shoot. The venue is not available on
-> Wednesday, and we need to decide on a new date. You have to weigh in here.
-> [Link]
-
-## Close
-
-As you can see, the chief of staff I put together simplifies my life. It helps
-me focus and be more productive. The key is to create a good set of skills that
-describe how we like things done, give the agent access to tools so it can
-actively help, and teach it about our projects so it has context.
-
-In this session, we will walk through all of these concepts and demystify
-agents. By the end, you will know how they work, and hopefully we will have
-given you the tools to go home and set up your own chief of staff.
-
-## Expansion ideas and working notes
-
-- Email management and sorting.
-- Important and prioritized work.
-- Drafting rather than sending email.
-- Morning brief and plan for the day.
-- News.
-- Workfront or Jira updates.
-- Blocked projects, missing dependencies, slipping deadlines, and stakeholders
-  waiting for feedback.
-- Event or launch tracker.
-- Follow-up agent and tracker updater.
-- Executive event recap and audit.
-- Social and online listening: sentiment, quotes, and headlines.
-- Pulling in photos.
-- Comparing events and producing recap reports.
-- Asset audits for messaging or product changes.
-- Mockups and design iteration.
-- Merchandise and website work.
-- Creating decks and key visuals.
-- GTMK assets across social, newsletter, website, and print, including resizing
-  and minor crops. Add the example tracker link at demo time.
-- Explore Adobe as a tool.
-
-**BAC**
-
-- Email and news morning brief.
-
-**Chief of Staff**
-
-- Morning brief across tracker, calendar, email, and Slack.
-- Jira and follow-ups.
-- Executive event recap and audit.
-- Security and OpenShell, including personal photos and confidential documents.
-- Personal access from a phone.
+Reset permanently deletes only the tracked seeded Gmail messages and tracked demo drafts, deletes the tracked Calendar resources, moves the generated Drive folder to Trash, and reseeds a fresh copy. Keep the local workspace state file if any cleanup step reports an error.
