@@ -63,6 +63,7 @@ class SkillRuntimeTests(unittest.TestCase):
         self.assertIn("General question", routing)
         self.assertIn("Never translate an item number directly into a stored command", routing)
         self.assertIn("Do not ask for redundant confirmation", skill)
+        self.assertIn("end each draft with `Thanks,` and never `Best regards,`", skill)
         self.assertIn("calendar availability", skill)
         self.assertIn("rejects conflicts", skill)
         self.assertIn("scripts/action.sh", skill)
