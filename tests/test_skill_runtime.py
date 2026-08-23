@@ -41,6 +41,8 @@ class SkillRuntimeTests(unittest.TestCase):
         self.assertIn("Daily brief", routing)
         self.assertIn("as the only terminal command", routing)
         self.assertIn("scripts/start_day.sh", routing)
+        self.assertIn("default is three priorities", routing)
+        self.assertIn("append `--top N`", routing)
         self.assertEqual(1, skill.count("scripts/start_day.sh"))
         self.assertIn("do not add redirection", start_section)
         self.assertNotIn("ingest.py", routing)
@@ -48,7 +50,7 @@ class SkillRuntimeTests(unittest.TestCase):
 
         script = START_DAY.read_text(encoding="utf-8")
         self.assertIn('ingest.py" --max-messages 20', script)
-        self.assertIn('brief.py" --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000 --reply-only', script)
+        self.assertIn('brief.py" --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000 --top "$TOP_N" --reply-only', script)
         self.assertNotIn(b"\r\n", START_DAY.read_bytes())
 
     def test_followups_are_flexible_and_use_conversation_history(self) -> None:
@@ -63,7 +65,8 @@ class SkillRuntimeTests(unittest.TestCase):
         self.assertIn("General question", routing)
         self.assertIn("Never translate an item number directly into a stored command", routing)
         self.assertIn("Do not ask for redundant confirmation", skill)
-        self.assertIn("end each draft with `Thanks,` and never `Best regards,`", skill)
+        self.assertIn("end each draft with exactly `Thanks` with no comma", skill)
+        self.assertIn('--closing "Thanks"', ACTION.read_text(encoding="utf-8"))
         self.assertIn("calendar availability", skill)
         self.assertIn("start no earlier than 8:00 AM and end no later than 5:00 PM", skill)
         self.assertIn("rejects conflicts", skill)

@@ -114,7 +114,7 @@ class SeedWorkspaceTests(unittest.TestCase):
         ]
         demo_day = datetime(2026, 8, 21).date()
 
-        created, _ = seed_workspace.create_emails(
+        created, evidence = seed_workspace.create_emails(
             gmail,
             "https://example.test/deck",
             "https://example.test/sheet",
@@ -151,10 +151,11 @@ class SeedWorkspaceTests(unittest.TestCase):
             "BLOCKER: Agent Runtime duplicates tool-call completions",
             "New slot for the Agent Runtime release review",
             "READY: Agent Runtime latency evaluation",
-            "Tracker confirmation for the completed evaluation",
+            "READY: Reliability test matrix",
             "For next week: approved Partner Readout headline",
-            "Partner Readout file for next week's copy pass",
+            "ACTION: Partner demo checklist ready to start",
         }
+        self.assertEqual({"bug", "scheduling", "evaluation", "reliability", "copy", "checklist"}, set(evidence))
         meaningful_positions = [
             index for index, (message, _labels) in enumerate(messages)
             if message["Subject"] in meaningful_subjects
@@ -299,6 +300,12 @@ class SeedWorkspaceTests(unittest.TestCase):
         partner_row = next(row for row in update["body"]["values"] if row and row[0] == "Partner Readout Deck")
         self.assertIn("APPROVED HEADLINE PLACEHOLDER", partner_row[4])
         self.assertIn("Meet the RTX Spark Agent Runtime", partner_row[4])
+        reliability_row = next(row for row in update["body"]["values"] if row and row[0] == "Reliability test matrix")
+        checklist_row = next(row for row in update["body"]["values"] if row and row[0] == "Partner demo checklist")
+        self.assertEqual("In review", reliability_row[2])
+        self.assertIn("status to Ready for review", reliability_row[4])
+        self.assertEqual("Not started", checklist_row[2])
+        self.assertIn("status to In progress", checklist_row[4])
         validation_request = next(
             request["setDataValidation"]
             for request in sheets.spreadsheets().batchUpdate.call_args.kwargs["body"]["requests"]

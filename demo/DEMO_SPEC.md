@@ -10,9 +10,10 @@ The fictional scenario is fixed seed data. The Chief of Staff skill does not con
   1. Priya reports a P0 duplicate tool-completion regression and asks to postpone the release review. Important.
   2. Daniel asks for the earliest non-conflicting one-hour slot on the next business day and an unsent confirmation draft to Priya and Daniel. Important.
   3. Mateo says the latency evaluation is complete and ready for review.
-  4. Aisha confirms that only the evaluation tracker's status should change.
+  4. Aisha reports that the completed reliability matrix is ready for review and asks for only that lane's status to change.
   5. Elena supplies the exact approved slide-4 headline.
-  6. Rafael identifies the Partner Readout deck containing the placeholder.
+  6. Jordan confirms that the partner-demo checklist is ready to start and asks for only that lane's status to change.
+  - These six messages support five distinct actionable workstreams; Priya and Daniel jointly support the release-review workstream.
 - **70 background Gmail messages** from unique fictional people:
   - Each has a unique sender, natural unnumbered subject, timestamp, and harmless low-signal body.
   - They are Inbox and Unread but not Important.
@@ -28,7 +29,7 @@ The fictional scenario is fixed seed data. The Chief of Staff skill does not con
   - Tab: `Campaign Lanes`
   - Columns A:J: Lane, PIC, Status, Latest update, Next action, Due, Dependency/blocker, Evidence, Artifact, Notes.
   - Eight data rows with a validated, color-coded status dropdown, a frozen/filterable header, and task-specific column widths.
-  - The seeded evidence currently ranks Agent Runtime regression, Agent Runtime Latency Evaluation, and Partner Readout Deck as the top three.
+  - The seeded evidence contains five strongly supported workstreams. It still ranks Agent Runtime regression, Agent Runtime Latency Evaluation, and Partner Readout Deck as the default top three, followed by Partner demo checklist and Reliability test matrix for top-four/top-five requests.
 - **1 Google Doc**: `RTX Spark Agent Runtime Latency Evaluation`
   - Uses a structured internal-report layout with a branded title, section hierarchy, status and action callouts, and a true bulleted scope list.
   - States that the evaluation is complete and ready for review.
@@ -50,7 +51,7 @@ Start of Day writes only the bounded Workspace snapshot used to build the brief.
 
 1. `Hey chief of staff, what should we work on today?`
    - Read the current Workspace snapshot.
-   - Return a short workload summary followed by exactly three numbered priorities.
+   - Return a short workload summary followed by three numbered priorities by default, or the explicitly requested top N.
    - Give every item two evidence links and a `Recommended action item(s):` sub-bullet.
    - Do not expose scores, internal IDs, or commands.
 2. `Take care of the first item.`
@@ -65,7 +66,7 @@ Start of Day writes only the bounded Workspace snapshot used to build the brief.
 4. `Take care of the second item.` or `Take care of the third item.`
    - Derive exact values from the displayed recommendation and focused live reads.
    - Execute and verify the authorized change without a redundant confirmation prompt.
-5. Requests unrelated to the top three still work through the same focused Workspace helpers; they do not require rerunning Start of Day.
+5. Requests unrelated to the displayed ranked list still work through the same focused Workspace helpers; they do not require rerunning Start of Day.
 
 The current seed is designed to produce a stable demo narrative, but the renderer and action flow contain no hardcoded project names, recipients, dates, statuses, or replacement text. Changing the seeded evidence changes the presented contents and subsequent actions.
 

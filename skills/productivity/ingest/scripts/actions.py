@@ -149,6 +149,29 @@ def gmail_thread(args: argparse.Namespace) -> None:
     emit({"thread_id": args.thread_id, "messages": output})
 
 
+def normalize_draft_body(value: str, closing: str = "") -> str:
+    """Accept shell-friendly escaped line breaks and apply an optional exact closing."""
+    normalized = value.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\r", "\n")
+    lines = [line.rstrip() for line in normalized.splitlines()]
+    while lines and not lines[-1]:
+        lines.pop()
+    if closing:
+        exact_closing = closing.strip()
+        common_closings = {"thanks", "thank you", "best regards", "regards", "sincerely"}
+        replaced = False
+        for index in range(len(lines) - 1, max(-1, len(lines) - 4), -1):
+            candidate = lines[index].strip().casefold().rstrip(",.!:")
+            if candidate in common_closings:
+                lines[index] = exact_closing
+                replaced = True
+                break
+        if not replaced:
+            if lines:
+                lines.append("")
+            lines.append(exact_closing)
+    return "\n".join(lines)
+
+
 def gmail_draft(args: argparse.Namespace) -> None:
     track_demo_state = getattr(args, "track_demo_state", False)
     if track_demo_state:
@@ -182,7 +205,7 @@ def gmail_draft(args: argparse.Namespace) -> None:
     if args.cc:
         message["Cc"] = args.cc
     message["Subject"] = subject
-    message.set_content(args.body)
+    message.set_content(normalize_draft_body(args.body, getattr(args, "closing", "")))
     raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
     body: dict[str, Any] = {"message": {"raw": raw}}
     if thread_id:
@@ -653,6 +676,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--cc", default="")
     p.add_argument("--subject", default="")
     p.add_argument("--body", required=True)
+    p.add_argument("--closing", default="", help="Ensure an exact final closing while preserving any following signature")
     p.add_argument("--thread-id", default="")
     p.add_argument("--reply-to-message", default="", help="Build a correctly threaded reply draft")
     p.add_argument("--track-demo-state", action="store_true", help="Record this draft for reference-workspace cleanup")

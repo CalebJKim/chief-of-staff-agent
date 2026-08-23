@@ -21,7 +21,7 @@ Desktop. Profile selection does not modify the default profile's configuration.
 
 ## Opening
 
-The dedicated demo account contains a busy fictional RTX Spark Agent Runtime workweek, 76 unread Inbox messages, and a Drive tracker/report/deck. Only six messages contain meaningful work. The chief of staff should cut through that noise and identify three grouped outcomes across Mail, Calendar, and Drive.
+The dedicated demo account contains a busy fictional RTX Spark Agent Runtime workweek, 76 unread Inbox messages, and a Drive tracker/report/deck. Only six messages contain meaningful work, supporting five distinct workstreams. The chief of staff should cut through that noise and identify three grouped outcomes by default across Mail, Calendar, and Drive.
 
 ## Query 1 — Morning priorities
 
@@ -38,6 +38,12 @@ Start with a very short summary of today's workload in no more than three senten
 3. **Partner Readout Deck** — Elena approved the exact slide-4 headline. Next: replace only the placeholder. Inline Mail and Deck links.
 
 Point out that each priority groups evidence and the action target instead of listing Mail, Calendar, and Drive as separate tasks.
+
+To demonstrate the dynamic limit, use:
+
+> Hey chief of staff, what are the top 5 things we should work on today?
+
+The same format should contain five ranked items. Top 4 works identically; requests without a number continue to return three.
 
 ## Query 2 — Mail plus Calendar action
 
@@ -64,7 +70,7 @@ After a reset, optionally replace Query 2 with:
 
 The agent must honor the new constraint, find a free Thursday-afternoon hour, and use the selected time in the draft. It must not replay a time from the initial recommendation.
 
-You can also ask for a direct Workspace action unrelated to the top three. The plan provides context but does not limit the agent's capabilities.
+You can also ask for a direct Workspace action unrelated to the displayed ranked list. The plan provides context but does not limit the agent's capabilities.
 
 ## Query 3 — Mail plus Sheet action
 

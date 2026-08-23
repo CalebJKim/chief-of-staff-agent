@@ -215,6 +215,7 @@ def build_workstreams(
     mail: list[dict[str, Any]],
     meetings: list[dict[str, Any]],
     files: list[dict[str, Any]],
+    limit: int = 3,
 ) -> list[dict[str, Any]]:
     """Rank actionable tracker rows and attach their supporting mail and write target."""
     candidates: list[tuple[int, int, int, dict[str, Any], dict[str, Any]]] = []
@@ -232,7 +233,7 @@ def build_workstreams(
     candidates.sort(key=lambda item: (-item[0], item[1], item[2]))
 
     output = []
-    for _, _, _, tracker, row in candidates[:3]:
+    for _, _, _, tracker, row in candidates[:limit]:
         row_text = " ".join(str(row.get(key) or "") for key in ("lane", "pic", "latest", "next", "blocker"))
         row_tokens = tokens(row_text)
         evidence = str(row.get("evidence") or "")
@@ -296,15 +297,22 @@ def build_workstreams(
 
 def render_initial_reply(packet: dict[str, Any]) -> str:
     """Render ranked workstreams without exposing action commands or internal IDs."""
-    workstreams = packet.get("workstreams", [])[:3]
-    if len(workstreams) != 3:
-        raise ValueError("A preformatted brief requires exactly three ranked workstreams")
+    requested_top_n = max(1, int(packet.get("requested_top_n") or 3))
+    workstreams = packet.get("workstreams", [])[:requested_top_n]
+    if not workstreams:
+        raise ValueError("A preformatted brief requires at least one ranked workstream")
 
     def display_text(value: Any) -> str:
         return str(value).strip().replace("\u2018", "'").replace("\u2019", "'").replace("\u201c", '"').replace("\u201d", '"')
 
     outcomes = [display_text(item.get("outcome") or "Untitled priority") for item in workstreams]
-    lines = [f"Today's workload centers on {outcomes[0]}, {outcomes[1]}, and {outcomes[2]}."]
+    if len(outcomes) == 1:
+        outcome_summary = outcomes[0]
+    elif len(outcomes) == 2:
+        outcome_summary = f"{outcomes[0]} and {outcomes[1]}"
+    else:
+        outcome_summary = f"{', '.join(outcomes[:-1])}, and {outcomes[-1]}"
+    lines = [f"Today's workload centers on {outcome_summary}."]
     for index, item in enumerate(workstreams, start=1):
         latest = display_text(item.get("latest") or "This priority needs attention")
         if latest[-1:] not in ".!?:":
@@ -327,6 +335,7 @@ def render_initial_reply(packet: dict[str, Any]) -> str:
 
 
 def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
+    top_n = max(1, int(getattr(args, "top_n", 3)))
     tz_name = snapshot.get("timezone") or "UTC"
     try:
         tz = ZoneInfo(tz_name)
@@ -413,11 +422,12 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
     }
     packet = {
         "schema": 1,
-        "instruction": "When workstreams has three items, render workstreams[0:3] exactly once and in order; never split, merge, or re-rank them. Otherwise rank up to three distinct outcomes from the remaining evidence. Begin with a very short plain-text summary of today's workload in no more than three sentences and no heading. Then render exactly three numbered items. Each item must have a bold outcome line, one concise evidence sentence using latest and ending with exactly two inline links (supporting_mail as Mail and target with its supplied label), and an indented sub-bullet labeled exactly `Recommended action item(s):` using next. No tables, inbox inventory, extra sections, closing question, scores, browser launches, or more tools; end after item 3's action sub-bullet. stale_timing means historical timing: verify it and never call it due today. ok_empty means success with zero results.",
+        "instruction": f"Render workstreams[0:{top_n}] exactly once and in order; never split, merge, or re-rank them. If fewer than {top_n} actionable workstreams are available, render every available workstream without padding. Begin with a very short plain-text summary of today's workload in no more than three sentences and no heading. Then render up to {top_n} numbered items. Each item must have a bold outcome line, one concise evidence sentence using latest and ending with exactly two inline links (supporting_mail as Mail and target with its supplied label), and an indented sub-bullet labeled exactly `Recommended action item(s):` using next. No tables, inbox inventory, extra sections, closing question, scores, browser launches, or more tools; end after the final item's action sub-bullet. stale_timing means historical timing: verify it and never call it due today. ok_empty means success with zero results.",
+        "requested_top_n": top_n,
         "freshness": {"generated_at": snapshot.get("generated_at"), "timezone": tz_name, "window": snapshot.get("window")},
         "coverage": coverage,
         "source_status": source_status,
-        "workstreams": build_workstreams(trackers, ranked_mail, ranked_events, recent_files),
+        "workstreams": build_workstreams(trackers, ranked_mail, ranked_events, recent_files, top_n),
         "conflicts": conflicts(events, tz),
         "focus_blocks": focus_blocks(events, tz, window_start, args.work_start, args.work_end, args.min_focus_minutes),
         "meetings": ranked_events[: args.max_meetings],
@@ -490,11 +500,14 @@ def main() -> int:
     parser.add_argument("--max-mail", type=int, default=12)
     parser.add_argument("--max-files", type=int, default=12)
     parser.add_argument("--max-chars", type=int, default=14000)
+    parser.add_argument("--top", dest="top_n", type=int, default=3, help="Number of ranked workstreams to return")
     parser.add_argument("--work-start", type=int, default=8)
     parser.add_argument("--work-end", type=int, default=18)
     parser.add_argument("--min-focus-minutes", type=int, default=30)
-    parser.add_argument("--reply-only", action="store_true", help="Print the preformatted top-three reply")
+    parser.add_argument("--reply-only", action="store_true", help="Print the preformatted ranked-priorities reply")
     args = parser.parse_args()
+    if args.top_n < 1:
+        parser.error("--top must be a positive integer")
     if not args.snapshot.exists():
         print(json.dumps({"ok": False, "error": f"Snapshot not found: {args.snapshot}"}), file=sys.stderr)
         return 1

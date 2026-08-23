@@ -12,13 +12,23 @@ fi
 
 ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
 
-if [ "${1:-}" = "gmail" ] && [ "${2:-}" = "draft" ] && [ -f "$COS_HOME/chief-of-staff-workspace-state.json" ]; then
+if [ "${1:-}" = "gmail" ] && [ "${2:-}" = "draft" ]; then
+  HAS_TRACKING=false
+  HAS_CLOSING=false
   for argument in "$@"; do
     if [ "$argument" = "--track-demo-state" ]; then
-      exec "$PYTHON" "$ACTION" "$@"
+      HAS_TRACKING=true
+    fi
+    if [ "$argument" = "--closing" ]; then
+      HAS_CLOSING=true
     fi
   done
-  set -- "$@" --track-demo-state
+  if [ "$HAS_TRACKING" = false ] && [ -f "$COS_HOME/chief-of-staff-workspace-state.json" ]; then
+    set -- "$@" --track-demo-state
+  fi
+  if [ "$HAS_CLOSING" = false ]; then
+    set -- "$@" --closing "Thanks"
+  fi
 fi
 
 exec "$PYTHON" "$ACTION" "$@"

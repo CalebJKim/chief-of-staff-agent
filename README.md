@@ -8,7 +8,7 @@ This README is the complete setup path for a new machine. [`QUICKSTART.md`](QUIC
 
 The optional seeder creates data in the Google account you authorize:
 
-- 6 meaningful Gmail messages, all Inbox and Unread; the two release-blocker messages are Important.
+- 6 meaningful Gmail messages supporting 5 distinct workstreams, all Inbox and Unread; the two release-blocker messages are Important.
 - 70 older, unread, low-signal messages from fictional people; none are Important.
 - 12 Calendar resources producing 47 visible meeting instances across one workweek, including three lightly overlapping series.
 - An `RTX Spark Agent Runtime Demo` Drive folder containing a polished 14-row delivery-tracker Sheet with color-coded statuses, a structured internal-report latency-evaluation Doc, and a 6-slide partner-readout deck built from a reusable visual template.
@@ -400,7 +400,7 @@ At the prompt, say:
 
 > Hey chief of staff, what should we work on today?
 
-The reply begins with a summary of today's workload in no more than three sentences. The expected top three, in order, are the Agent Runtime regression, the completed latency evaluation, and the Partner Readout deck. Each item includes inline links to its supporting mail and action target followed by a `Recommended action item(s):` sub-bullet. Continue with:
+The reply begins with a summary of today's workload in no more than three sentences. It returns three priorities by default; requests such as `What are the top 5 things we should work on today?` return that many when available. The expected default top three, in order, are the Agent Runtime regression, the completed latency evaluation, and the Partner Readout deck. The seeded top four and five continue with Partner demo checklist and Reliability test matrix. Each item includes inline links to its supporting mail and action target followed by a `Recommended action item(s):` sub-bullet. Continue with:
 
 - `Take the action items for the first thing.` This resolves item one from conversation history, checks current availability, moves the existing release review to the earliest valid non-conflicting slot, and creates an unsent threaded draft to Priya with Daniel copied. The request authorizes the displayed actions; the agent does not ask for confirmation again.
 - Natural wording such as `Can you take care of the first item on the list for me?` follows the same evidence-driven flow without rerunning Start of Day. Added constraints such as `but use Thursday afternoon` override the earlier recommendation.

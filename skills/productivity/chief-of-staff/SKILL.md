@@ -1,6 +1,6 @@
 ---
 name: chief-of-staff
-description: Build a Google Workspace-backed daily top-three plan and handle related or direct Workspace actions.
+description: Build a Google Workspace-backed ranked daily plan and handle related or direct Workspace actions.
 version: 0.6.0
 author: NVIDIA, Hermes Agent
 license: MIT
@@ -17,7 +17,7 @@ metadata:
 
 Choose the behavior that matches the user's current request:
 
-- **Daily brief:** Only when the user asks what to work on today or asks to start the day, run `bash "$HERMES_HOME/skills/productivity/chief-of-staff/scripts/start_day.sh"` as the only terminal command and return its preformatted Markdown verbatim.
+- **Daily brief:** Only when the user asks what to work on today or asks to start the day, run `bash "$HERMES_HOME/skills/productivity/chief-of-staff/scripts/start_day.sh"` as the only terminal command and return its preformatted Markdown verbatim. The default is three priorities. If the user explicitly asks for the top N items, append `--top N` to that command, using the positive integer from the request.
 - **Plan follow-up:** Resolve references such as "the first item" from the most recent brief in conversation history. Combine that evidence with the complete current request; the user's newest instructions and constraints override the earlier recommendation. Do not rerun Start of Day.
 - **Direct Workspace request:** Handle supported Gmail, Calendar, Drive, Docs, Sheets, or Slides work even when it is unrelated to the brief. Use focused reads and actions below; a daily plan is not required.
 - **General question:** Answer normally without running Start of Day or Workspace commands.
@@ -36,7 +36,7 @@ The script dynamically ranks Workspace evidence and preformats each grouped work
 
 ## Initial Reply
 
-`brief.py` owns this presentation contract: a one-sentence workload summary with no heading, followed by exactly three numbered items. Each item has a bold outcome line, one evidence sentence ending with exactly two links, and an indented action sub-bullet labeled `Recommended action item(s):`. The script uses the matching meeting's Calendar URL for scheduling and ends after item 3. Return that text verbatim.
+`brief.py` owns this presentation contract: a one-sentence workload summary with no heading, followed by the requested number of ranked items (three by default). Each item has a bold outcome line, one evidence sentence ending with exactly two links, and an indented action sub-bullet labeled `Recommended action item(s):`. The script uses the matching meeting's Calendar URL for scheduling and ends after the final requested item. Return that text verbatim.
 
 1. **Outcome**
    Why this matters now. [Mail](URL) [Calendar or Drive](URL)
@@ -56,7 +56,7 @@ For a request outside the ranked workstreams, use the same focused helper direct
 ACTION="$HERMES_HOME/skills/productivity/chief-of-staff/scripts/action.sh"
 
 bash "$ACTION" gmail thread THREAD_ID
-bash "$ACTION" gmail draft --reply-to-message MESSAGE_ID --cc ADDRESS --body 'BODY'
+bash "$ACTION" gmail draft --reply-to-message MESSAGE_ID --cc ADDRESS --body 'BODY' --closing 'Thanks'
 bash "$ACTION" calendar get EVENT_ID
 bash "$ACTION" calendar list --start ISO_DATETIME --end ISO_DATETIME --query 'meeting terms'
 bash "$ACTION" calendar availability --start ISO_DATETIME --end ISO_DATETIME --duration-minutes 60 --exclude-event EVENT_ID
@@ -69,7 +69,7 @@ bash "$ACTION" slides get PRESENTATION_ID
 bash "$ACTION" slides replace-text PRESENTATION_ID --find 'OLD' --replace 'NEW' --confirm
 ```
 
-- Gmail drafts are threaded and never sent. Unless the user requests a different closing, end each draft with `Thanks,` and never `Best regards,`. The helper tracks demo drafts automatically when a reference workspace is active.
+- Gmail drafts are threaded and never sent. Use real paragraph breaks; the helper also converts shell-escaped `\n` sequences into line breaks. Unless the user requests a different closing, end each draft with exactly `Thanks` with no comma or other punctuation. The wrapper enforces that default and tracks demo drafts automatically when a reference workspace is active.
 - Before moving an event, read the relevant date and use `calendar availability` when the requested or recommended time may conflict. Preserve the event's duration. Unless the user explicitly requests otherwise, constrain availability and rescheduling to working hours in the calendar's local timezone: the event must start no earlier than 8:00 AM and end no later than 5:00 PM. If a proposed slot is occupied, automatically use the earliest slot satisfying the user's stated day or window; ask only when no valid slot exists.
 - `calendar move` updates the existing event, preserves its other details, and rejects conflicts unless the user explicitly asks to allow one. Do not create a duplicate.
 - `sheets update-lanes` preserves unspecified cells and validates the status.

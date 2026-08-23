@@ -155,7 +155,8 @@ class IngestTests(unittest.TestCase):
                 to="",
                 cc="",
                 subject="",
-                body="Thanks — I will update it.",
+                body="Priya, Daniel,\\n\\nThe release review has moved.\\n\\nThanks, ",
+                closing="Thanks",
                 thread_id="",
                 reply_to_message="message-0",
             )
@@ -170,6 +171,9 @@ class IngestTests(unittest.TestCase):
         self.assertEqual(parsed["To"], "Person <person@example.com>")
         self.assertEqual(parsed["Subject"], "Re: Project update")
         self.assertEqual(parsed["In-Reply-To"], "<original@example.com>")
+        body = parsed.get_payload(decode=True).decode("utf-8")
+        self.assertEqual("Priya, Daniel,\n\nThe release review has moved.\n\nThanks\n", body)
+        self.assertNotIn("\\n", body)
 
     def test_demo_draft_is_recorded_in_reference_workspace_state(self):
         class Request:

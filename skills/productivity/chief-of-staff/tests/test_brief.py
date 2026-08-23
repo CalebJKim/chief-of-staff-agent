@@ -22,11 +22,12 @@ brief = load("cos_brief", ROOT / "scripts" / "brief.py")
 
 
 class BriefTests(unittest.TestCase):
-    def args(self):
+    def args(self, top_n=3):
         return argparse.Namespace(
             max_files=12,
             max_meetings=15,
             max_mail=12,
+            top_n=top_n,
             work_start=8,
             work_end=18,
             min_focus_minutes=30,
@@ -45,6 +46,7 @@ class BriefTests(unittest.TestCase):
         self.assertIn("Recommended action item(s):", packet["instruction"])
         self.assertIn("inline links", packet["instruction"])
         self.assertIn("workstreams[0:3]", packet["instruction"])
+        self.assertEqual(3, packet["requested_top_n"])
         self.assertIn("never split", packet["instruction"])
         exec_event = next(event for event in packet["meetings"] if event["id"] == "evt-exec")
         self.assertTrue(any(item["id"] == "deck-1" for item in exec_event["related"]["files"]))
@@ -89,28 +91,59 @@ class BriefTests(unittest.TestCase):
                     "evidence": "https://mail.google.com/mail/u/0/#all/thread-urgent",
                     "artifact": "https://docs.google.com/presentation/d/deck-1/edit",
                 },
+                {
+                    "row": 10,
+                    "lane": "Partner checklist",
+                    "pic": "Producer",
+                    "status": "Not started",
+                    "latest": "The checklist is ready to start.",
+                    "next": "Change only this lane's status to In progress.",
+                    "blocker": "None",
+                    "evidence": "https://mail.google.com/mail/u/0/#all/thread-customer",
+                    "artifact": "https://docs.google.com/spreadsheets/d/sheet-1/edit",
+                },
+                {
+                    "row": 11,
+                    "lane": "Reliability matrix",
+                    "pic": "QA",
+                    "status": "In review",
+                    "latest": "The matrix is ready for review.",
+                    "next": "Change only this lane's status to Ready for review.",
+                    "blocker": "None",
+                    "evidence": "https://mail.google.com/mail/u/0/#all/thread-urgent",
+                    "artifact": "https://docs.google.com/spreadsheets/d/sheet-1/edit",
+                },
             ],
         }]
 
-        packet = brief.build_packet(snapshot, self.args())
+        packet = brief.build_packet(snapshot, self.args(top_n=5))
         workstreams = packet["workstreams"]
-        self.assertEqual(["Exec launch decision", "Launch readiness", "Launch positioning deck"], [item["outcome"] for item in workstreams])
-        self.assertEqual(["Calendar", "Tracker", "Deck"], [item["target"]["label"] for item in workstreams])
+        self.assertEqual(
+            ["Exec launch decision", "Launch readiness", "Launch positioning deck", "Partner checklist", "Reliability matrix"],
+            [item["outcome"] for item in workstreams],
+        )
+        self.assertEqual(["Calendar", "Tracker", "Deck", "Tracker", "Tracker"], [item["target"]["label"] for item in workstreams])
         self.assertEqual("msg-urgent", workstreams[0]["supporting_mail"]["id"])
         self.assertEqual("evt-exec", workstreams[0]["target"]["id"])
         self.assertTrue(all("action_command" not in item and "_action" not in item for item in workstreams))
+        self.assertEqual(5, packet["requested_top_n"])
+        self.assertIn("workstreams[0:5]", packet["instruction"])
 
         reply = brief.render_initial_reply(packet)
         self.assertTrue(reply.startswith("Today's workload centers on "))
         self.assertIn("Exec launch decision", reply)
         self.assertIn("Change only this lane's status to Ready for review.", reply)
         self.assertIn("Meet the launch: a faster path to completed work.", reply)
-        self.assertEqual(3, reply.count("Recommended action item(s):"))
+        self.assertEqual(5, reply.count("Recommended action item(s):"))
         self.assertEqual(1, reply.count("[Calendar]("))
-        self.assertEqual(1, reply.count("[Tracker]("))
+        self.assertEqual(3, reply.count("[Tracker]("))
         self.assertEqual(1, reply.count("[Deck]("))
         self.assertNotIn("action_command", reply)
         self.assertNotIn("cos.sh", reply)
+
+        default_packet = brief.build_packet(snapshot, self.args())
+        self.assertEqual(3, len(default_packet["workstreams"]))
+        self.assertEqual(3, brief.render_initial_reply(default_packet).count("Recommended action item(s):"))
 
     def test_packet_respects_context_budget(self):
         snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))

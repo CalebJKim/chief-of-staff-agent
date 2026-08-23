@@ -733,11 +733,11 @@ def tracker_rows(
         ["Agent Runtime regression", "Priya Shah", "Blocked", "The current build duplicates tool-call completions in repeated local runs.", f"Move the existing release review to the earliest non-conflicting one-hour slot on {reschedule_label} and draft Priya and Daniel a confirmation; do not send it.", "Today", "Release review must move while the P0 regression is open.", evidence.get("bug", "Priya's blocker email"), sheet_url, "Calendar and draft follow-up are the immediate coordination actions."],
         ["Agent Runtime Latency Evaluation", "Mateo Chen", "In progress", "Mateo completed the evaluation report and handed it off for review.", "Change only this lane's status to Ready for review.", "Today", "None; the tracker status is stale.", evidence.get("evaluation", "Mateo's completion email"), doc_url, "Keep the owner, due date, and notes unchanged."],
         ["Partner Readout Deck", "Elena Torres", "Awaiting update", "Communications approved the replacement headline for slide 4.", "Replace APPROVED HEADLINE PLACEHOLDER with “Meet the RTX Spark Agent Runtime: a faster path from intent to completed work.” on slide 4; leave the rest unchanged.", "Next week", "None; intentionally lower priority than today's two actions.", evidence.get("copy", "Elena's approval email"), slides_url, "Optional backup demo; not required today."],
-        ["Reliability test matrix", "Noah Williams", "On track", "Routine coverage review completed with no new blockers.", "Continue the planned test pass.", "This week", "None", "Routine team update", sheet_url, "No executive action needed."],
+        ["Reliability test matrix", "Noah Williams", "In review", "Noah completed the expanded reliability matrix and submitted the results for review.", "Change only this lane's status to Ready for review.", "This week", "None; the tracker status has not caught up with the completed matrix.", evidence.get("reliability", "Reliability matrix completion email"), sheet_url, "Keep the owner, due date, and notes unchanged."],
         ["Developer guide refresh", "Maya Patel", "In review", "The draft is with technical writing for routine review.", "Wait for consolidated comments.", "Next week", "None", "Routine team update", doc_url, "No action needed today."],
-        ["Partner demo checklist", "Jordan Lee", "On track", "Venue and equipment checks remain on schedule.", "Continue normal preparation.", "Next week", "None", "Routine team update", slides_url, "No action needed today."],
+        ["Partner demo checklist", "Jordan Lee", "Not started", "Jordan finalized the checklist and confirmed that execution can begin.", "Change only this lane's status to In progress.", "Next week", "None; the checklist is ready to start.", evidence.get("checklist", "Partner checklist kickoff email"), slides_url, "Keep the owner, due date, and notes unchanged."],
         ["Accessibility review", "Sofia Martin", "Complete", "The scheduled review is complete.", "No further action.", "Complete", "None", "Routine team update", sheet_url, "Closed."],
-        ["Release notes", "Ethan Brooks", "On track", "The routine draft is progressing on schedule.", "Continue drafting after the regression is resolved.", "This week", "Regression outcome", evidence.get("bug", "Priya's blocker email"), doc_url, "Lower priority than the release blocker."],
+        ["Release notes", "Ethan Brooks", "On track", "The routine draft is progressing on schedule.", "Continue drafting after the regression is resolved.", "This week", "None", "Routine team update", doc_url, "Lower priority than the release blocker."],
     ]
 
 
@@ -993,11 +993,11 @@ def create_emails(
             "important": False,
         },
         {
-            "key": "tracker",
+            "key": "reliability",
             "sender": "Aisha Rahman <aisha.rahman@nvidia.example>",
-            "subject": "Tracker confirmation for the completed evaluation",
+            "subject": "READY: Reliability test matrix",
             "body": (
-                "Confirming Mateo's handoff: update only the Agent Runtime Latency Evaluation row from In progress to Ready for review. Keep Mateo as owner and leave the due date and notes unchanged.\n\n"
+                "Noah completed the expanded reliability matrix and submitted the results for review. The tracker still says In review; change only the Reliability test matrix lane to Ready for review. Keep Noah as owner and leave the due date and notes unchanged.\n\n"
                 f"Delivery tracker: {sheet_url}\n\n— Aisha"
             ),
             "unread": True,
@@ -1015,12 +1015,13 @@ def create_emails(
             "important": False,
         },
         {
-            "key": "deck",
-            "sender": "Rafael Costa <rafael.costa@nvidia.example>",
-            "subject": "Partner Readout file for next week's copy pass",
+            "key": "checklist",
+            "sender": "Jordan Lee <jordan.lee@nvidia.example>",
+            "subject": "ACTION: Partner demo checklist ready to start",
             "body": (
-                "Here is the working Partner Readout deck Elena referenced. The approved-copy placeholder is on slide 4. No action is needed today; this is backup work for next week.\n\n"
-                f"Partner Readout: {deck_url}\n\n— Rafael"
+                "The partner demo checklist is finalized and execution can begin. Change only the Partner demo checklist lane from Not started to In progress; keep the owner, due date, and notes unchanged.\n\n"
+                f"Delivery tracker: {sheet_url}\n"
+                f"Partner Readout: {deck_url}\n\n— Jordan"
             ),
             "unread": True,
             "important": False,
