@@ -145,33 +145,30 @@ export HERMES_HOME="$HERMES_ROOT/profiles/$PROFILE_NAME"
 
 The repository pins `tzdata` because Windows does not include the IANA time-zone database used by the seeder.
 
-## 5. Create an isolated Hermes demo profile
+## 5. Create the isolated Hermes demo profile and install the agent
 
 Use a dedicated profile so the demo exposes only its two skills and two required
 toolsets. This avoids routing competition from unrelated skills and does not
 change the model, provider, skills, or tools in the default profile.
 
-Create the profile once on Windows:
+Run the idempotent profile setup on Windows:
 
 ```powershell
-hermes profile create $ProfileName --no-skills --description "Isolated Chief of Staff demo"
-Copy-Item -LiteralPath (Join-Path $HermesRoot "config.yaml") -Destination (Join-Path $env:HERMES_HOME "config.yaml")
-hermes -p $ProfileName config set platform_toolsets.cli '["skills","terminal"]' --force
+& $Python setup_profile.py --profile-name $ProfileName --hermes-root $HermesRoot
 ```
 
 Or on Linux/macOS:
 
 ```bash
-hermes profile create "$PROFILE_NAME" --no-skills --description "Isolated Chief of Staff demo"
-cp "$HERMES_ROOT/config.yaml" "$HERMES_HOME/config.yaml"
-hermes -p "$PROFILE_NAME" config set platform_toolsets.cli '["skills","terminal"]' --force
+python setup_profile.py --profile-name "$PROFILE_NAME" --hermes-root "$HERMES_ROOT"
 ```
 
-`--no-skills` creates a `.no-bundled-skills` marker so future Hermes updates do
-not repopulate the profile with unrelated bundled skills. If the profile already
-exists, do not recreate it; set the variables above and continue. The copied
-configuration preserves the selected model. If that provider uses a secret in
-the default profile's `.env`, configure it separately with
+The script creates the profile with `--no-skills` when it is missing, copies the
+default profile's model configuration only on first creation, installs the two
+demo skills and `SOUL.md`, enables only the `skills` and `terminal` toolsets, and
+sets `agent.max_turns` to `40`. It is safe to rerun: an existing profile is not
+recreated and its model configuration is not replaced. If that provider uses a
+secret in the default profile's `.env`, configure it separately with
 `hermes -p chief-of-staff-demo model`; do not commit or publish profile secrets.
 
 ## 6. Run the offline tests
@@ -194,26 +191,28 @@ python -m unittest discover -s skills/productivity/chief-of-staff/tests -v
 
 Expected result: all tests pass across the three suites.
 
-## 7. Install the agent into Hermes
+## 7. Verify the installed agent
 
 ```powershell
 # Windows PowerShell
-& $Python install.py --hermes-home $env:HERMES_HOME --overwrite-soul
 hermes -p $ProfileName skills list
+hermes -p $ProfileName config get agent.max_turns
 ```
 
 ```bash
 # Linux/macOS
-python install.py --hermes-home "$HERMES_HOME" --overwrite-soul
 hermes -p "$PROFILE_NAME" skills list
+hermes -p "$PROFILE_NAME" config get agent.max_turns
 ```
 
 Confirm that `chief-of-staff` and `ingest` are the only skills in the profile.
-`--overwrite-soul` is intentional here because this is a dedicated profile. In a
-shared profile, the installer instead preserves a customized `SOUL.md` and adds
-the chief-of-staff routing paragraph when it is absent.
+Confirm that the turn limit is `40`. Rerun `setup_profile.py` to refresh the
+skills, routing instructions, toolsets, and turn limit after pulling repository
+updates.
 
-The demo does not require changes to Hermes model/provider defaults or unrelated tool settings. It only requires the installed `chief-of-staff` and `ingest` skills plus the `skills` and `terminal` toolsets.
+The setup preserves Hermes model/provider defaults and unrelated profile
+settings. It installs `chief-of-staff` and `ingest`, enables `skills` and
+`terminal`, and applies the demo's bounded agent-step limit.
 
 ## 8. Create Google OAuth credentials
 
@@ -319,9 +318,10 @@ python demo/seed_workspace.py --confirm
 
 The command resolves a consistent demo day automatically: it uses the current
 day on Monday through Friday and the upcoming Monday on Saturday or Sunday. The
-release-review meeting is created on that demo day, and its proposed replacement
-slot is the next business day at 11:00 AM Pacific. To seed another week, add its
-Monday date as `--week-of YYYY-MM-DD` before `--confirm`.
+release-review meeting is created on that demo day, and the seeded evidence asks
+the agent to find the earliest non-conflicting one-hour slot on the next business
+day. To seed another week, add its Monday date as `--week-of YYYY-MM-DD` before
+`--confirm`.
 
 A successful result reports `"emails": 76`, `"events": 12`, the resolved
 `"demo_day"`, and links for the folder, Sheet, Doc, and Slides deck. The 12
@@ -402,10 +402,12 @@ At the prompt, say:
 
 The reply begins with a summary of today's workload in no more than three sentences. The expected top three, in order, are the Agent Runtime regression, the completed latency evaluation, and the Partner Readout deck. Each item includes inline links to its supporting mail and action target followed by a `Recommended action item(s):` sub-bullet. Continue with:
 
-- `Take the action items for the first thing.` This moves the existing release review to the next business day at 11:00 AM PT and creates an unsent threaded draft to Priya with Daniel copied.
-- Natural wording such as `Can you take care of the first item on the list for me?` follows the same direct action path; it must not rerun Start of Day or probe for Google tooling.
+- `Take the action items for the first thing.` This resolves item one from conversation history, checks current availability, moves the existing release review to the earliest valid non-conflicting slot, and creates an unsent threaded draft to Priya with Daniel copied. The request authorizes the displayed actions; the agent does not ask for confirmation again.
+- Natural wording such as `Can you take care of the first item on the list for me?` follows the same evidence-driven flow without rerunning Start of Day. Added constraints such as `but use Thursday afternoon` override the earlier recommendation.
 - `Take the action items for the second thing.` This changes only the `Agent Runtime Latency Evaluation` tracker status to `Ready for review`.
 - Optional backup: `Take the action items for the third thing.` This replaces only the slide-4 placeholder with Elena's approved headline.
+
+The three-item plan is conversational context, not a capability boundary. Direct Gmail, Calendar, Drive, Docs, Sheets, and Slides requests outside the plan use the same focused helpers and current Workspace data.
 
 Use [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) for the complete staged presentation flow. Gmail responses are created as drafts and are never sent by these scripts. While a seeded reference workspace is active, drafts created through the chief-of-staff flow are recorded by exact ID so cleanup can remove them without touching unrelated drafts.
 
@@ -501,6 +503,6 @@ Gmail deletion is immediate and cannot be undone; unrelated messages are untouch
 - `demo/` contains the reference-workspace seeder, reset wrapper, specification, and fixtures.
 - `config.example.yaml` documents the recommended tool surface.
 
-No sessions, OAuth credentials, account IDs, generated Workspace IDs, email/calendar fixtures from a real account, or model files are included. Broad ingestion is bounded and metadata/snippet-first; one-time codes are redacted before model context; ranked workstreams save a local data-derived action plan; Docs, Sheets, Slides, and Calendar writes require explicit confirmation; and tracker updates preserve lane ownership and validate statuses.
+No sessions, OAuth credentials, account IDs, generated Workspace IDs, email/calendar fixtures from a real account, or model files are included. Broad ingestion is bounded and metadata/snippet-first; one-time codes are redacted before model context; the daily brief saves no executable action plan; Calendar moves reject conflicts by default; and tracker updates preserve lane ownership and validate statuses. A direct request to complete a displayed action authorizes that scoped write without a redundant confirmation question, while the helper still requires its internal `--confirm` guard and verifies every write.
 
 The tracker-specific update path expects a tab named `Campaign Lanes` with columns A:J matching the demonstrated schema. General Gmail, Calendar, and Drive planning works without that sheet. See [`demo/DEMO_SPEC.md`](demo/DEMO_SPEC.md) for the exact reference data and manual fallback procedure.

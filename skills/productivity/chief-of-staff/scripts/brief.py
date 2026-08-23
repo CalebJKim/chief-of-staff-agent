@@ -8,7 +8,6 @@ import os
 import re
 import sys
 from datetime import datetime, time, timedelta
-from email.utils import parseaddr
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -44,21 +43,6 @@ STATUS_PRIORITY = {
     "on track": 0,
     "complete": -100,
 }
-TRACKER_STATUSES = (
-    "Not started", "In progress", "Ready for review", "On track",
-    "In review", "Awaiting update", "Blocked", "Complete",
-)
-WEEKDAYS = {
-    "monday": 0,
-    "tuesday": 1,
-    "wednesday": 2,
-    "thursday": 3,
-    "friday": 4,
-    "saturday": 5,
-    "sunday": 6,
-}
-
-
 def hermes_home() -> Path:
     override = os.environ.get("HERMES_HOME")
     if override:
@@ -226,131 +210,11 @@ def resource_id(url: str) -> str:
     return match.group(1) if match else ""
 
 
-def scheduled_time(text: str, generated: datetime, tz: ZoneInfo) -> datetime | None:
-    """Resolve a weekday-and-time instruction such as "Monday at 11 AM PT"."""
-    match = re.search(
-        r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b"
-        r".*?\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b",
-        text,
-        flags=re.IGNORECASE | re.DOTALL,
-    )
-    if not match:
-        return None
-    hour = int(match.group(2)) % 12
-    if match.group(4).casefold() == "pm":
-        hour += 12
-    minute = int(match.group(3) or 0)
-    target_weekday = WEEKDAYS[match.group(1).casefold()]
-    days_ahead = (target_weekday - generated.weekday()) % 7
-    target_date = generated.date() + timedelta(days=days_ahead)
-    result = datetime.combine(target_date, time(hour=hour, minute=minute), tzinfo=tz)
-    if result <= generated:
-        result += timedelta(days=7)
-    return result
-
-
-def desired_tracker_status(text: str, current: str) -> str:
-    lowered = text.casefold()
-    return next(
-        (status for status in TRACKER_STATUSES if status.casefold() != current.casefold() and status.casefold() in lowered),
-        "",
-    )
-
-
-def slide_replacement(text: str) -> tuple[str, str] | None:
-    match = re.search(
-        r"\breplace\s+([A-Z][A-Z0-9 _-]{3,}?)\s+with\s+[\"“](.+?)[\"”](?:\s|[.;]|$)",
-        text,
-        flags=re.IGNORECASE | re.DOTALL,
-    )
-    if not match:
-        return None
-    return match.group(1).strip(), match.group(2).strip()
-
-
-def first_name(address: str) -> str:
-    display, email = parseaddr(address or "")
-    if display:
-        return display.split()[0]
-    return email.split("@", 1)[0].split(".", 1)[0].title()
-
-
-def workstream_action(
-    row: dict[str, Any],
-    target: dict[str, Any],
-    supporting: dict[str, Any] | None,
-    related_mail: list[dict[str, Any]],
-    generated: datetime,
-    tz: ZoneInfo,
-) -> dict[str, Any] | None:
-    """Build exact, verified helper steps from the same evidence used to rank a row."""
-    next_action = str(row.get("next") or "")
-    next_lower = next_action.casefold()
-
-    if target.get("label") == "Calendar" and "draft" in next_lower and supporting:
-        evidence_text = " ".join(
-            [next_action, str(row.get("latest") or "")]
-            + [f"{item.get('subject', '')} {item.get('snippet', '')}" for item in related_mail]
-        )
-        new_start = scheduled_time(evidence_text, generated, tz)
-        old_start = parse_dt(str(target.get("start") or ""), tz)
-        old_end = parse_dt(str(target.get("end") or ""), tz)
-        cc_message = next(
-            (
-                item for item in related_mail
-                if item.get("id") != supporting.get("id")
-                and ("new slot" in str(item.get("subject") or "").casefold() or "draft" in str(item.get("snippet") or "").casefold())
-            ),
-            None,
-        )
-        cc_address = parseaddr(str((cc_message or {}).get("from") or ""))[1]
-        if new_start and old_start and old_end and cc_address and target.get("id") and supporting.get("id"):
-            new_end = new_start + (old_end - old_start)
-            recipients = " and ".join(filter(None, [first_name(str(supporting.get("from") or "")), first_name(str(cc_message.get("from") or ""))]))
-            when = new_start.strftime("%A, %B %-d at %-I:%M %p") if os.name != "nt" else new_start.strftime("%A, %B %#d at %#I:%M %p")
-            body = (
-                f"Hi {recipients},\n\n"
-                f"I moved the {target.get('name')} to {when} PT. "
-                "The event details are unchanged.\n\nThanks"
-            )
-            return {
-                "kind": "calendar_move_and_draft",
-                "steps": [
-                    ["calendar", "move", str(target["id"]), "--start", new_start.isoformat(), "--end", new_end.isoformat()],
-                    ["gmail", "draft", "--reply-to-message", str(supporting["id"]), "--cc", cc_address, "--body", body],
-                ],
-            }
-
-    if target.get("label") == "Tracker":
-        status = desired_tracker_status(next_action, str(row.get("status") or ""))
-        if status and target.get("id") and row.get("lane"):
-            return {
-                "kind": "tracker_status",
-                "steps": [["sheets", "update-lanes", str(target["id"]), "--lane", str(row["lane"]), "--status", status]],
-            }
-
-    if target.get("label") == "Deck":
-        evidence_text = " ".join(
-            [next_action, str(row.get("latest") or "")]
-            + [str(item.get("snippet") or "") for item in related_mail]
-        )
-        replacement = slide_replacement(evidence_text)
-        if replacement and target.get("id"):
-            old, new = replacement
-            return {
-                "kind": "slides_replace_text",
-                "steps": [["slides", "replace-text", str(target["id"]), "--find", old, "--replace", new]],
-            }
-    return None
-
-
 def build_workstreams(
     trackers: list[dict[str, Any]],
     mail: list[dict[str, Any]],
     meetings: list[dict[str, Any]],
     files: list[dict[str, Any]],
-    generated: datetime,
-    tz: ZoneInfo,
 ) -> list[dict[str, Any]]:
     """Rank actionable tracker rows and attach their supporting mail and write target."""
     candidates: list[tuple[int, int, int, dict[str, Any], dict[str, Any]]] = []
@@ -408,8 +272,6 @@ def build_workstreams(
         if target is None:
             target = {"label": "Drive", "url": row.get("artifact")}
 
-        action = workstream_action(row, target, supporting, related_mail, generated, tz)
-
         def compact_mail(item: dict[str, Any] | None) -> dict[str, Any]:
             if not item:
                 return {}
@@ -428,36 +290,8 @@ def build_workstreams(
             ][:1],
             "target": target,
         }
-        if action:
-            item["_action"] = action
         output.append(item)
     return output
-
-
-def prepare_action_plan(packet: dict[str, Any]) -> dict[str, Any]:
-    """Extract private action details and leave only short executable commands in the packet."""
-    plan = {
-        "schema": 1,
-        "generated_at": packet.get("freshness", {}).get("generated_at"),
-        "workstreams": [],
-    }
-    for index, workstream in enumerate(packet.get("workstreams", []), start=1):
-        action = workstream.pop("_action", None)
-        plan["workstreams"].append({
-            "outcome": workstream.get("outcome"),
-            "target": workstream.get("target"),
-            "action": action,
-        })
-        if action:
-            workstream["action_command"] = f'bash "$HERMES_HOME/cos.sh" {index}'
-    return plan
-
-
-def write_action_plan(plan: dict[str, Any], path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    os.replace(temporary, path)
 
 
 def render_initial_reply(packet: dict[str, Any]) -> str:
@@ -583,7 +417,7 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
         "freshness": {"generated_at": snapshot.get("generated_at"), "timezone": tz_name, "window": snapshot.get("window")},
         "coverage": coverage,
         "source_status": source_status,
-        "workstreams": build_workstreams(trackers, ranked_mail, ranked_events, recent_files, generated, tz),
+        "workstreams": build_workstreams(trackers, ranked_mail, ranked_events, recent_files),
         "conflicts": conflicts(events, tz),
         "focus_blocks": focus_blocks(events, tz, window_start, args.work_start, args.work_end, args.min_focus_minutes),
         "meetings": ranked_events[: args.max_meetings],
@@ -656,7 +490,6 @@ def main() -> int:
     parser.add_argument("--max-mail", type=int, default=12)
     parser.add_argument("--max-files", type=int, default=12)
     parser.add_argument("--max-chars", type=int, default=14000)
-    parser.add_argument("--action-plan", type=Path, default=hermes_home() / "chief-of-staff" / "action-plan.json")
     parser.add_argument("--work-start", type=int, default=8)
     parser.add_argument("--work-end", type=int, default=18)
     parser.add_argument("--min-focus-minutes", type=int, default=30)
@@ -668,7 +501,6 @@ def main() -> int:
     try:
         snapshot = json.loads(args.snapshot.read_text(encoding="utf-8"))
         packet = build_packet(snapshot, args)
-        write_action_plan(prepare_action_plan(packet), args.action_plan)
         print(render_initial_reply(packet) if args.reply_only else fit_packet(packet, args.max_chars))
         return 0
     except Exception as exc:

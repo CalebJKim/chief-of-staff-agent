@@ -8,13 +8,12 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+CHIEF_SKILL = ROOT / "skills" / "productivity" / "chief-of-staff" / "SKILL.md"
 INGEST_SKILL = ROOT / "skills" / "productivity" / "ingest" / "SKILL.md"
 WINDOWS_PYTHON = r'${LOCALAPPDATA//\\//}/hermes/hermes-agent/venv/Scripts/python.exe'
 WINDOWS_HOME = r'${COS_HOME//\\//}'
 START_DAY = ROOT / "skills" / "productivity" / "chief-of-staff" / "scripts" / "start_day.sh"
 ACTION = ROOT / "skills" / "productivity" / "chief-of-staff" / "scripts" / "action.sh"
-LAUNCHER = ROOT / "cos.sh"
-WORKSTREAM = ROOT / "skills" / "productivity" / "chief-of-staff" / "scripts" / "workstream.py"
 SOUL = ROOT / "SOUL.md"
 
 
@@ -34,70 +33,61 @@ class SkillRuntimeTests(unittest.TestCase):
                 self.assertIn(WINDOWS_HOME, text)
                 self.assertLess(text.index(WINDOWS_PYTHON), text.index("command -v python3"))
 
-    def test_chief_skill_runs_installed_start_day_script(self) -> None:
-        skill = (ROOT / "skills" / "productivity" / "chief-of-staff" / "SKILL.md").read_text(encoding="utf-8")
+    def test_daily_brief_uses_one_installed_start_day_command(self) -> None:
+        skill = CHIEF_SKILL.read_text(encoding="utf-8")
+        routing = skill.split("## Request Routing", 1)[1].split("## Start of Day", 1)[0]
         start_section = skill.split("## Start of Day", 1)[1].split("## Initial Reply", 1)[0]
-        router = skill.split("## Turn Router", 1)[1].split("## Start of Day", 1)[0]
 
-        self.assertIn("Fresh daily plan", router)
-        self.assertIn("only terminal command", router)
-        self.assertIn("scripts/start_day.sh", router)
+        self.assertIn("Daily brief", routing)
+        self.assertIn("as the only terminal command", routing)
+        self.assertIn("scripts/start_day.sh", routing)
         self.assertEqual(1, skill.count("scripts/start_day.sh"))
         self.assertIn("do not add redirection", start_section)
-        self.assertNotIn("ACTION=", router)
-        self.assertNotIn("ingest.py", router)
-        self.assertNotIn("brief.py", router)
+        self.assertNotIn("ingest.py", routing)
+        self.assertNotIn("brief.py", routing)
 
         script = START_DAY.read_text(encoding="utf-8")
-        self.assertIn("ingest.py\" --max-messages 20", script)
-        self.assertIn("brief.py\" --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000 --reply-only", script)
-        self.assertNotIn("ACTION=", script)
+        self.assertIn('ingest.py" --max-messages 20', script)
+        self.assertIn('brief.py" --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000 --reply-only', script)
         self.assertNotIn(b"\r\n", START_DAY.read_bytes())
 
-    def test_chief_skill_keeps_followups_on_focused_helper(self) -> None:
-        skill = (ROOT / "skills" / "productivity" / "chief-of-staff" / "SKILL.md").read_text(encoding="utf-8")
+    def test_followups_are_flexible_and_use_conversation_history(self) -> None:
+        skill = CHIEF_SKILL.read_text(encoding="utf-8")
+        routing = skill.split("## Request Routing", 1)[1].split("## Start of Day", 1)[0]
+        soul = SOUL.read_text(encoding="utf-8")
+
+        self.assertIn("Plan follow-up", routing)
+        self.assertIn("conversation history", routing)
+        self.assertIn("newest instructions and constraints override", routing)
+        self.assertIn("Direct Workspace request", routing)
+        self.assertIn("General question", routing)
+        self.assertIn("Never translate an item number directly into a stored command", routing)
+        self.assertIn("Do not ask for redundant confirmation", skill)
+        self.assertIn("calendar availability", skill)
+        self.assertIn("rejects conflicts", skill)
         self.assertIn("scripts/action.sh", skill)
-        self.assertIn("calendar move", skill)
+        self.assertNotIn("action-plan.json", skill)
+        self.assertNotIn("cos.sh", skill)
+        self.assertNotIn("workstream.py", ACTION.read_text(encoding="utf-8"))
+        self.assertFalse((ROOT / "cos.sh").exists())
+        self.assertFalse((ROOT / "skills" / "productivity" / "chief-of-staff" / "scripts" / "workstream.py").exists())
+        self.assertIn("requests Google Workspace work", soul)
+
+    def test_presentation_contract_is_enforced_without_scenario_content(self) -> None:
+        skill = CHIEF_SKILL.read_text(encoding="utf-8")
         self.assertIn("one-sentence workload summary", skill)
         self.assertIn("Recommended action item(s):", skill)
         self.assertIn("exactly two links", skill)
-        self.assertIn("Never launch Chrome", skill)
-        self.assertIn("Do not load the generic Google Workspace skill", skill)
-        self.assertIn("numbered follow-up", skill)
-        self.assertIn("chief-of-staff/action-plan.json", skill)
-        self.assertIn("workstream.py", ACTION.read_text(encoding="utf-8"))
-        self.assertTrue(WORKSTREAM.is_file())
-        self.assertIn("ACTION=", ACTION.read_text(encoding="utf-8"))
-        self.assertNotIn(b"\r\n", ACTION.read_bytes())
-
-    def test_followup_router_precedes_start_of_day_and_is_single_path(self) -> None:
-        skill = (ROOT / "skills" / "productivity" / "chief-of-staff" / "SKILL.md").read_text(encoding="utf-8")
-        router = skill.split("## Turn Router", 1)[1].split("## Start of Day", 1)[0]
-        command = 'bash "$HERMES_HOME/cos.sh" N'
-        soul = SOUL.read_text(encoding="utf-8")
-
-        self.assertLess(skill.index("## Turn Router"), skill.index("## Start of Day"))
-        self.assertIn("Choose exactly one path", router)
-        self.assertIn(command, router)
-        self.assertEqual(1, skill.count(command))
-        self.assertIn("Never combine paths", router)
-        self.assertIn("do not load another skill", router)
-        self.assertNotIn("start_day.sh", soul)
-        self.assertNotIn("action.sh", soul)
-        self.assertNotIn("google-workspace", soul)
-        self.assertIn("follows up on a numbered priority", soul)
+        self.assertIn("creates recommendations only", skill)
+        self.assertNotIn("RTX Spark", skill)
+        self.assertNotIn("Ready for review", skill)
+        self.assertNotIn("APPROVED HEADLINE", skill)
 
     @unittest.skipUnless(bash_executable(), "Git Bash or bash is required for syntax validation")
-    def test_start_day_shell_syntax(self) -> None:
-        for script in (START_DAY, ACTION, LAUNCHER):
+    def test_shell_syntax(self) -> None:
+        for script in (START_DAY, ACTION):
             result = subprocess.run([bash_executable(), "-n", script.as_posix()], capture_output=True, text=True)
             self.assertEqual(0, result.returncode, result.stderr)
-
-    def test_short_launcher_forwards_only_ranked_workstreams(self) -> None:
-        launcher = LAUNCHER.read_text(encoding="utf-8")
-        self.assertIn('^[1-3]$', launcher)
-        self.assertIn('action.sh" workstream "$1" --confirm', launcher)
-        self.assertNotIn(b"\r\n", LAUNCHER.read_bytes())
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ import json
 import os
 import re
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from email.message import EmailMessage
 from pathlib import Path
 from typing import Any
@@ -396,6 +396,175 @@ def slides_replace(args: argparse.Namespace) -> None:
     emit({"status": "updated", "presentation_id": args.presentation_id, "occurrences_changed": occurrences, "verified": True})
 
 
+def _calendar_time(value: str, label: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise RuntimeError(f"{label} must be an ISO date-time") from exc
+    if parsed.tzinfo is None:
+        raise RuntimeError(f"{label} must include a UTC offset")
+    return parsed
+
+
+def _event_time(event: dict[str, Any], key: str, fallback: datetime) -> datetime | None:
+    value = event.get(key, {})
+    if value.get("dateTime"):
+        try:
+            return datetime.fromisoformat(value["dateTime"].replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    if value.get("date"):
+        try:
+            return datetime.fromisoformat(value["date"]).replace(tzinfo=fallback.tzinfo)
+        except ValueError:
+            return None
+    return None
+
+
+def _excluded_event(event: dict[str, Any], event_id: str) -> bool:
+    return bool(event_id) and event_id in {event.get("id"), event.get("recurringEventId")}
+
+
+def _event_blocks_time(event: dict[str, Any]) -> bool:
+    return event.get("status") != "cancelled" and event.get("transparency") != "transparent"
+
+
+def _calendar_window(
+    api: Any,
+    calendar_id: str,
+    start: datetime,
+    end: datetime,
+    query: str = "",
+    max_results: int = 250,
+) -> list[dict[str, Any]]:
+    if end <= start:
+        raise RuntimeError("Calendar window end must be after start")
+    request = {
+        "calendarId": calendar_id,
+        "timeMin": start.isoformat(),
+        "timeMax": end.isoformat(),
+        "singleEvents": True,
+        "orderBy": "startTime",
+        "maxResults": max_results,
+    }
+    if query:
+        request["q"] = query
+    return api.events().list(**request).execute().get("items", [])
+
+
+def _calendar_item(event: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": event.get("id"),
+        "recurring_event_id": event.get("recurringEventId"),
+        "title": event.get("summary", ""),
+        "start": event.get("start", {}),
+        "end": event.get("end", {}),
+        "status": event.get("status"),
+        "transparency": event.get("transparency"),
+        "url": event.get("htmlLink", ""),
+    }
+
+
+def calendar_get(args: argparse.Namespace) -> None:
+    event = service("calendar", "v3").events().get(
+        calendarId=args.calendar,
+        eventId=args.event_id,
+    ).execute()
+    emit(_calendar_item(event))
+
+
+def calendar_list(args: argparse.Namespace) -> None:
+    start = _calendar_time(args.start, "--start")
+    end = _calendar_time(args.end, "--end")
+    events = _calendar_window(
+        service("calendar", "v3"),
+        args.calendar,
+        start,
+        end,
+        query=args.query,
+        max_results=args.max,
+    )
+    emit({
+        "start": start.isoformat(),
+        "end": end.isoformat(),
+        "events": [
+            _calendar_item(event)
+            for event in events
+            if not _excluded_event(event, args.exclude_event)
+        ],
+    })
+
+
+def _blocking_intervals(
+    events: list[dict[str, Any]],
+    start: datetime,
+    end: datetime,
+    exclude_event: str = "",
+) -> list[tuple[datetime, datetime, dict[str, Any]]]:
+    intervals = []
+    for event in events:
+        if _excluded_event(event, exclude_event) or not _event_blocks_time(event):
+            continue
+        event_start = _event_time(event, "start", start)
+        event_end = _event_time(event, "end", start)
+        if event_start and event_end and event_start < end and event_end > start:
+            intervals.append((max(start, event_start), min(end, event_end), event))
+    return sorted(intervals, key=lambda item: item[0])
+
+
+def _ceil_to_minutes(value: datetime, step_minutes: int) -> datetime:
+    value = value.replace(second=0, microsecond=0)
+    remainder = value.minute % step_minutes
+    return value if remainder == 0 else value + timedelta(minutes=step_minutes - remainder)
+
+
+def calendar_availability(args: argparse.Namespace) -> None:
+    start = _calendar_time(args.start, "--start")
+    end = _calendar_time(args.end, "--end")
+    if args.duration_minutes < 1 or args.step_minutes < 1 or args.limit < 1:
+        raise RuntimeError("Duration, step, and limit must be positive")
+    api = service("calendar", "v3")
+    events = _calendar_window(api, args.calendar, start, end)
+    intervals = _blocking_intervals(events, start, end, args.exclude_event)
+
+    merged: list[tuple[datetime, datetime]] = []
+    for busy_start, busy_end, _event in intervals:
+        if merged and busy_start <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], busy_end))
+        else:
+            merged.append((busy_start, busy_end))
+
+    duration = timedelta(minutes=args.duration_minutes)
+    step = timedelta(minutes=args.step_minutes)
+    slots = []
+    cursor = _ceil_to_minutes(start, args.step_minutes)
+
+    def add_slots(gap_end: datetime) -> None:
+        nonlocal cursor
+        while cursor + duration <= gap_end and len(slots) < args.limit:
+            slots.append({"start": cursor.isoformat(), "end": (cursor + duration).isoformat()})
+            cursor += step
+
+    for busy_start, busy_end in merged:
+        add_slots(busy_start)
+        cursor = _ceil_to_minutes(max(cursor, busy_end), args.step_minutes)
+        if len(slots) >= args.limit:
+            break
+    if len(slots) < args.limit:
+        add_slots(end)
+
+    emit({
+        "start": start.isoformat(),
+        "end": end.isoformat(),
+        "duration_minutes": args.duration_minutes,
+        "slots": slots,
+        "busy": [
+            {**_calendar_item(event), "start": busy_start.isoformat(), "end": busy_end.isoformat()}
+            for busy_start, busy_end, event in intervals
+        ],
+    })
+
+
 def calendar_create(args: argparse.Namespace) -> None:
     require_confirm(args, "Calendar event creation")
     event: dict[str, Any] = {
@@ -424,6 +593,19 @@ def calendar_move(args: argparse.Namespace) -> None:
     require_confirm(args, "Calendar event move")
     api = service("calendar", "v3")
     current = api.events().get(calendarId=args.calendar, eventId=args.event_id).execute()
+    requested_start = _calendar_time(args.start, "--start")
+    requested_end = _calendar_time(args.end, "--end")
+    if requested_end <= requested_start:
+        raise RuntimeError("Calendar move end must be after start")
+    if not getattr(args, "allow_conflict", False):
+        events = _calendar_window(api, args.calendar, requested_start, requested_end)
+        conflicts = _blocking_intervals(events, requested_start, requested_end, args.event_id)
+        if conflicts:
+            detail = "; ".join(
+                f"{event.get('summary', 'Untitled event')} ({busy_start.isoformat()} to {busy_end.isoformat()})"
+                for busy_start, busy_end, event in conflicts
+            )
+            raise RuntimeError(f"Calendar move conflicts with existing event(s): {detail}")
     start = {"dateTime": args.start}
     end = {"dateTime": args.end}
     if current.get("start", {}).get("timeZone"):
@@ -535,6 +717,27 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=slides_replace)
 
     calendar = groups.add_parser("calendar").add_subparsers(dest="action", required=True)
+    p = calendar.add_parser("get")
+    p.add_argument("event_id")
+    p.add_argument("--calendar", default="primary")
+    p.set_defaults(func=calendar_get)
+    p = calendar.add_parser("list")
+    p.add_argument("--start", required=True)
+    p.add_argument("--end", required=True)
+    p.add_argument("--query", default="")
+    p.add_argument("--exclude-event", default="")
+    p.add_argument("--max", type=int, default=250)
+    p.add_argument("--calendar", default="primary")
+    p.set_defaults(func=calendar_list)
+    p = calendar.add_parser("availability")
+    p.add_argument("--start", required=True)
+    p.add_argument("--end", required=True)
+    p.add_argument("--duration-minutes", type=int, required=True)
+    p.add_argument("--step-minutes", type=int, default=15)
+    p.add_argument("--limit", type=int, default=5)
+    p.add_argument("--exclude-event", default="")
+    p.add_argument("--calendar", default="primary")
+    p.set_defaults(func=calendar_availability)
     p = calendar.add_parser("create")
     p.add_argument("--title", required=True)
     p.add_argument("--start", required=True)
@@ -550,6 +753,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--end", required=True)
     p.add_argument("--calendar", default="primary")
     p.add_argument("--send-updates", choices=("none", "all", "externalOnly"), default="none")
+    p.add_argument("--allow-conflict", action="store_true", help="Permit an explicitly requested overlapping move")
     p.add_argument("--confirm", action="store_true")
     p.set_defaults(func=calendar_move)
     return parser

@@ -278,6 +278,9 @@ class IngestTests(unittest.TestCase):
                     })
                 return Request(moved)
 
+            def list(self, **_kwargs):
+                return Request({"items": []})
+
             def patch(self, **kwargs):
                 captured.update(kwargs)
                 return Request(moved)
@@ -297,6 +300,7 @@ class IngestTests(unittest.TestCase):
                 start="2026-08-24T11:00:00-07:00",
                 end="2026-08-24T12:00:00-07:00",
                 send_updates="none",
+                allow_conflict=False,
                 confirm=True,
             )
             output = io.StringIO()
@@ -308,6 +312,118 @@ class IngestTests(unittest.TestCase):
         self.assertEqual({"start", "end"}, set(captured["body"]))
         self.assertNotIn("summary", captured["body"])
         self.assertTrue(json.loads(output.getvalue())["verified"])
+
+    def test_calendar_availability_returns_earliest_conflict_free_slot(self):
+        class Request:
+            def __init__(self, value):
+                self.value = value
+
+            def execute(self):
+                return self.value
+
+        class Events:
+            def list(self, **_kwargs):
+                return Request({"items": [
+                    {
+                        "id": "morning",
+                        "summary": "Morning meetings",
+                        "start": {"dateTime": "2026-08-25T09:00:00-07:00"},
+                        "end": {"dateTime": "2026-08-25T11:00:00-07:00"},
+                    },
+                    {
+                        "id": "focus",
+                        "summary": "Engineering focus block",
+                        "start": {"dateTime": "2026-08-25T11:00:00-07:00"},
+                        "end": {"dateTime": "2026-08-25T12:00:00-07:00"},
+                    },
+                    {
+                        "id": "lunch",
+                        "summary": "Team lunch",
+                        "start": {"dateTime": "2026-08-25T12:00:00-07:00"},
+                        "end": {"dateTime": "2026-08-25T13:00:00-07:00"},
+                    },
+                ]})
+
+        class Api:
+            def events(self):
+                return Events()
+
+        original_service = actions.service
+        actions.service = lambda *_args: Api()
+        try:
+            args = argparse.Namespace(
+                calendar="primary",
+                start="2026-08-25T09:00:00-07:00",
+                end="2026-08-25T15:00:00-07:00",
+                duration_minutes=60,
+                step_minutes=15,
+                limit=1,
+                exclude_event="release-review",
+            )
+            output = io.StringIO()
+            with redirect_stdout(output):
+                actions.calendar_availability(args)
+        finally:
+            actions.service = original_service
+
+        result = json.loads(output.getvalue())
+        self.assertEqual(
+            [{"start": "2026-08-25T13:00:00-07:00", "end": "2026-08-25T14:00:00-07:00"}],
+            result["slots"],
+        )
+        self.assertEqual(
+            ["Morning meetings", "Engineering focus block", "Team lunch"],
+            [item["title"] for item in result["busy"]],
+        )
+
+    def test_calendar_move_rejects_an_existing_conflict(self):
+        class Request:
+            def __init__(self, value):
+                self.value = value
+
+            def execute(self):
+                return self.value
+
+        class Events:
+            def get(self, **_kwargs):
+                return Request({
+                    "id": "release-review",
+                    "summary": "Release review",
+                    "start": {"dateTime": "2026-08-24T14:00:00-07:00"},
+                    "end": {"dateTime": "2026-08-24T15:00:00-07:00"},
+                })
+
+            def list(self, **_kwargs):
+                return Request({"items": [{
+                    "id": "focus",
+                    "summary": "Engineering focus block",
+                    "start": {"dateTime": "2026-08-25T11:00:00-07:00"},
+                    "end": {"dateTime": "2026-08-25T12:00:00-07:00"},
+                }]})
+
+            def patch(self, **_kwargs):
+                raise AssertionError("A conflicting move must not be written")
+
+        class Api:
+            def events(self):
+                return Events()
+
+        original_service = actions.service
+        actions.service = lambda *_args: Api()
+        try:
+            args = argparse.Namespace(
+                calendar="primary",
+                event_id="release-review",
+                start="2026-08-25T11:00:00-07:00",
+                end="2026-08-25T12:00:00-07:00",
+                send_updates="none",
+                allow_conflict=False,
+                confirm=True,
+            )
+            with self.assertRaisesRegex(RuntimeError, "Engineering focus block"):
+                actions.calendar_move(args)
+        finally:
+            actions.service = original_service
 
     def test_lane_update_preserves_unspecified_cells(self):
         captured = {}
@@ -372,6 +488,26 @@ class IngestTests(unittest.TestCase):
         self.assertEqual("Evaluation", args.lane)
         self.assertEqual("Ready for review", args.status)
         self.assertIsNone(args.updates)
+
+    def test_calendar_parser_exposes_focused_reads_and_safe_move(self):
+        availability = actions.build_parser().parse_args([
+            "calendar", "availability",
+            "--start", "2026-08-25T08:00:00-07:00",
+            "--end", "2026-08-25T18:00:00-07:00",
+            "--duration-minutes", "60",
+            "--exclude-event", "event-1",
+        ])
+        move = actions.build_parser().parse_args([
+            "calendar", "move", "event-1",
+            "--start", "2026-08-25T13:00:00-07:00",
+            "--end", "2026-08-25T14:00:00-07:00",
+            "--confirm",
+        ])
+
+        self.assertEqual(60, availability.duration_minutes)
+        self.assertEqual("event-1", availability.exclude_event)
+        self.assertFalse(move.allow_conflict)
+        self.assertTrue(move.confirm)
 
 
 if __name__ == "__main__":

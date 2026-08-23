@@ -32,6 +32,7 @@ API_BATCH_SIZE = 25
 GMAIL_BATCH_SIZE = 20
 CALENDAR_BATCH_SIZE = 5
 API_BATCH_ATTEMPTS = 4
+API_REQUEST_ATTEMPTS = 4
 
 BACKGROUND_FIRST_NAMES = [
     "Maya", "Owen", "Sofia", "Liam", "Nora",
@@ -268,26 +269,50 @@ def request_is_retryable(exc: Exception) -> bool:
     return getattr(getattr(exc, "resp", None), "status", None) in {409, 429, 500, 502, 503, 504}
 
 
+def execute_request(request, operation: str):
+    """Execute one API request with bounded retries for transient failures."""
+    for attempt in range(API_REQUEST_ATTEMPTS):
+        try:
+            return request.execute()
+        except Exception as exc:
+            if not request_is_retryable(exc) or attempt == API_REQUEST_ATTEMPTS - 1:
+                raise
+            time.sleep(2 ** attempt)
+    raise RuntimeError(f"{operation} failed without returning a response")
+
+
 def move_to_folder(drive, file_id: str, folder_id: str) -> None:
-    parents = drive.files().get(fileId=file_id, fields="parents").execute().get("parents", [])
-    drive.files().update(
-        fileId=file_id,
-        addParents=folder_id,
-        removeParents=",".join(parents),
-        fields="id,parents",
-    ).execute()
+    parents = execute_request(
+        drive.files().get(fileId=file_id, fields="parents"),
+        "Read Drive parents",
+    ).get("parents", [])
+    execute_request(
+        drive.files().update(
+            fileId=file_id,
+            addParents=folder_id,
+            removeParents=",".join(parents),
+            fields="id,parents",
+        ),
+        "Move Drive file",
+    )
 
 
 def create_folder(drive) -> dict:
-    item = drive.files().create(
-        body={"name": "RTX Spark Agent Runtime Demo", "mimeType": "application/vnd.google-apps.folder", "description": MARKER},
-        fields="id,name,webViewLink",
-    ).execute()
+    item = execute_request(
+        drive.files().create(
+            body={"name": "RTX Spark Agent Runtime Demo", "mimeType": "application/vnd.google-apps.folder", "description": MARKER},
+            fields="id,name,webViewLink",
+        ),
+        "Create Drive folder",
+    )
     return {"id": item["id"], "url": item.get("webViewLink", f"https://drive.google.com/drive/folders/{item['id']}")}
 
 
 def create_doc(docs, drive, folder_id: str) -> dict:
-    result = docs.documents().create(body={"title": "RTX Spark Agent Runtime Latency Evaluation"}).execute()
+    result = execute_request(
+        docs.documents().create(body={"title": "RTX Spark Agent Runtime Latency Evaluation"}),
+        "Create evaluation document",
+    )
     doc_id = result["documentId"]
     text = (
         "RTX Spark Agent Runtime Latency Evaluation\n\n"
@@ -304,7 +329,10 @@ def create_doc(docs, drive, folder_id: str) -> dict:
         "Tracker action\n"
         "Update the Agent Runtime Latency Evaluation lane from In progress to Ready for review. Do not change its owner, due date, or notes.\n"
     )
-    docs.documents().batchUpdate(documentId=doc_id, body={"requests": [{"insertText": {"location": {"index": 1}, "text": text}}]}).execute()
+    execute_request(
+        docs.documents().batchUpdate(documentId=doc_id, body={"requests": [{"insertText": {"location": {"index": 1}, "text": text}}]}),
+        "Populate evaluation document",
+    )
     move_to_folder(drive, doc_id, folder_id)
     return {"id": doc_id, "url": f"https://docs.google.com/document/d/{doc_id}/edit"}
 
@@ -320,7 +348,10 @@ SLIDES = [
 
 
 def create_slides(slides, drive, folder_id: str) -> dict:
-    result = slides.presentations().create(body={"title": "RTX Spark Partner Readout"}).execute()
+    result = execute_request(
+        slides.presentations().create(body={"title": "RTX Spark Partner Readout"}),
+        "Create partner readout",
+    )
     presentation_id = result["presentationId"]
     requests = []
     if result.get("slides"):
@@ -338,7 +369,10 @@ def create_slides(slides, drive, folder_id: str) -> dict:
             {"insertText": {"objectId": body_id, "text": body}},
             {"updateTextStyle": {"objectId": body_id, "style": {"fontSize": {"magnitude": 16, "unit": "PT"}, "foregroundColor": {"opaqueColor": {"rgbColor": {"red": 0.18, "green": 0.22, "blue": 0.28}}}}, "textRange": {"type": "ALL"}, "fields": "fontSize,foregroundColor"}},
         ])
-    slides.presentations().batchUpdate(presentationId=presentation_id, body={"requests": requests}).execute()
+    execute_request(
+        slides.presentations().batchUpdate(presentationId=presentation_id, body={"requests": requests}),
+        "Populate partner readout",
+    )
     move_to_folder(drive, presentation_id, folder_id)
     return {"id": presentation_id, "url": f"https://docs.google.com/presentation/d/{presentation_id}/edit"}
 
@@ -354,7 +388,7 @@ def tracker_rows(
     reschedule_label = reschedule_day.strftime("%A")
     return [
         ["Lane", "PIC", "Status", "Latest update", "Next action", "Due", "Dependency / blocker", "Evidence", "Artifact", "Notes"],
-        ["Agent Runtime regression", "Priya Shah", "Blocked", "The current build duplicates tool-call completions in repeated local runs.", f"Move the existing release review to {reschedule_label} at 11 AM PT and draft Priya and Daniel a confirmation; do not send it.", "Today", "Release review must move while the P0 regression is open.", evidence.get("bug", "Priya's blocker email"), sheet_url, "Calendar and draft follow-up are the immediate coordination actions."],
+        ["Agent Runtime regression", "Priya Shah", "Blocked", "The current build duplicates tool-call completions in repeated local runs.", f"Move the existing release review to the earliest non-conflicting one-hour slot on {reschedule_label} and draft Priya and Daniel a confirmation; do not send it.", "Today", "Release review must move while the P0 regression is open.", evidence.get("bug", "Priya's blocker email"), sheet_url, "Calendar and draft follow-up are the immediate coordination actions."],
         ["Agent Runtime Latency Evaluation", "Mateo Chen", "In progress", "Mateo completed the evaluation report and handed it off for review.", "Change only this lane's status to Ready for review.", "Today", "None; the tracker status is stale.", evidence.get("evaluation", "Mateo's completion email"), doc_url, "Keep the owner, due date, and notes unchanged."],
         ["Partner Readout Deck", "Elena Torres", "Awaiting update", "Communications approved the replacement headline for slide 4.", "Replace APPROVED HEADLINE PLACEHOLDER with “Meet the RTX Spark Agent Runtime: a faster path from intent to completed work.” on slide 4; leave the rest unchanged.", "Next week", "None; intentionally lower priority than today's two actions.", evidence.get("copy", "Elena's approval email"), slides_url, "Optional backup demo; not required today."],
         ["Reliability test matrix", "Noah Williams", "On track", "Routine coverage review completed with no new blockers.", "Continue the planned test pass.", "This week", "None", "Routine team update", sheet_url, "No executive action needed."],
@@ -366,12 +400,18 @@ def tracker_rows(
 
 
 def create_sheet(sheets, drive, folder_id: str, slides_url: str, doc_url: str, demo_day: date) -> dict:
-    result = sheets.spreadsheets().create(body={"properties": {"title": "RTX Spark Delivery Tracker"}, "sheets": [{"properties": {"title": "Campaign Lanes", "gridProperties": {"rowCount": 100, "columnCount": 12, "frozenRowCount": 6, "hideGridlines": True}}}]}).execute()
+    result = execute_request(
+        sheets.spreadsheets().create(body={"properties": {"title": "RTX Spark Delivery Tracker"}, "sheets": [{"properties": {"title": "Campaign Lanes", "gridProperties": {"rowCount": 100, "columnCount": 12, "frozenRowCount": 6, "hideGridlines": True}}}]}),
+        "Create delivery tracker",
+    )
     spreadsheet_id = result["spreadsheetId"]
     sheet_id = result["sheets"][0]["properties"]["sheetId"]
     sheet_url = result.get("spreadsheetUrl", f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit")
     rows = [["RTX Spark Delivery Tracker"], ["Decision-ready view of Agent Runtime work"], ["Awaiting updates", "1", "", "Blocked", "1", "", "Active lanes", "8", "Last refreshed", demo_day.isoformat()], ["Statuses are updated from current owner evidence; use the Artifact column to open the working file or decision source."], [], *tracker_rows(slides_url, doc_url, sheet_url, {}, demo_day)]
-    sheets.spreadsheets().values().update(spreadsheetId=spreadsheet_id, range="'Campaign Lanes'!A1:J14", valueInputOption="USER_ENTERED", body={"values": rows}).execute()
+    execute_request(
+        sheets.spreadsheets().values().update(spreadsheetId=spreadsheet_id, range="'Campaign Lanes'!A1:J14", valueInputOption="USER_ENTERED", body={"values": rows}),
+        "Populate delivery tracker",
+    )
     requests = [
         {"mergeCells": {"range": {"sheetId": sheet_id, "startRowIndex": 0, "endRowIndex": 1, "startColumnIndex": 0, "endColumnIndex": 10}, "mergeType": "MERGE_ALL"}},
         {"mergeCells": {"range": {"sheetId": sheet_id, "startRowIndex": 1, "endRowIndex": 2, "startColumnIndex": 0, "endColumnIndex": 10}, "mergeType": "MERGE_ALL"}},
@@ -382,7 +422,10 @@ def create_sheet(sheets, drive, folder_id: str, slides_url: str, doc_url: str, d
         {"setDataValidation": {"range": {"sheetId": sheet_id, "startRowIndex": 6, "endRowIndex": 14, "startColumnIndex": 2, "endColumnIndex": 3}, "rule": {"condition": {"type": "ONE_OF_LIST", "values": [{"userEnteredValue": value} for value in STATUS_VALUES]}, "strict": True, "showCustomUi": True}}},
         {"updateDimensionProperties": {"range": {"sheetId": sheet_id, "dimension": "COLUMNS", "startIndex": 0, "endIndex": 10}, "properties": {"pixelSize": 170}, "fields": "pixelSize"}},
     ]
-    sheets.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests}).execute()
+    execute_request(
+        sheets.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests}),
+        "Format delivery tracker",
+    )
     move_to_folder(drive, spreadsheet_id, folder_id)
     return {"id": spreadsheet_id, "url": sheet_url, "sheet_id": sheet_id}
 
@@ -506,7 +549,10 @@ def create_emails(
     seed_run_id: str | None = None,
 ) -> tuple[list[dict], dict[str, str]]:
     seed_run_id = seed_run_id or uuid.uuid4().hex
-    account = gmail.users().getProfile(userId="me").execute()["emailAddress"]
+    account = execute_request(
+        gmail.users().getProfile(userId="me"),
+        "Read Gmail profile",
+    )["emailAddress"]
     reference_time = email_reference_time(demo_day)
     follow_up_day = next_business_day(demo_day)
     data = [
@@ -517,7 +563,7 @@ def create_emails(
             "body": (
                 "P0 regression: tool-call completions duplicate in 8 of 10 runs. Postpone today's 2 PM release review.\n\n"
                 "Hi,\n\nI reproduced the issue in the latest fictional RTX Spark Agent Runtime build. The release candidate should not advance until the patch passes the same matrix cleanly.\n\n"
-                f"Please postpone the RTX Spark Agent Runtime release review scheduled for {display_date(demo_day)}. Daniel is checking the next available slot.\n\n"
+                f"Please postpone the RTX Spark Agent Runtime release review scheduled for {display_date(demo_day)}.\n\n"
                 f"Event: {release_review_url}\n"
                 f"Tracker: {sheet_url}\n\n— Priya"
             ),
@@ -529,7 +575,7 @@ def create_emails(
             "sender": "Daniel Cho <daniel.cho@nvidia.example>",
             "subject": "New slot for the Agent Runtime release review",
             "body": (
-                f"Move the existing release review to {display_date(follow_up_day)} at 11:00 AM Pacific. Draft a confirmation to Priya and me; do not send it.\n\n"
+                f"Move the existing release review to the earliest non-conflicting one-hour slot on {display_date(follow_up_day)}. Draft a confirmation to Priya and me; do not send it.\n\n"
                 "Keep the event's current details and move it rather than creating a duplicate.\n\n"
                 f"Event: {release_review_url}\n\n"
                 "— Daniel"
@@ -739,7 +785,10 @@ def update_tracker_evidence(sheets, state: dict, evidence: dict[str, str]) -> No
         evidence,
         date.fromisoformat(state["demo_day"]),
     )
-    sheets.spreadsheets().values().update(spreadsheetId=sheet["id"], range="'Campaign Lanes'!A6:J14", valueInputOption="USER_ENTERED", body={"values": values}).execute()
+    execute_request(
+        sheets.spreadsheets().values().update(spreadsheetId=sheet["id"], range="'Campaign Lanes'!A6:J14", valueInputOption="USER_ENTERED", body={"values": values}),
+        "Update delivery tracker evidence",
+    )
 
 
 def resource_is_already_absent(exc: Exception) -> bool:
@@ -752,7 +801,10 @@ def cleanup(state: dict) -> dict[str, int]:
     failures = []
     for item in state.get("drafts", []):
         try:
-            svc["gmail"].users().drafts().delete(userId="me", id=item["id"]).execute()
+            execute_request(
+                svc["gmail"].users().drafts().delete(userId="me", id=item["id"]),
+                "Delete tracked Gmail draft",
+            )
             result["drafts_deleted"] += 1
         except Exception as exc:
             if resource_is_already_absent(exc):
@@ -806,7 +858,10 @@ def cleanup(state: dict) -> dict[str, int]:
         failures.append(str(exc))
     if state.get("folder", {}).get("id"):
         try:
-            svc["drive"].files().update(fileId=state["folder"]["id"], body={"trashed": True}).execute()
+            execute_request(
+                svc["drive"].files().update(fileId=state["folder"]["id"], body={"trashed": True}),
+                "Trash seeded Drive folder",
+            )
             result["folders_trashed"] += 1
         except Exception as exc:
             if resource_is_already_absent(exc):

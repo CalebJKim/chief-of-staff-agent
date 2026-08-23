@@ -76,8 +76,8 @@ class SeedWorkspaceTests(unittest.TestCase):
         thursday = seed_workspace.tracker_rows("slides", "doc", "sheet", {}, date(2026, 8, 20))
         friday = seed_workspace.tracker_rows("slides", "doc", "sheet", {}, date(2026, 8, 21))
 
-        self.assertIn("Friday at 11 AM PT", thursday[1][4])
-        self.assertIn("Monday at 11 AM PT", friday[1][4])
+        self.assertIn("earliest non-conflicting one-hour slot on Friday", thursday[1][4])
+        self.assertIn("earliest non-conflicting one-hour slot on Monday", friday[1][4])
 
     def test_background_mail_is_low_signal_unread_and_on_one_day(self) -> None:
         reference = datetime(2026, 8, 21, 12, 0, tzinfo=ZoneInfo("America/Los_Angeles"))
@@ -167,6 +167,13 @@ class SeedWorkspaceTests(unittest.TestCase):
         background_dates = [item for index, item in enumerate(dates) if index not in meaningful_positions]
         self.assertGreater(min(meaningful_dates), max(background_dates))
         labels_by_subject = {message["Subject"]: labels for message, labels in messages}
+        bodies_by_subject = {
+            message["Subject"]: message.get_payload(decode=True).decode("utf-8")
+            for message, _labels in messages
+        }
+        priya_body = bodies_by_subject["BLOCKER: Agent Runtime duplicates tool-call completions"]
+        self.assertNotIn("Daniel is checking the next available slot.", priya_body)
+        self.assertIn("Please postpone the RTX Spark Agent Runtime release review scheduled for", priya_body)
         self.assertIn("IMPORTANT", labels_by_subject["BLOCKER: Agent Runtime duplicates tool-call completions"])
         self.assertIn("IMPORTANT", labels_by_subject["New slot for the Agent Runtime release review"])
         self.assertTrue(all(
@@ -210,6 +217,23 @@ class SeedWorkspaceTests(unittest.TestCase):
 
         self.assertEqual([("item-1", "created-1")], recorded)
         self.assertEqual(2, service.new_batch_http_request.call_count)
+        mock_sleep.assert_called_once_with(1)
+
+    @patch.object(seed_workspace.time, "sleep")
+    def test_individual_request_retries_service_unavailable(self, mock_sleep: Mock) -> None:
+        class ServiceUnavailable(Exception):
+            resp = type("Response", (), {"status": 503})()
+
+        request = Mock()
+        request.execute.side_effect = [
+            ServiceUnavailable("temporarily unavailable"),
+            {"spreadsheetId": "sheet-1"},
+        ]
+
+        result = seed_workspace.execute_request(request, "Create delivery tracker")
+
+        self.assertEqual({"spreadsheetId": "sheet-1"}, result)
+        self.assertEqual(2, request.execute.call_count)
         mock_sleep.assert_called_once_with(1)
 
     def test_campaign_lanes_match_tracker_row_contract(self) -> None:

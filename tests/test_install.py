@@ -55,7 +55,8 @@ class InstallSoulTests(unittest.TestCase):
 
         self.assertEqual("preserved; chief-of-staff routing updated", status)
         self.assertTrue(installed.startswith("My custom Soul.\n\n"))
-        self.assertIn("follows up on a numbered priority", installed)
+        self.assertIn("follows up on that plan", installed)
+        self.assertIn("requests Google Workspace work", installed)
         self.assertTrue(installed.endswith("\n\nKeep this too.\n"))
 
 

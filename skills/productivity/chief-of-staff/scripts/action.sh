@@ -12,11 +12,6 @@ fi
 
 ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
 
-if [ "${1:-}" = "workstream" ]; then
-  shift
-  exec "$PYTHON" "$COS_HOME/skills/productivity/chief-of-staff/scripts/workstream.py" "$@"
-fi
-
 if [ "${1:-}" = "gmail" ] && [ "${2:-}" = "draft" ] && [ -f "$COS_HOME/chief-of-staff-workspace-state.json" ]; then
   for argument in "$@"; do
     if [ "$argument" = "--track-demo-state" ]; then

@@ -76,7 +76,9 @@ the desktop process inheriting a separately installed Python from `PATH`.
 python -m venv .venv
 $Python = (Resolve-Path .\.venv\Scripts\python.exe).Path
 & $Python -m pip install -r requirements.txt
-$env:HERMES_HOME = Join-Path $env:LOCALAPPDATA "hermes"
+$ProfileName = "chief-of-staff-demo"
+$HermesRoot = Join-Path $env:LOCALAPPDATA "hermes"
+$env:HERMES_HOME = Join-Path $HermesRoot "profiles\$ProfileName"
 ```
 
 The pinned `tzdata` dependency is required on Windows for the seeder's IANA
@@ -92,19 +94,20 @@ calendar event offsets.
 & $Python -m unittest discover -s skills/productivity/chief-of-staff/tests -v
 ```
 
-Expected result: 33 tests pass across the three suites.
+Expected result: 47 tests pass across the three suites.
 
-## 5. Install the skills into Hermes
+## 5. Create or refresh the isolated Hermes profile
 
 ```powershell
-& $Python install.py --hermes-home $env:HERMES_HOME
-hermes tools enable skills terminal --platform cli
-hermes skills list
+& $Python setup_profile.py --profile-name $ProfileName --hermes-root $HermesRoot
+hermes -p $ProfileName skills list
+hermes -p $ProfileName config get agent.max_turns
 ```
 
-The installer copies `ingest` and `chief-of-staff` under
-`$env:HERMES_HOME\skills\productivity`. It preserves an existing `SOUL.md` and
-appends the Chief of Staff routing paragraph only when it is absent.
+The setup script creates the dedicated profile if needed, preserves the selected
+model configuration, installs only `ingest` and `chief-of-staff`, enables the
+`skills` and `terminal` toolsets, and sets Max Agent Steps to `40`. It can be
+rerun after repository updates without recreating the profile.
 
 Optional Hermes health checks:
 
@@ -216,7 +219,7 @@ Start a new Hermes session and say:
 
 > Hey chief of staff, what should we work on today?
 
-Then say `Take the action items for the first thing.` and `Take the action items for the second thing.` The optional third-item action is documented in `DEMO_SCRIPT.md`.
+Then say `Take the action items for the first thing.` and `Take the action items for the second thing.` The first follow-up resolves the displayed item from conversation history, checks live availability, and proceeds without asking for confirmation again. The optional third-item action and a constraint-override example are documented in `DEMO_SCRIPT.md`.
 
 ## 9. Reset or remove the reference data
 

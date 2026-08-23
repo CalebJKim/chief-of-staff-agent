@@ -33,7 +33,7 @@ The dedicated demo account contains a busy fictional RTX Spark Agent Runtime wor
 
 Start with a very short summary of today's workload in no more than three sentences and without a heading. Follow it with exactly three succinct numbered items, with no scores, inbox inventory, or closing question. Each item has an evidence sentence with its two inline links, followed by an indented `Recommended action item(s):` sub-bullet. The expected content is:
 
-1. **Agent Runtime regression** — Priya's P0 duplicate-completion blocker. Next: move the existing release review to the next business day at 11:00 AM PT and draft Priya and Daniel a confirmation. Inline Mail and Calendar links.
+1. **Agent Runtime regression** — Priya's P0 duplicate-completion blocker. Next: move the existing release review to the earliest non-conflicting one-hour slot on the next business day and draft Priya and Daniel a confirmation. Inline Mail and Calendar links.
 2. **Agent Runtime Latency Evaluation** — Mateo completed it while the tracker remains `In progress`. Next: change only that lane to `Ready for review`. Inline Mail and Tracker links.
 3. **Partner Readout Deck** — Elena approved the exact slide-4 headline. Next: replace only the placeholder. Inline Mail and Deck links.
 
@@ -45,15 +45,26 @@ Point out that each priority groups evidence and the action target instead of li
 
 > Take the action items for the first thing.
 
-Equivalent natural wording such as `Can you take care of the first item on the list for me?` must execute the same workstream directly. It must not reload skills, rerun Start of Day, run setup, or search the filesystem.
+Equivalent natural wording such as `Can you take care of the first item on the list for me?` resolves item one from conversation history and authorizes its displayed actions. It must not rerun Start of Day, run setup, or search the filesystem, and it must not ask for confirmation again.
 
 **Expected result**
 
-- The existing `RTX Spark Agent Runtime release review` moves to the next business day at 11:00 AM Pacific; no duplicate event is created.
+- The agent refreshes the relevant event window and finds the earliest one-hour opening that does not overlap another event.
+- The existing `RTX Spark Agent Runtime release review` moves to that runtime-selected slot; no duplicate event is created.
 - An unsent reply draft is created in Priya's original thread with Daniel copied.
 - The response is one short confirmation with inline Calendar and Draft links.
 
 If presenting the UI, Ctrl-click the returned links yourself. The agent should not launch a browser.
+
+## Constraint override check
+
+After a reset, optionally replace Query 2 with:
+
+> Take care of the first item, but use Thursday afternoon.
+
+The agent must honor the new constraint, find a free Thursday-afternoon hour, and use the selected time in the draft. It must not replay a time from the initial recommendation.
+
+You can also ask for a direct Workspace action unrelated to the top three. The plan provides context but does not limit the agent's capabilities.
 
 ## Query 3 — Mail plus Sheet action
 

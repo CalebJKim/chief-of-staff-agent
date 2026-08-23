@@ -2,11 +2,13 @@
 
 The seeder creates a self-contained RTX Spark Agent Runtime workspace in the Google account connected through OAuth. It contains no real account IDs, credentials, or reference-workspace links.
 
+The fictional scenario is fixed seed data. The Chief of Staff skill does not contain RTX Spark-specific actions: it reads the current Workspace evidence, renders the prescribed brief format, and decides follow-up operations from the user's current request.
+
 ## What it creates
 
 - **6 meaningful Gmail messages**, all in Inbox and Unread:
   1. Priya reports a P0 duplicate tool-completion regression and asks to postpone the release review. Important.
-  2. Daniel supplies the replacement slot—the next business day at 11:00 AM Pacific—and asks for an unsent confirmation draft to Priya and Daniel. Important.
+  2. Daniel asks for the earliest non-conflicting one-hour slot on the next business day and an unsent confirmation draft to Priya and Daniel. Important.
   3. Mateo says the latency evaluation is complete and ready for review.
   4. Aisha confirms that only the evaluation tracker's status should change.
   5. Elena supplies the exact approved slide-4 headline.
@@ -20,12 +22,13 @@ The seeder creates a self-contained RTX Spark Agent Runtime workspace in the Goo
 - **12 Calendar resources** producing 47 visible meeting instances across one workweek:
   - Eight routine weekday series.
   - Three two-day series that overlap existing meetings at different times.
-  - One `RTX Spark Agent Runtime release review` on the resolved demo day that action 1 moves to the next business day at 11:00 AM Pacific.
+  - One `RTX Spark Agent Runtime release review` on the resolved demo day.
+  - Busy blocks on the next business day force scheduling actions to use current availability rather than a predetermined time.
 - **1 Google Sheet**: `RTX Spark Delivery Tracker`
   - Tab: `Campaign Lanes`
   - Columns A:J: Lane, PIC, Status, Latest update, Next action, Due, Dependency/blocker, Evidence, Artifact, Notes.
   - Eight data rows with a validated status dropdown.
-  - The three actionable rows are Agent Runtime regression, Agent Runtime Latency Evaluation, and Partner Readout Deck.
+  - The seeded evidence currently ranks Agent Runtime regression, Agent Runtime Latency Evaluation, and Partner Readout Deck as the top three.
 - **1 Google Doc**: `RTX Spark Agent Runtime Latency Evaluation`
   - States that the evaluation is complete and ready for review.
 - **1 Google Slides deck**: `RTX Spark Partner Readout`
@@ -40,27 +43,30 @@ $HERMES_HOME/chief-of-staff-workspace-state.json
 
 The reset and cleanup commands use this file to delete tracked demo drafts, permanently delete imported mail by exact message ID, delete imported Calendar resources, and move the generated Drive folder to Trash. Ordinary Gmail messages and drafts are never listed or deleted.
 
-The start-of-day skill also writes a data-derived follow-up plan to:
+Start of Day writes only the bounded Workspace snapshot used to build the brief. It does not create an executable action plan.
 
-```text
-$HERMES_HOME/chief-of-staff/action-plan.json
-```
-
-That file contains only the resolved operations for the current three ranked workstreams. It is runtime state, not a Hermes default or model/provider setting.
-
-## Expected demo flow
+## Expected demo behavior
 
 1. `Hey chief of staff, what should we work on today?`
-   - Return exactly three succinct items in this order: regression, evaluation, deck.
-   - End every item with its inline Mail link and Calendar, Tracker, or Deck link.
-   - Do not show internal ranking scores and do not open a browser.
-2. `Take the action items for the first thing.`
-   - Move the existing release review to the next business day at 11:00 AM Pacific without creating a duplicate.
-   - Create an unsent reply draft in Priya's thread with Daniel copied.
-3. `Take the action items for the second thing.`
-   - Change only `Agent Runtime Latency Evaluation` from `In progress` to `Ready for review`.
-4. Optional backup: `Take the action items for the third thing.`
-   - Replace only `APPROVED HEADLINE PLACEHOLDER` with `Meet the RTX Spark Agent Runtime: a faster path from intent to completed work.`
+   - Read the current Workspace snapshot.
+   - Return a short workload summary followed by exactly three numbered priorities.
+   - Give every item two evidence links and a `Recommended action item(s):` sub-bullet.
+   - Do not expose scores, internal IDs, or commands.
+2. `Take care of the first item.`
+   - Resolve the first item from conversation history.
+   - Treat the request as authorization for the displayed actions without asking again.
+   - Refresh the relevant email, event, and target-day availability.
+   - Move the existing event to the earliest valid non-conflicting slot, preserve its duration and other details, and create the requested unsent draft.
+   - Verify both writes and report the result.
+3. `Take care of the first item, but use Thursday afternoon.`
+   - Honor the new constraint instead of replaying the original recommendation.
+   - Find a valid Thursday-afternoon slot before moving.
+4. `Take care of the second item.` or `Take care of the third item.`
+   - Derive exact values from the displayed recommendation and focused live reads.
+   - Execute and verify the authorized change without a redundant confirmation prompt.
+5. Requests unrelated to the top three still work through the same focused Workspace helpers; they do not require rerunning Start of Day.
+
+The current seed is designed to produce a stable demo narrative, but the renderer and action flow contain no hardcoded project names, recipients, dates, statuses, or replacement text. Changing the seeded evidence changes the presented contents and subsequent actions.
 
 ## Seed, reset, and cleanup
 
@@ -70,8 +76,7 @@ First connect a dedicated demo Google account as described in `QUICKSTART.md`, t
 python demo/seed_workspace.py --confirm
 ```
 
-By default, the demo day is today on weekdays or the upcoming Monday on
-weekends. To target a particular week instead:
+By default, the demo day is today on weekdays or the upcoming Monday on weekends. To target a particular week instead:
 
 ```bash
 python demo/seed_workspace.py --week-of 2026-08-17 --confirm
@@ -93,14 +98,14 @@ Gmail deletion is permanent; the Drive folder goes to Trash. If cleanup is parti
 
 ## Manual fallback
 
-If an organization policy prevents one resource from being created, reproduce the names and exact action data above. The most important constraints are:
+If an organization policy prevents one resource from being created, reproduce the names and evidence above. The most important constraints are:
 
 1. Keep the six meaningful messages newer than the background mail, with Priya and Daniel marked Important.
-2. Use one existing release-review event on the demo day and provide the next business day at 11:00 AM Pacific as the new slot.
+2. Use one existing release-review event on the demo day and enough next-business-day calendar activity to exercise availability-aware scheduling.
 3. Keep the Sheet tab named `Campaign Lanes` with the A:J schema and exact evaluation lane name.
 4. Put the exact placeholder and approved replacement text in the Partner Readout evidence.
 
-The skill resolves actions from current evidence and generated IDs; it does not depend on IDs committed to the repository.
+The skill resolves resources from current evidence and generated IDs; it does not depend on IDs committed to the repository.
 
 ## Troubleshooting
 

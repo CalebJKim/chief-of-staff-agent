@@ -3,11 +3,8 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
-import tempfile
 import unittest
-from datetime import datetime
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "tests" / "fixtures" / "workspace.json"
@@ -97,69 +94,23 @@ class BriefTests(unittest.TestCase):
 
         packet = brief.build_packet(snapshot, self.args())
         workstreams = packet["workstreams"]
-        plan = brief.prepare_action_plan(packet)
-
         self.assertEqual(["Exec launch decision", "Launch readiness", "Launch positioning deck"], [item["outcome"] for item in workstreams])
         self.assertEqual(["Calendar", "Tracker", "Deck"], [item["target"]["label"] for item in workstreams])
         self.assertEqual("msg-urgent", workstreams[0]["supporting_mail"]["id"])
         self.assertEqual("evt-exec", workstreams[0]["target"]["id"])
-        self.assertNotIn("action_command", workstreams[0])
-        self.assertEqual('bash "$HERMES_HOME/cos.sh" 2', workstreams[1]["action_command"])
-        self.assertEqual('bash "$HERMES_HOME/cos.sh" 3', workstreams[2]["action_command"])
-        self.assertEqual("tracker_status", plan["workstreams"][1]["action"]["kind"])
-        self.assertEqual("slides_replace_text", plan["workstreams"][2]["action"]["kind"])
+        self.assertTrue(all("action_command" not in item and "_action" not in item for item in workstreams))
 
         reply = brief.render_initial_reply(packet)
         self.assertTrue(reply.startswith("Today's workload centers on "))
+        self.assertIn("Exec launch decision", reply)
+        self.assertIn("Change only this lane's status to Ready for review.", reply)
+        self.assertIn("Meet the launch: a faster path to completed work.", reply)
         self.assertEqual(3, reply.count("Recommended action item(s):"))
         self.assertEqual(1, reply.count("[Calendar]("))
         self.assertEqual(1, reply.count("[Tracker]("))
         self.assertEqual(1, reply.count("[Deck]("))
         self.assertNotIn("action_command", reply)
         self.assertNotIn("cos.sh", reply)
-
-    def test_calendar_action_plan_resolves_move_and_threaded_draft(self):
-        tz = ZoneInfo("America/Los_Angeles")
-        row = {
-            "lane": "Release gate",
-            "status": "Blocked",
-            "latest": "The release is blocked.",
-            "next": "Move the existing release review to Monday at 11 AM PT and draft Priya and Daniel a confirmation; do not send it.",
-        }
-        target = {
-            "label": "Calendar",
-            "id": "event-1",
-            "name": "Release review",
-            "start": "2026-08-14T14:00:00-07:00",
-            "end": "2026-08-14T15:00:00-07:00",
-        }
-        supporting = {"id": "message-priya", "from": "Priya Shah <priya@example.test>"}
-        related = [
-            supporting,
-            {
-                "id": "message-daniel",
-                "from": "Daniel Cho <daniel@example.test>",
-                "subject": "New slot for the release review",
-                "snippet": "Draft Priya and me a confirmation.",
-            },
-        ]
-
-        action = brief.workstream_action(
-            row,
-            target,
-            supporting,
-            related,
-            datetime(2026, 8, 14, 9, 0, tzinfo=tz),
-            tz,
-        )
-
-        self.assertEqual("calendar_move_and_draft", action["kind"])
-        self.assertEqual("2026-08-17T11:00:00-07:00", action["steps"][0][4])
-        self.assertEqual("2026-08-17T12:00:00-07:00", action["steps"][0][6])
-        self.assertEqual("message-priya", action["steps"][1][3])
-        self.assertEqual("daniel@example.test", action["steps"][1][5])
-        self.assertTrue(action["steps"][1][7].endswith("\n\nThanks"))
-        self.assertNotIn("\n\nBest", action["steps"][1][7])
 
     def test_packet_respects_context_budget(self):
         snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))

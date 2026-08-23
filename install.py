@@ -42,23 +42,38 @@ def install_soul(source: Path, target: Path, overwrite: bool) -> str:
     return "preserved; chief-of-staff routing added"
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Install the Chief of Staff skills into a Hermes profile")
-    parser.add_argument("--hermes-home", type=Path, default=default_home())
-    parser.add_argument("--overwrite-soul", action="store_true", help="Replace an existing SOUL.md (otherwise preserve it)")
-    args = parser.parse_args()
-    source = Path(__file__).resolve().parent
-    target = args.hermes_home.expanduser().resolve()
+def install_agent(source: Path, target: Path, overwrite_soul: bool) -> tuple[Path, str]:
+    """Install the skills and SOUL into an already-created Hermes home."""
+    source = source.expanduser().resolve()
+    target = target.expanduser().resolve()
     skills_target = target / "skills" / "productivity"
     skills_target.mkdir(parents=True, exist_ok=True)
     for name in ("ingest", "chief-of-staff"):
         destination = skills_target / name
         if destination.exists():
             shutil.rmtree(destination)
-        shutil.copytree(source / "skills" / "productivity" / name, destination, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-    shutil.copy2(source / "cos.sh", target / "cos.sh")
-    soul = target / "SOUL.md"
-    soul_status = install_soul(source / "SOUL.md", soul, args.overwrite_soul)
+        shutil.copytree(
+            source / "skills" / "productivity" / name,
+            destination,
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+        )
+    obsolete_launcher = target / "cos.sh"
+    if obsolete_launcher.exists():
+        obsolete_launcher.unlink()
+    obsolete_plan = target / "chief-of-staff" / "action-plan.json"
+    if obsolete_plan.exists():
+        obsolete_plan.unlink()
+    soul_status = install_soul(source / "SOUL.md", target / "SOUL.md", overwrite_soul)
+    return skills_target, soul_status
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Install the Chief of Staff skills into a Hermes profile")
+    parser.add_argument("--hermes-home", type=Path, default=default_home())
+    parser.add_argument("--overwrite-soul", action="store_true", help="Replace an existing SOUL.md (otherwise preserve it)")
+    args = parser.parse_args()
+    source = Path(__file__).resolve().parent
+    skills_target, soul_status = install_agent(source, args.hermes_home, args.overwrite_soul)
     print(f"Installed skills into {skills_target}")
     print(f"SOUL.md: {soul_status}")
     print("Next: enable the skills + terminal toolsets and complete Google OAuth (see QUICKSTART.md).")
