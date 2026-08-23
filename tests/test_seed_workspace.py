@@ -236,6 +236,44 @@ class SeedWorkspaceTests(unittest.TestCase):
         self.assertEqual(2, request.execute.call_count)
         mock_sleep.assert_called_once_with(1)
 
+    def test_evaluation_doc_uses_structured_report_formatting(self) -> None:
+        docs = Mock()
+        drive = Mock()
+        docs.documents().create.return_value.execute.return_value = {"documentId": "doc-1"}
+        drive.files().get.return_value.execute.return_value = {"parents": []}
+
+        result = seed_workspace.create_doc(docs, drive, "folder-1")
+
+        self.assertEqual("doc-1", result["id"])
+        requests = docs.documents().batchUpdate.call_args.kwargs["body"]["requests"]
+        self.assertIn("insertText", requests[0])
+        document_text = requests[0]["insertText"]["text"]
+        self.assertIn("EVALUATION REPORT  •  INTERNAL", document_text)
+        self.assertIn("Complete — ready for review.", document_text)
+        self.assertNotIn("- Interactive tool-call latency", document_text)
+        self.assertEqual(1, sum("createParagraphBullets" in request for request in requests))
+        named_styles = {
+            request["updateParagraphStyle"]["paragraphStyle"].get("namedStyleType")
+            for request in requests
+            if "updateParagraphStyle" in request
+            and request["updateParagraphStyle"]["paragraphStyle"].get("namedStyleType")
+        }
+        self.assertEqual({"TITLE", "HEADING_2"}, named_styles)
+        callout_styles = [
+            request["updateTextStyle"]["textStyle"]
+            for request in requests
+            if "updateTextStyle" in request
+            and "backgroundColor" in request["updateTextStyle"]["textStyle"]
+        ]
+        self.assertEqual(2, len(callout_styles))
+        self.assertTrue(all(style["bold"] for style in callout_styles))
+        drive.files().update.assert_called_once_with(
+            fileId="doc-1",
+            addParents="folder-1",
+            removeParents="",
+            fields="id,parents",
+        )
+
     def test_campaign_lanes_match_tracker_row_contract(self) -> None:
         sheets = Mock()
         drive = Mock()
@@ -277,8 +315,77 @@ class SeedWorkspaceTests(unittest.TestCase):
             },
             validation,
         )
+        format_requests = sheets.spreadsheets().batchUpdate.call_args.kwargs["body"]["requests"]
+        conditional_rules = [
+            request["addConditionalFormatRule"]
+            for request in format_requests
+            if "addConditionalFormatRule" in request
+        ]
+        self.assertEqual(len(seed_workspace.STATUS_VALUES), len(conditional_rules))
+        self.assertEqual(
+            set(seed_workspace.STATUS_VALUES),
+            {
+                rule["rule"]["booleanRule"]["condition"]["values"][0]["userEnteredValue"]
+                for rule in conditional_rules
+            },
+        )
+        for rule in conditional_rules:
+            cell_format = rule["rule"]["booleanRule"]["format"]
+            self.assertIn("backgroundColor", cell_format)
+            self.assertTrue(cell_format["textFormat"]["bold"])
+        column_widths = [
+            request["updateDimensionProperties"]["properties"]["pixelSize"]
+            for request in format_requests
+            if request.get("updateDimensionProperties", {}).get("range", {}).get("dimension") == "COLUMNS"
+        ]
+        self.assertEqual(seed_workspace.TRACKER_COLUMN_WIDTHS, column_widths)
         drive.files().update.assert_called_once_with(
             fileId="sheet-1",
+            addParents="folder-1",
+            removeParents="",
+            fields="id,parents",
+        )
+
+    def test_partner_readout_uses_reusable_slide_template(self) -> None:
+        slides = Mock()
+        drive = Mock()
+        slides.presentations().create.return_value.execute.return_value = {
+            "presentationId": "slides-1",
+            "slides": [{"objectId": "default-slide"}],
+        }
+        drive.files().get.return_value.execute.return_value = {"parents": []}
+
+        result = seed_workspace.create_slides(slides, drive, "folder-1")
+
+        self.assertEqual("slides-1", result["id"])
+        requests = slides.presentations().batchUpdate.call_args.kwargs["body"]["requests"]
+        self.assertEqual(6, sum("createSlide" in request for request in requests))
+        self.assertEqual(6, sum("updatePageProperties" in request for request in requests))
+        shape_ids = {
+            request["createShape"]["objectId"]
+            for request in requests
+            if "createShape" in request
+        }
+        for index in range(1, 7):
+            self.assertIn(f"rtx_accent_{index}", shape_ids)
+            self.assertIn(f"rtx_card_{index}", shape_ids)
+            self.assertIn(f"rtx_footer_{index}", shape_ids)
+            self.assertIn(f"rtx_page_{index}", shape_ids)
+        inserted_text = {
+            request["insertText"]["objectId"]: request["insertText"]["text"]
+            for request in requests
+            if "insertText" in request
+        }
+        self.assertIn("APPROVED HEADLINE PLACEHOLDER", inserted_text["rtx_body_4"])
+        emphasized_ranges = [
+            request["updateTextStyle"]["textRange"]
+            for request in requests
+            if request.get("updateTextStyle", {}).get("objectId") == "rtx_body_4"
+            and request["updateTextStyle"]["textRange"].get("type") == "FIXED_RANGE"
+        ]
+        self.assertEqual(1, len(emphasized_ranges))
+        drive.files().update.assert_called_once_with(
+            fileId="slides-1",
             addParents="folder-1",
             removeParents="",
             fields="id,parents",

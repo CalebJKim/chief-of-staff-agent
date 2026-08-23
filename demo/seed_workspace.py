@@ -24,6 +24,33 @@ MARKER = "chief-of-staff-reference-workspace-v1"
 STATE_FILE = "chief-of-staff-workspace-state.json"
 TZ_NAME = os.environ.get("CHIEF_OF_STAFF_WORKSPACE_TZ", "America/Los_Angeles")
 STATUS_VALUES = ["Not started", "In progress", "Ready for review", "On track", "In review", "Awaiting update", "Blocked", "Complete"]
+STATUS_STYLES = {
+    "Not started": ({"red": 0.91, "green": 0.93, "blue": 0.95}, {"red": 0.28, "green": 0.32, "blue": 0.38}),
+    "In progress": ({"red": 0.82, "green": 0.90, "blue": 1.00}, {"red": 0.07, "green": 0.27, "blue": 0.52}),
+    "Ready for review": ({"red": 0.90, "green": 0.84, "blue": 0.98}, {"red": 0.31, "green": 0.15, "blue": 0.50}),
+    "On track": ({"red": 0.82, "green": 0.95, "blue": 0.86}, {"red": 0.06, "green": 0.36, "blue": 0.17}),
+    "In review": ({"red": 0.80, "green": 0.94, "blue": 0.94}, {"red": 0.02, "green": 0.35, "blue": 0.37}),
+    "Awaiting update": ({"red": 1.00, "green": 0.91, "blue": 0.76}, {"red": 0.51, "green": 0.27, "blue": 0.02}),
+    "Blocked": ({"red": 1.00, "green": 0.82, "blue": 0.82}, {"red": 0.58, "green": 0.06, "blue": 0.06}),
+    "Complete": ({"red": 0.75, "green": 0.91, "blue": 0.80}, {"red": 0.03, "green": 0.29, "blue": 0.12}),
+}
+TRACKER_COLUMN_WIDTHS = [220, 145, 145, 290, 330, 100, 250, 220, 170, 250]
+SLIDE_THEME = {
+    "background": {"red": 0.05, "green": 0.07, "blue": 0.11},
+    "surface": {"red": 0.10, "green": 0.13, "blue": 0.19},
+    "accent": {"red": 0.48, "green": 0.82, "blue": 0.22},
+    "title": {"red": 0.97, "green": 0.98, "blue": 1.00},
+    "body": {"red": 0.82, "green": 0.85, "blue": 0.90},
+    "muted": {"red": 0.55, "green": 0.60, "blue": 0.68},
+}
+DOC_THEME = {
+    "navy": {"red": 0.10, "green": 0.18, "blue": 0.30},
+    "accent": {"red": 0.26, "green": 0.58, "blue": 0.16},
+    "body": {"red": 0.20, "green": 0.24, "blue": 0.30},
+    "muted": {"red": 0.40, "green": 0.45, "blue": 0.52},
+    "success_fill": {"red": 0.88, "green": 0.96, "blue": 0.89},
+    "action_fill": {"red": 0.91, "green": 0.95, "blue": 1.00},
+}
 MEANINGFUL_EMAIL_COUNT = 6
 BACKGROUND_EMAIL_COUNT = 70
 EMAIL_REFERENCE_HOUR = 13
@@ -308,6 +335,197 @@ def create_folder(drive) -> dict:
     return {"id": item["id"], "url": item.get("webViewLink", f"https://drive.google.com/drive/folders/{item['id']}")}
 
 
+def _doc_range(text: str, fragment: str, *, include_newline: bool = False) -> dict[str, int]:
+    offset = text.index(fragment)
+    start = 1 + offset
+    end = start + len(fragment)
+    if include_newline and text[offset + len(fragment):].startswith("\n"):
+        end += 1
+    return {"startIndex": start, "endIndex": end}
+
+
+def _doc_text_style(text: str, fragment: str, style: dict, fields: str) -> dict:
+    return {
+        "updateTextStyle": {
+            "range": _doc_range(text, fragment),
+            "textStyle": style,
+            "fields": fields,
+        }
+    }
+
+
+def _doc_paragraph_style(text: str, fragment: str, style: dict, fields: str) -> dict:
+    return {
+        "updateParagraphStyle": {
+            "range": _doc_range(text, fragment, include_newline=True),
+            "paragraphStyle": style,
+            "fields": fields,
+        }
+    }
+
+
+def evaluation_doc_requests(text: str) -> list[dict]:
+    """Build the reusable formatting layer for the seeded evaluation report."""
+    title = "RTX Spark Agent Runtime Latency Evaluation"
+    eyebrow = "EVALUATION REPORT  •  INTERNAL"
+    status = "Complete — ready for review."
+    tracker_action = (
+        "Update the Agent Runtime Latency Evaluation lane from In progress to Ready for review. "
+        "Do not change its owner, due date, or notes."
+    )
+    scope = (
+        "Interactive tool-call latency across the internal reference workflow\n"
+        "Recovery behavior after a failed tool response\n"
+        "Completion consistency across repeated local runs\n"
+    )
+    requests = [
+        {"insertText": {"location": {"index": 1}, "text": text}},
+        {
+            "updateTextStyle": {
+                "range": {"startIndex": 1, "endIndex": len(text) + 1},
+                "textStyle": {
+                    "weightedFontFamily": {"fontFamily": "Roboto"},
+                    "fontSize": {"magnitude": 10.5, "unit": "PT"},
+                    "foregroundColor": {"color": {"rgbColor": DOC_THEME["body"]}},
+                },
+                "fields": "weightedFontFamily,fontSize,foregroundColor",
+            }
+        },
+        _doc_paragraph_style(
+            text,
+            title,
+            {
+                "namedStyleType": "TITLE",
+                "spaceBelow": {"magnitude": 4, "unit": "PT"},
+                "keepWithNext": True,
+            },
+            "namedStyleType,spaceBelow,keepWithNext",
+        ),
+        _doc_text_style(
+            text,
+            title,
+            {
+                "weightedFontFamily": {"fontFamily": "Roboto"},
+                "fontSize": {"magnitude": 24, "unit": "PT"},
+                "bold": True,
+                "foregroundColor": {"color": {"rgbColor": DOC_THEME["navy"]}},
+            },
+            "weightedFontFamily,fontSize,bold,foregroundColor",
+        ),
+        _doc_text_style(
+            text,
+            eyebrow,
+            {
+                "weightedFontFamily": {"fontFamily": "Roboto"},
+                "fontSize": {"magnitude": 9, "unit": "PT"},
+                "bold": True,
+                "foregroundColor": {"color": {"rgbColor": DOC_THEME["accent"]}},
+            },
+            "weightedFontFamily,fontSize,bold,foregroundColor",
+        ),
+        _doc_paragraph_style(
+            text,
+            eyebrow,
+            {"spaceBelow": {"magnitude": 14, "unit": "PT"}, "keepWithNext": True},
+            "spaceBelow,keepWithNext",
+        ),
+    ]
+    for heading in ("Status", "Summary", "Evaluation scope", "Review notes", "Tracker action"):
+        requests.extend([
+            _doc_paragraph_style(
+                text,
+                heading,
+                {
+                    "namedStyleType": "HEADING_2",
+                    "spaceAbove": {"magnitude": 12, "unit": "PT"},
+                    "spaceBelow": {"magnitude": 4, "unit": "PT"},
+                    "keepWithNext": True,
+                },
+                "namedStyleType,spaceAbove,spaceBelow,keepWithNext",
+            ),
+            _doc_text_style(
+                text,
+                heading,
+                {
+                    "weightedFontFamily": {"fontFamily": "Roboto"},
+                    "fontSize": {"magnitude": 13, "unit": "PT"},
+                    "bold": True,
+                    "foregroundColor": {"color": {"rgbColor": DOC_THEME["navy"]}},
+                },
+                "weightedFontFamily,fontSize,bold,foregroundColor",
+            ),
+        ])
+    requests.extend([
+        _doc_text_style(
+            text,
+            status,
+            {
+                "bold": True,
+                "foregroundColor": {"color": {"rgbColor": DOC_THEME["accent"]}},
+                "backgroundColor": {"color": {"rgbColor": DOC_THEME["success_fill"]}},
+            },
+            "bold,foregroundColor,backgroundColor",
+        ),
+        _doc_paragraph_style(
+            text,
+            status,
+            {
+                "borderLeft": {
+                    "color": {"color": {"rgbColor": DOC_THEME["accent"]}},
+                    "width": {"magnitude": 3, "unit": "PT"},
+                    "padding": {"magnitude": 8, "unit": "PT"},
+                    "dashStyle": "SOLID",
+                },
+                "spaceAbove": {"magnitude": 4, "unit": "PT"},
+                "spaceBelow": {"magnitude": 8, "unit": "PT"},
+            },
+            "borderLeft,spaceAbove,spaceBelow",
+        ),
+        {
+            "createParagraphBullets": {
+                "range": _doc_range(text, scope),
+                "bulletPreset": "BULLET_DISC_CIRCLE_SQUARE",
+            }
+        },
+        _doc_paragraph_style(
+            text,
+            scope,
+            {
+                "indentStart": {"magnitude": 18, "unit": "PT"},
+                "indentFirstLine": {"magnitude": 0, "unit": "PT"},
+                "spaceBelow": {"magnitude": 3, "unit": "PT"},
+            },
+            "indentStart,indentFirstLine,spaceBelow",
+        ),
+        _doc_text_style(
+            text,
+            tracker_action,
+            {
+                "bold": True,
+                "foregroundColor": {"color": {"rgbColor": DOC_THEME["navy"]}},
+                "backgroundColor": {"color": {"rgbColor": DOC_THEME["action_fill"]}},
+            },
+            "bold,foregroundColor,backgroundColor",
+        ),
+        _doc_paragraph_style(
+            text,
+            tracker_action,
+            {
+                "borderLeft": {
+                    "color": {"color": {"rgbColor": DOC_THEME["navy"]}},
+                    "width": {"magnitude": 3, "unit": "PT"},
+                    "padding": {"magnitude": 8, "unit": "PT"},
+                    "dashStyle": "SOLID",
+                },
+                "spaceAbove": {"magnitude": 4, "unit": "PT"},
+                "spaceBelow": {"magnitude": 8, "unit": "PT"},
+            },
+            "borderLeft,spaceAbove,spaceBelow",
+        ),
+    ])
+    return requests
+
+
 def create_doc(docs, drive, folder_id: str) -> dict:
     result = execute_request(
         docs.documents().create(body={"title": "RTX Spark Agent Runtime Latency Evaluation"}),
@@ -316,22 +534,23 @@ def create_doc(docs, drive, folder_id: str) -> dict:
     doc_id = result["documentId"]
     text = (
         "RTX Spark Agent Runtime Latency Evaluation\n\n"
+        "EVALUATION REPORT  •  INTERNAL\n\n"
         "Status\n"
         "Complete — ready for review.\n\n"
         "Summary\n"
         "The Agent Runtime evaluation completed its planned local test matrix. The duplicate-completion regression reported today is a separate release blocker and does not invalidate this report.\n\n"
         "Evaluation scope\n"
-        "- Interactive tool-call latency across the internal reference workflow\n"
-        "- Recovery behavior after a failed tool response\n"
-        "- Completion consistency across repeated local runs\n\n"
+        "Interactive tool-call latency across the internal reference workflow\n"
+        "Recovery behavior after a failed tool response\n"
+        "Completion consistency across repeated local runs\n\n"
         "Review notes\n"
         "The results package, methodology notes, and raw-run references are complete. Mateo Chen has handed the report to the program team for review.\n\n"
         "Tracker action\n"
         "Update the Agent Runtime Latency Evaluation lane from In progress to Ready for review. Do not change its owner, due date, or notes.\n"
     )
     execute_request(
-        docs.documents().batchUpdate(documentId=doc_id, body={"requests": [{"insertText": {"location": {"index": 1}, "text": text}}]}),
-        "Populate evaluation document",
+        docs.documents().batchUpdate(documentId=doc_id, body={"requests": evaluation_doc_requests(text)}),
+        "Populate and format evaluation document",
     )
     move_to_folder(drive, doc_id, folder_id)
     return {"id": doc_id, "url": f"https://docs.google.com/document/d/{doc_id}/edit"}
@@ -347,6 +566,140 @@ SLIDES = [
 ]
 
 
+def _slide_element(object_id: str, slide_id: str, width: float, height: float, x: float, y: float) -> dict:
+    return {
+        "objectId": object_id,
+        "shapeType": "TEXT_BOX",
+        "elementProperties": {
+            "pageObjectId": slide_id,
+            "size": {
+                "width": {"magnitude": width, "unit": "PT"},
+                "height": {"magnitude": height, "unit": "PT"},
+            },
+            "transform": {
+                "scaleX": 1,
+                "scaleY": 1,
+                "translateX": x,
+                "translateY": y,
+                "unit": "PT",
+            },
+        },
+    }
+
+
+def _slide_text_style(
+    object_id: str,
+    font_size: float,
+    color: dict[str, float],
+    *,
+    bold: bool = False,
+    font_family: str = "Roboto",
+    text_range: dict | None = None,
+) -> dict:
+    return {
+        "updateTextStyle": {
+            "objectId": object_id,
+            "style": {
+                "fontFamily": font_family,
+                "fontSize": {"magnitude": font_size, "unit": "PT"},
+                "bold": bold,
+                "foregroundColor": {"opaqueColor": {"rgbColor": color}},
+            },
+            "textRange": text_range or {"type": "ALL"},
+            "fields": "fontFamily,fontSize,bold,foregroundColor",
+        }
+    }
+
+
+def _solid_slide_shape(
+    object_id: str,
+    slide_id: str,
+    shape_type: str,
+    width: float,
+    height: float,
+    x: float,
+    y: float,
+    color: dict[str, float],
+) -> list[dict]:
+    element = _slide_element(object_id, slide_id, width, height, x, y)
+    element["shapeType"] = shape_type
+    return [
+        {"createShape": element},
+        {
+            "updateShapeProperties": {
+                "objectId": object_id,
+                "shapeProperties": {
+                    "shapeBackgroundFill": {"solidFill": {"color": {"rgbColor": color}}},
+                    "outline": {"propertyState": "NOT_RENDERED"},
+                },
+                "fields": "shapeBackgroundFill,outline.propertyState",
+            }
+        },
+    ]
+
+
+def slide_template_requests(index: int, title: str, body: str) -> list[dict]:
+    """Render one slide with the reusable seeded-demo visual template."""
+    slide_id = f"rtx_slide_{index}"
+    accent_id = f"rtx_accent_{index}"
+    kicker_id = f"rtx_kicker_{index}"
+    title_id = f"rtx_title_{index}"
+    card_id = f"rtx_card_{index}"
+    body_id = f"rtx_body_{index}"
+    footer_rule_id = f"rtx_footer_rule_{index}"
+    footer_id = f"rtx_footer_{index}"
+    page_id = f"rtx_page_{index}"
+
+    requests = [
+        {"createSlide": {"objectId": slide_id, "slideLayoutReference": {"predefinedLayout": "BLANK"}}},
+        {
+            "updatePageProperties": {
+                "objectId": slide_id,
+                "pageProperties": {
+                    "pageBackgroundFill": {"solidFill": {"color": {"rgbColor": SLIDE_THEME["background"]}}}
+                },
+                "fields": "pageBackgroundFill",
+            }
+        },
+    ]
+    requests.extend(_solid_slide_shape(accent_id, slide_id, "RECTANGLE", 720, 8, 0, 0, SLIDE_THEME["accent"]))
+    requests.extend([
+        {"createShape": _slide_element(kicker_id, slide_id, 620, 18, 46, 28)},
+        {"insertText": {"objectId": kicker_id, "text": "RTX SPARK  /  AGENT RUNTIME"}},
+        _slide_text_style(kicker_id, 9, SLIDE_THEME["accent"], bold=True),
+        {"createShape": _slide_element(title_id, slide_id, 625, 72, 46, 53)},
+        {"insertText": {"objectId": title_id, "text": title}},
+        _slide_text_style(title_id, 28 if index == 1 else 25, SLIDE_THEME["title"], bold=True),
+    ])
+    requests.extend(_solid_slide_shape(card_id, slide_id, "ROUND_RECTANGLE", 644, 205, 38, 137, SLIDE_THEME["surface"]))
+    requests.extend([
+        {"createShape": _slide_element(body_id, slide_id, 594, 158, 63, 160)},
+        {"insertText": {"objectId": body_id, "text": body}},
+        _slide_text_style(body_id, 15, SLIDE_THEME["body"]),
+    ])
+    if "APPROVED HEADLINE PLACEHOLDER" in body:
+        start = body.index("APPROVED HEADLINE PLACEHOLDER")
+        requests.append(
+            _slide_text_style(
+                body_id,
+                19,
+                SLIDE_THEME["accent"],
+                bold=True,
+                text_range={"type": "FIXED_RANGE", "startIndex": start, "endIndex": start + len("APPROVED HEADLINE PLACEHOLDER")},
+            )
+        )
+    requests.extend(_solid_slide_shape(footer_rule_id, slide_id, "RECTANGLE", 628, 1, 46, 365, SLIDE_THEME["muted"]))
+    requests.extend([
+        {"createShape": _slide_element(footer_id, slide_id, 520, 16, 46, 374)},
+        {"insertText": {"objectId": footer_id, "text": "INTERNAL WORKING DECK  •  SEEDED DEMO"}},
+        _slide_text_style(footer_id, 8, SLIDE_THEME["muted"], bold=True),
+        {"createShape": _slide_element(page_id, slide_id, 35, 16, 638, 374)},
+        {"insertText": {"objectId": page_id, "text": f"{index:02d}"}},
+        _slide_text_style(page_id, 8, SLIDE_THEME["accent"], bold=True),
+    ])
+    return requests
+
+
 def create_slides(slides, drive, folder_id: str) -> dict:
     result = execute_request(
         slides.presentations().create(body={"title": "RTX Spark Partner Readout"}),
@@ -357,18 +710,7 @@ def create_slides(slides, drive, folder_id: str) -> dict:
     if result.get("slides"):
         requests.append({"deleteObject": {"objectId": result["slides"][0]["objectId"]}})
     for index, (title, body) in enumerate(SLIDES, 1):
-        slide_id = f"rtx_slide_{index}"
-        title_id = f"rtx_title_{index}"
-        body_id = f"rtx_body_{index}"
-        requests.extend([
-            {"createSlide": {"objectId": slide_id, "slideLayoutReference": {"predefinedLayout": "BLANK"}}},
-            {"createShape": {"objectId": title_id, "shapeType": "TEXT_BOX", "elementProperties": {"pageObjectId": slide_id, "size": {"width": {"magnitude": 620, "unit": "PT"}, "height": {"magnitude": 90, "unit": "PT"}}, "transform": {"scaleX": 1, "scaleY": 1, "translateX": 45, "translateY": 35, "unit": "PT"}}}},
-            {"insertText": {"objectId": title_id, "text": title}},
-            {"updateTextStyle": {"objectId": title_id, "style": {"fontSize": {"magnitude": 26, "unit": "PT"}, "bold": True, "foregroundColor": {"opaqueColor": {"rgbColor": {"red": 0.12, "green": 0.20, "blue": 0.32}}}}, "textRange": {"type": "ALL"}, "fields": "fontSize,bold,foregroundColor"}},
-            {"createShape": {"objectId": body_id, "shapeType": "TEXT_BOX", "elementProperties": {"pageObjectId": slide_id, "size": {"width": {"magnitude": 620, "unit": "PT"}, "height": {"magnitude": 280, "unit": "PT"}}, "transform": {"scaleX": 1, "scaleY": 1, "translateX": 50, "translateY": 145, "unit": "PT"}}}},
-            {"insertText": {"objectId": body_id, "text": body}},
-            {"updateTextStyle": {"objectId": body_id, "style": {"fontSize": {"magnitude": 16, "unit": "PT"}, "foregroundColor": {"opaqueColor": {"rgbColor": {"red": 0.18, "green": 0.22, "blue": 0.28}}}}, "textRange": {"type": "ALL"}, "fields": "fontSize,foregroundColor"}},
-        ])
+        requests.extend(slide_template_requests(index, title, body))
     execute_request(
         slides.presentations().batchUpdate(presentationId=presentation_id, body={"requests": requests}),
         "Populate partner readout",
@@ -399,6 +741,53 @@ def tracker_rows(
     ]
 
 
+def tracker_status_format_requests(sheet_id: int) -> list[dict]:
+    status_range = {
+        "sheetId": sheet_id,
+        "startRowIndex": 6,
+        "endRowIndex": 14,
+        "startColumnIndex": 2,
+        "endColumnIndex": 3,
+    }
+    requests = []
+    for index, status in enumerate(STATUS_VALUES):
+        background, foreground = STATUS_STYLES[status]
+        requests.append({
+            "addConditionalFormatRule": {
+                "rule": {
+                    "ranges": [status_range],
+                    "booleanRule": {
+                        "condition": {"type": "TEXT_EQ", "values": [{"userEnteredValue": status}]},
+                        "format": {
+                            "backgroundColor": background,
+                            "textFormat": {"foregroundColor": foreground, "bold": True},
+                        },
+                    },
+                },
+                "index": index,
+            }
+        })
+    return requests
+
+
+def tracker_column_width_requests(sheet_id: int) -> list[dict]:
+    return [
+        {
+            "updateDimensionProperties": {
+                "range": {
+                    "sheetId": sheet_id,
+                    "dimension": "COLUMNS",
+                    "startIndex": index,
+                    "endIndex": index + 1,
+                },
+                "properties": {"pixelSize": width},
+                "fields": "pixelSize",
+            }
+        }
+        for index, width in enumerate(TRACKER_COLUMN_WIDTHS)
+    ]
+
+
 def create_sheet(sheets, drive, folder_id: str, slides_url: str, doc_url: str, demo_day: date) -> dict:
     result = execute_request(
         sheets.spreadsheets().create(body={"properties": {"title": "RTX Spark Delivery Tracker"}, "sheets": [{"properties": {"title": "Campaign Lanes", "gridProperties": {"rowCount": 100, "columnCount": 12, "frozenRowCount": 6, "hideGridlines": True}}}]}),
@@ -417,11 +806,19 @@ def create_sheet(sheets, drive, folder_id: str, slides_url: str, doc_url: str, d
         {"mergeCells": {"range": {"sheetId": sheet_id, "startRowIndex": 1, "endRowIndex": 2, "startColumnIndex": 0, "endColumnIndex": 10}, "mergeType": "MERGE_ALL"}},
         {"mergeCells": {"range": {"sheetId": sheet_id, "startRowIndex": 3, "endRowIndex": 4, "startColumnIndex": 0, "endColumnIndex": 10}, "mergeType": "MERGE_ALL"}},
         {"repeatCell": {"range": {"sheetId": sheet_id, "startRowIndex": 0, "endRowIndex": 1, "startColumnIndex": 0, "endColumnIndex": 10}, "cell": {"userEnteredFormat": {"backgroundColor": {"red": 0.10, "green": 0.18, "blue": 0.30}, "textFormat": {"foregroundColor": {"red": 1, "green": 1, "blue": 1}, "fontSize": 18, "bold": True}, "verticalAlignment": "MIDDLE"}}, "fields": "userEnteredFormat"}},
+        {"repeatCell": {"range": {"sheetId": sheet_id, "startRowIndex": 1, "endRowIndex": 2, "startColumnIndex": 0, "endColumnIndex": 10}, "cell": {"userEnteredFormat": {"backgroundColor": {"red": 0.90, "green": 0.94, "blue": 0.98}, "textFormat": {"foregroundColor": {"red": 0.16, "green": 0.24, "blue": 0.34}, "fontSize": 12, "italic": True}, "verticalAlignment": "MIDDLE"}}, "fields": "userEnteredFormat"}},
+        {"repeatCell": {"range": {"sheetId": sheet_id, "startRowIndex": 2, "endRowIndex": 3, "startColumnIndex": 0, "endColumnIndex": 10}, "cell": {"userEnteredFormat": {"backgroundColor": {"red": 0.96, "green": 0.97, "blue": 0.98}, "textFormat": {"foregroundColor": {"red": 0.20, "green": 0.25, "blue": 0.32}, "bold": True}, "verticalAlignment": "MIDDLE", "horizontalAlignment": "CENTER"}}, "fields": "userEnteredFormat"}},
+        {"repeatCell": {"range": {"sheetId": sheet_id, "startRowIndex": 3, "endRowIndex": 4, "startColumnIndex": 0, "endColumnIndex": 10}, "cell": {"userEnteredFormat": {"backgroundColor": {"red": 0.94, "green": 0.97, "blue": 1.00}, "textFormat": {"foregroundColor": {"red": 0.24, "green": 0.32, "blue": 0.42}, "italic": True}, "wrapStrategy": "WRAP", "verticalAlignment": "MIDDLE"}}, "fields": "userEnteredFormat"}},
         {"repeatCell": {"range": {"sheetId": sheet_id, "startRowIndex": 5, "endRowIndex": 6, "startColumnIndex": 0, "endColumnIndex": 10}, "cell": {"userEnteredFormat": {"backgroundColor": {"red": 0.20, "green": 0.35, "blue": 0.55}, "textFormat": {"foregroundColor": {"red": 1, "green": 1, "blue": 1}, "bold": True}, "wrapStrategy": "WRAP"}}, "fields": "userEnteredFormat"}},
         {"repeatCell": {"range": {"sheetId": sheet_id, "startRowIndex": 6, "endRowIndex": 14, "startColumnIndex": 0, "endColumnIndex": 10}, "cell": {"userEnteredFormat": {"wrapStrategy": "WRAP", "verticalAlignment": "TOP"}}, "fields": "userEnteredFormat.wrapStrategy,userEnteredFormat.verticalAlignment"}},
+        {"repeatCell": {"range": {"sheetId": sheet_id, "startRowIndex": 6, "endRowIndex": 14, "startColumnIndex": 2, "endColumnIndex": 3}, "cell": {"userEnteredFormat": {"horizontalAlignment": "CENTER", "verticalAlignment": "MIDDLE", "textFormat": {"bold": True}}}, "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.verticalAlignment,userEnteredFormat.textFormat.bold"}},
         {"setDataValidation": {"range": {"sheetId": sheet_id, "startRowIndex": 6, "endRowIndex": 14, "startColumnIndex": 2, "endColumnIndex": 3}, "rule": {"condition": {"type": "ONE_OF_LIST", "values": [{"userEnteredValue": value} for value in STATUS_VALUES]}, "strict": True, "showCustomUi": True}}},
-        {"updateDimensionProperties": {"range": {"sheetId": sheet_id, "dimension": "COLUMNS", "startIndex": 0, "endIndex": 10}, "properties": {"pixelSize": 170}, "fields": "pixelSize"}},
+        {"setBasicFilter": {"filter": {"range": {"sheetId": sheet_id, "startRowIndex": 5, "endRowIndex": 14, "startColumnIndex": 0, "endColumnIndex": 10}}}},
+        {"updateDimensionProperties": {"range": {"sheetId": sheet_id, "dimension": "ROWS", "startIndex": 0, "endIndex": 1}, "properties": {"pixelSize": 42}, "fields": "pixelSize"}},
+        {"updateDimensionProperties": {"range": {"sheetId": sheet_id, "dimension": "ROWS", "startIndex": 5, "endIndex": 6}, "properties": {"pixelSize": 42}, "fields": "pixelSize"}},
     ]
+    requests.extend(tracker_status_format_requests(sheet_id))
+    requests.extend(tracker_column_width_requests(sheet_id))
     execute_request(
         sheets.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests}),
         "Format delivery tracker",

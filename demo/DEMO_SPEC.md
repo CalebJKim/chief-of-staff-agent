@@ -27,12 +27,13 @@ The fictional scenario is fixed seed data. The Chief of Staff skill does not con
 - **1 Google Sheet**: `RTX Spark Delivery Tracker`
   - Tab: `Campaign Lanes`
   - Columns A:J: Lane, PIC, Status, Latest update, Next action, Due, Dependency/blocker, Evidence, Artifact, Notes.
-  - Eight data rows with a validated status dropdown.
+  - Eight data rows with a validated, color-coded status dropdown, a frozen/filterable header, and task-specific column widths.
   - The seeded evidence currently ranks Agent Runtime regression, Agent Runtime Latency Evaluation, and Partner Readout Deck as the top three.
 - **1 Google Doc**: `RTX Spark Agent Runtime Latency Evaluation`
+  - Uses a structured internal-report layout with a branded title, section hierarchy, status and action callouts, and a true bulleted scope list.
   - States that the evaluation is complete and ready for review.
 - **1 Google Slides deck**: `RTX Spark Partner Readout`
-  - Six slides.
+  - Six slides rendered from a reusable dark visual template with consistent typography, accent bars, content cards, footers, and page numbers.
   - Slide 4 contains `APPROVED HEADLINE PLACEHOLDER` and keeps all surrounding content intact.
 
 Generated resource IDs and explicitly tracked demo draft IDs are stored only in:

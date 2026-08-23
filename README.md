@@ -11,7 +11,7 @@ The optional seeder creates data in the Google account you authorize:
 - 6 meaningful Gmail messages, all Inbox and Unread; the two release-blocker messages are Important.
 - 70 older, unread, low-signal messages from fictional people; none are Important.
 - 12 Calendar resources producing 47 visible meeting instances across one workweek, including three lightly overlapping series.
-- An `RTX Spark Agent Runtime Demo` Drive folder containing a 14-row delivery-tracker Sheet, a latency-evaluation Doc, and a 6-slide partner-readout deck.
+- An `RTX Spark Agent Runtime Demo` Drive folder containing a polished 14-row delivery-tracker Sheet with color-coded statuses, a structured internal-report latency-evaluation Doc, and a 6-slide partner-readout deck built from a reusable visual template.
 - A local state file under `HERMES_HOME` containing only the generated resource IDs needed for reset and cleanup.
 
 Use a dedicated test or demo Google account. Seeding and cleanup modify real Google Workspace data in the connected account, and cleanup permanently deletes the exact seeded Gmail message IDs.
