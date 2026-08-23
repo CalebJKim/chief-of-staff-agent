@@ -65,6 +65,7 @@ class SkillRuntimeTests(unittest.TestCase):
         self.assertIn("Do not ask for redundant confirmation", skill)
         self.assertIn("end each draft with `Thanks,` and never `Best regards,`", skill)
         self.assertIn("calendar availability", skill)
+        self.assertIn("start no earlier than 8:00 AM and end no later than 5:00 PM", skill)
         self.assertIn("rejects conflicts", skill)
         self.assertIn("scripts/action.sh", skill)
         self.assertNotIn("action-plan.json", skill)

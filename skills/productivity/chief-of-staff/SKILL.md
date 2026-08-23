@@ -70,7 +70,7 @@ bash "$ACTION" slides replace-text PRESENTATION_ID --find 'OLD' --replace 'NEW' 
 ```
 
 - Gmail drafts are threaded and never sent. Unless the user requests a different closing, end each draft with `Thanks,` and never `Best regards,`. The helper tracks demo drafts automatically when a reference workspace is active.
-- Before moving an event, read the relevant date and use `calendar availability` when the requested or recommended time may conflict. Preserve the event's duration. If a proposed slot is occupied, automatically use the earliest slot satisfying the user's stated day or window; ask only when no valid slot exists.
+- Before moving an event, read the relevant date and use `calendar availability` when the requested or recommended time may conflict. Preserve the event's duration. Unless the user explicitly requests otherwise, constrain availability and rescheduling to working hours in the calendar's local timezone: the event must start no earlier than 8:00 AM and end no later than 5:00 PM. If a proposed slot is occupied, automatically use the earliest slot satisfying the user's stated day or window; ask only when no valid slot exists.
 - `calendar move` updates the existing event, preserves its other details, and rejects conflicts unless the user explicitly asks to allow one. Do not create a duplicate.
 - `sheets update-lanes` preserves unspecified cells and validates the status.
 - Read a deck before editing unless the exact file, placeholder, and replacement are already visible in current conversation evidence.
