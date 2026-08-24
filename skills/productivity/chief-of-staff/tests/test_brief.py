@@ -33,117 +33,103 @@ class BriefTests(unittest.TestCase):
             min_focus_minutes=30,
         )
 
-    def test_conflict_and_priority_evidence(self):
+    def test_packet_contains_bounded_generic_decision_evidence(self):
         snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
         packet = brief.build_packet(snapshot, self.args())
-        self.assertEqual(len(packet["conflicts"]), 1)
-        self.assertEqual(len(packet["conflicts"][0]["events"]), 3)
-        self.assertEqual(packet["mail"][0]["id"], "msg-urgent")
+
+        self.assertEqual(1, len(packet["conflicts"]))
+        self.assertEqual(3, len(packet["conflicts"][0]["events"]))
+        self.assertEqual("msg-urgent", packet["mail"][0]["id"])
         self.assertNotIn('"signal_score"', json.dumps(packet))
-        self.assertEqual(packet["mail"][0]["url"], "https://mail.google.com/mail/u/0/#all/thread-urgent")
-        self.assertEqual(packet["source_status"], {"calendar": "ok", "gmail": "ok", "drive": "ok"})
-        self.assertIn("no more than three sentences", packet["instruction"])
-        self.assertIn("Recommended action item(s):", packet["instruction"])
-        self.assertIn("inline links", packet["instruction"])
-        self.assertIn("workstreams[0:3]", packet["instruction"])
+        self.assertEqual("https://mail.google.com/mail/u/0/#all/thread-urgent", packet["mail"][0]["url"])
+        self.assertEqual(
+            {"calendar": "ok", "gmail": "ok", "drive": "ok", "sheets": "ok_empty"},
+            packet["source_status"],
+        )
+        packet_rules = json.dumps({
+            "instruction": packet["instruction"],
+            "selection_rules": packet["selection_rules"],
+            "response_contract": packet["response_contract"],
+        })
+        self.assertIn("top 3 distinct actionable outcomes", packet_rules)
+        self.assertIn("Recommended action item(s):", packet_rules)
+        self.assertIn("one distinct Mail link for every message", packet_rules)
+        self.assertIn("bounded to at most three Mail links", packet_rules)
+        self.assertIn("Copy sender names exactly", packet_rules)
+        self.assertIn("URL-valued cell", packet_rules)
+        self.assertIn("exactly matches live mail.from", packet_rules)
+        self.assertTrue(packet["response_contract"]["item_template"][1].startswith("   - **Evidence:**"))
+        self.assertIn("separate Evidence line", packet_rules)
+        self.assertIn("never use remembered, learned, or repository-defined", packet_rules)
+        self.assertIn("never merge row_units", packet_rules)
         self.assertEqual(3, packet["requested_top_n"])
-        self.assertIn("never split", packet["instruction"])
+        self.assertEqual("response_contract", next(reversed(packet)))
         exec_event = next(event for event in packet["meetings"] if event["id"] == "evt-exec")
         self.assertTrue(any(item["id"] == "deck-1" for item in exec_event["related"]["files"]))
 
-    def test_tracker_workstreams_are_grouped_ranked_and_linked(self):
+    def test_sheet_schema_samples_and_validations_pass_through_without_mappings(self):
         snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
-        snapshot["trackers"] = [{
+        snapshot["sheets"] = [{
             "id": "sheet-1",
-            "name": "Product launch tracker",
+            "name": "Live workbook",
             "url": "https://docs.google.com/spreadsheets/d/sheet-1/edit",
-            "rows": [
-                {
-                    "row": 7,
-                    "lane": "Exec launch decision",
-                    "pic": "CEO",
-                    "status": "Blocked",
-                    "latest": "A release blocker is open.",
-                    "next": "Move the exec launch decision meeting.",
-                    "blocker": "The meeting must move.",
-                    "evidence": "https://mail.google.com/mail/u/0/#all/thread-urgent",
-                    "artifact": "https://docs.google.com/spreadsheets/d/sheet-1/edit",
+            "title": "Live workbook",
+            "locale": "en_US",
+            "timezone": "UTC",
+            "tabs": [{
+                "title": "Arbitrary tab",
+                "grid_size": {"rows": 100, "columns": 12},
+                "inspection_truncated": True,
+                "preamble": [{"row": 1, "values": {"A": "Overview"}}],
+                "table": {
+                    "header_row": 3,
+                    "columns": [
+                        {"column": "A", "name": "Signal"},
+                        {"column": "B", "name": "Choice"},
+                        {"column": "C", "name": "Instruction"},
+                    ],
+                    "row_count": 2,
+                    "representative_rows": [
+                        {"row": 4, "values": {"A": "One", "B": "Alpha", "C": "Review it"}},
+                        {"row": 5, "values": {"A": "Two", "B": "Beta", "C": "Wait"}},
+                    ],
                 },
-                {
-                    "row": 8,
-                    "lane": "Launch readiness",
-                    "pic": "PM",
-                    "status": "In progress",
-                    "latest": "The work is ready.",
-                    "next": "Change only this lane's status to Ready for review.",
-                    "blocker": "None",
-                    "evidence": "https://mail.google.com/mail/u/0/#all/thread-customer",
-                    "artifact": "https://docs.google.com/document/d/doc-1/edit",
-                },
-                {
-                    "row": 9,
-                    "lane": "Launch positioning deck",
-                    "pic": "Owner",
-                    "status": "Awaiting update",
-                    "latest": "The headline is approved.",
-                    "next": "Replace APPROVED HEADLINE PLACEHOLDER with “Meet the launch: a faster path to completed work.” on slide 4.",
-                    "blocker": "None",
-                    "evidence": "https://mail.google.com/mail/u/0/#all/thread-urgent",
-                    "artifact": "https://docs.google.com/presentation/d/deck-1/edit",
-                },
-                {
-                    "row": 10,
-                    "lane": "Partner checklist",
-                    "pic": "Producer",
-                    "status": "Not started",
-                    "latest": "The checklist is ready to start.",
-                    "next": "Change only this lane's status to In progress.",
-                    "blocker": "None",
-                    "evidence": "https://mail.google.com/mail/u/0/#all/thread-customer",
-                    "artifact": "https://docs.google.com/spreadsheets/d/sheet-1/edit",
-                },
-                {
-                    "row": 11,
-                    "lane": "Reliability matrix",
-                    "pic": "QA",
-                    "status": "In review",
-                    "latest": "The matrix is ready for review.",
-                    "next": "Change only this lane's status to Ready for review.",
-                    "blocker": "None",
-                    "evidence": "https://mail.google.com/mail/u/0/#all/thread-urgent",
-                    "artifact": "https://docs.google.com/spreadsheets/d/sheet-1/edit",
-                },
-            ],
+                "validation_previews": [{
+                    "cells": ["B4", "B5"],
+                    "cell_count": 2,
+                    "validation": {
+                        "condition_type": "ONE_OF_LIST",
+                        "allowed_values": ["Alpha", "Beta"],
+                    },
+                }],
+            }],
         }]
 
         packet = brief.build_packet(snapshot, self.args(top_n=5))
-        workstreams = packet["workstreams"]
+
+        sheet = packet["sheet_evidence"][0]
+        self.assertEqual(snapshot["sheets"][0]["url"], sheet["url"])
         self.assertEqual(
-            ["Exec launch decision", "Launch readiness", "Launch positioning deck", "Partner checklist", "Reliability matrix"],
-            [item["outcome"] for item in workstreams],
+            ["Signal", "Choice", "Instruction"],
+            [item["name"] for item in sheet["tabs"][0]["schema"]],
         )
-        self.assertEqual(["Calendar", "Tracker", "Deck", "Tracker", "Tracker"], [item["target"]["label"] for item in workstreams])
-        self.assertEqual("msg-urgent", workstreams[0]["supporting_mail"]["id"])
-        self.assertEqual("evt-exec", workstreams[0]["target"]["id"])
-        self.assertTrue(all("action_command" not in item and "_action" not in item for item in workstreams))
+        self.assertEqual(2, len(sheet["tabs"][0]["row_units"]))
+        self.assertNotIn("row", sheet["tabs"][0]["row_units"][0])
+        self.assertEqual(
+            ["Signal", "Choice", "Instruction"],
+            [cell["header"] for cell in sheet["tabs"][0]["row_units"][0]["cells"]],
+        )
+        self.assertEqual(
+            snapshot["sheets"][0]["tabs"][0]["validation_previews"],
+            sheet["tabs"][0]["validation_previews"],
+        )
+        self.assertNotIn("workstreams", packet)
         self.assertEqual(5, packet["requested_top_n"])
-        self.assertIn("workstreams[0:5]", packet["instruction"])
-
-        reply = brief.render_initial_reply(packet)
-        self.assertTrue(reply.startswith("Today's workload centers on "))
-        self.assertIn("Exec launch decision", reply)
-        self.assertIn("Change only this lane's status to Ready for review.", reply)
-        self.assertIn("Meet the launch: a faster path to completed work.", reply)
-        self.assertEqual(5, reply.count("Recommended action item(s):"))
-        self.assertEqual(1, reply.count("[Calendar]("))
-        self.assertEqual(3, reply.count("[Tracker]("))
-        self.assertEqual(1, reply.count("[Deck]("))
-        self.assertNotIn("action_command", reply)
-        self.assertNotIn("cos.sh", reply)
-
-        default_packet = brief.build_packet(snapshot, self.args())
-        self.assertEqual(3, len(default_packet["workstreams"]))
-        self.assertEqual(3, brief.render_initial_reply(default_packet).count("Recommended action item(s):"))
+        self.assertIn("top 5 distinct actionable outcomes", packet["instruction"])
+        self.assertFalse(hasattr(brief, "STATUS_PRIORITY"))
+        self.assertFalse(hasattr(brief, "KEYWORDS"))
+        self.assertFalse(hasattr(brief, "build_workstreams"))
+        self.assertFalse(hasattr(brief, "render_initial_reply"))
 
     def test_packet_respects_context_budget(self):
         snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
@@ -151,7 +137,7 @@ class BriefTests(unittest.TestCase):
         self.assertLessEqual(len(encoded), 5000)
         self.assertIn("conflicts", json.loads(encoded))
 
-    def test_normal_budget_preserves_six_highest_signal_messages(self):
+    def test_normal_budget_preserves_mail_and_sheet_samples(self):
         packet = {
             "mail": [
                 {"id": f"message-{index}", "snippet": "signal " * 100}
@@ -160,13 +146,18 @@ class BriefTests(unittest.TestCase):
             "meetings": [{"id": index, "detail": "calendar " * 100} for index in range(10)],
             "recent_files": [{"id": index, "detail": "file " * 100} for index in range(8)],
             "conflicts": [{"id": index, "detail": "conflict " * 100} for index in range(5)],
-            "trackers": [{"rows": [{"row": index, "detail": "tracker " * 100} for index in range(8)]}],
+            "focus_blocks": [],
+            "sheet_evidence": [{"tabs": [{"row_units": [
+                {"row": index, "cells": [{"header": "Anything", "value": "sheet " * 100}]}
+                for index in range(8)
+            ]}]}],
         }
 
         fitted = json.loads(brief.fit_packet(packet, 14000))
 
         self.assertLessEqual(len(json.dumps(fitted, ensure_ascii=False, separators=(",", ":"))), 14000)
         self.assertGreaterEqual(len(fitted["mail"]), 6)
+        self.assertGreaterEqual(len(fitted["sheet_evidence"][0]["tabs"][0]["row_units"]), 6)
 
     def test_empty_success_is_not_reported_as_unavailable(self):
         snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
@@ -174,8 +165,9 @@ class BriefTests(unittest.TestCase):
         snapshot["files"] = []
         snapshot["coverage"].update({"events": 0, "files": 0, "errors": []})
         packet = brief.build_packet(snapshot, self.args())
-        self.assertEqual(packet["source_status"]["calendar"], "ok_empty")
-        self.assertEqual(packet["source_status"]["drive"], "ok_empty")
+        self.assertEqual("ok_empty", packet["source_status"]["calendar"])
+        self.assertEqual("ok_empty", packet["source_status"]["drive"])
+        self.assertEqual("ok_empty", packet["source_status"]["sheets"])
 
 
 if __name__ == "__main__":

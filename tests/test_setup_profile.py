@@ -56,6 +56,13 @@ class SetupProfileTests(unittest.TestCase):
             ],
             self.commands,
         )
+        self.assertIn(
+            [
+                "hermes", "-p", "chief-of-staff-demo", "config", "set",
+                "skills.creation_nudge_interval", "0", "--force",
+            ],
+            self.commands,
+        )
 
     def test_existing_profile_is_updated_without_replacing_config(self) -> None:
         target = self.hermes_root / "profiles" / "chief-of-staff-demo"
@@ -79,6 +86,13 @@ class SetupProfileTests(unittest.TestCase):
             [
                 "hermes", "-p", "chief-of-staff-demo", "config", "set",
                 "agent.max_turns", "24", "--force",
+            ],
+            self.commands,
+        )
+        self.assertIn(
+            [
+                "hermes", "-p", "chief-of-staff-demo", "config", "set",
+                "skills.creation_nudge_interval", "0", "--force",
             ],
             self.commands,
         )

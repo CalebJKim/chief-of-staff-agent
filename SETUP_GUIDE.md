@@ -94,7 +94,7 @@ calendar event offsets.
 & $Python -m unittest discover -s skills/productivity/chief-of-staff/tests -v
 ```
 
-Expected result: 47 tests pass across the three suites.
+Expected result: 73 tests pass across the three suites.
 
 ## 5. Create or refresh the isolated Hermes profile
 
@@ -102,12 +102,15 @@ Expected result: 47 tests pass across the three suites.
 & $Python setup_profile.py --profile-name $ProfileName --hermes-root $HermesRoot
 hermes -p $ProfileName skills list
 hermes -p $ProfileName config get agent.max_turns
+hermes -p $ProfileName config get skills.creation_nudge_interval
 ```
 
 The setup script creates the dedicated profile if needed, preserves the selected
 model configuration, installs only `ingest` and `chief-of-staff`, enables the
 `skills` and `terminal` toolsets, and sets Max Agent Steps to `40`. It can be
-rerun after repository updates without recreating the profile.
+rerun after repository updates without recreating the profile. It also disables
+skill-creation nudges and installs repository-managed-skill instructions; the
+agent can load the skills but must not modify them during a demo run.
 
 Optional Hermes health checks:
 
@@ -192,7 +195,7 @@ one seeded message through the installed action helper:
 $StatePath = Join-Path $env:HERMES_HOME "chief-of-staff-workspace-state.json"
 $State = Get-Content -Raw $StatePath | ConvertFrom-Json
 $Action = Join-Path $env:HERMES_HOME "skills\productivity\ingest\scripts\actions.py"
-& $Python $Action gmail draft --reply-to-message $State.emails[0].id `
+& $Python $Action gmail reply-draft $State.emails[0].id `
   --body "Thanks, I am preparing the decision brief." --track-demo-state
 ```
 
@@ -226,6 +229,7 @@ Then say `Take the action items for the first thing.` and `Take the action items
 Reset the workspace to its original seeded state:
 
 ```powershell
+$env:HERMES_HOME = Join-Path $env:LOCALAPPDATA "hermes\profiles\chief-of-staff-demo"
 & $Python demo\reset_workspace.py
 ```
 
@@ -234,6 +238,7 @@ their recorded IDs, delete imported calendar events, and move the generated Driv
 contents to Trash:
 
 ```powershell
+$env:HERMES_HOME = Join-Path $env:LOCALAPPDATA "hermes\profiles\chief-of-staff-demo"
 & $Python demo\seed_workspace.py --cleanup --confirm
 ```
 
@@ -262,8 +267,7 @@ The original full acceptance checks passed on August 21, 2026:
   background), 12 calendar resources producing 47 visible weekly instances,
   one Agent Runtime folder, one 14-row delivery tracker, one latency-evaluation
   Doc, and one 6-slide partner-readout deck.
-- Decision-packet generation with three grouped workstreams in the expected
-  regression, evaluation, and deck order, plus inline Mail and action links.
+- Decision-packet generation with generic Sheet schema/sample/validation evidence and no repository-defined field mappings, status ranking, or action routing. The live agent interpreted it into the expected regression, evaluation, and deck order with inline Mail and action links.
 - A real Hermes prompt using the installed skill and configured local model:
   `Hey chief of staff, what should we work on today?`
 - The final acceptance reset/reseed took 42.2 seconds. The complete four-prompt
@@ -272,13 +276,12 @@ The original full acceptance checks passed on August 21, 2026:
   messages, no seeded messages in Trash, and exact agreement between all 76
   saved cleanup IDs and live Gmail IDs. Each of the six meaningful threads
   contained exactly one message.
-- The 14,000-character decision packet retained all 6 meaningful messages and
-  the three action-ready workstreams.
+- The 14,000-character decision packet retained the meaningful messages and compact Sheet evidence needed for the agent to identify the action-ready workstreams.
 
 The Gmail ordering and automatic demo-day update was revalidated live on August
 22, 2026. Ingestion scanned all 76 matching messages, sorted before retaining
 20, placed all 6 meaningful subjects first, selected the upcoming Monday on the
-weekend, and generated the same three ordered workstreams without source errors.
+weekend, and retained the evidence needed to generate the same three ordered workstreams without source errors.
 A clean reset then confirmed that Gmail's raw positions 1–6 were the six
 meaningful messages, all 76 mailbox messages belonged to the current seed, all
 76 subjects were unique, and no subject contained either the old `note NNN`
@@ -322,18 +325,26 @@ expected top-three priorities and schedule recommendations.
    IDs while leaving all untracked drafts alone. One legacy fake draft created
    before tracking existed was removed once by its exact Gmail draft ID.
 8. With 20 scanned messages and the dense demo calendar, the original packet
-   fitter discarded mail until only one message remained. Conflict and tracker
-   data are now compacted, low-value duplicate context is trimmed first, and
-   the normal 14,000-character budget preserves the six highest-signal emails.
+   fitter discarded mail until only one message remained. Conflict and Sheet
+   preview data are now compacted, low-value duplicate context is trimmed first,
+   and the normal 14,000-character budget preserves the six highest-signal emails.
 9. The local model occasionally rewrote the multi-line start-of-day command in
    `SKILL.md`, duplicated the Hermes path, and substituted an unsupported
    `actions.py gmail threads` call. The exact ingest-and-brief command now lives
    in `scripts/start_day.sh`; the skill invokes that file with one command.
-10. Follow-up runs still improvised Sheets and Slides command syntax. The
-    decision-packet builder now saves a data-derived action plan and exposes one
-    short `workstream N` command per ranked item. The demo helper executes and
-    verifies those exact steps without changing Hermes defaults.
-11. `disabled_client` is not a seeder or Hermes error. In the final run, Google
+10. Follow-up runs could improvise fixed tracker coordinates or repeat a status
+    list in code. The spreadsheet helper now inspects the live workbook, finds a
+    row and column from their contents, reads the target cell's validation and
+    protection metadata, checks its current value again, writes only that cell,
+    and verifies it. The runtime does not assume the seeded tab name, row number,
+    column letter, or dropdown values.
+11. A local-model run mixed GNU and macOS `date` flags, omitted a UTC offset,
+    guessed recipient addresses, and attempted an unnecessary `skill_manage`
+    patch. Calendar rescheduling now accepts a literal local date and performs
+    timezone, working-hours, duration, and conflict logic in Python. Reply drafts
+    derive recipients from real Gmail message IDs. The profile disables creation
+    nudges and explicitly treats installed skills as immutable.
+12. `disabled_client` is not a seeder or Hermes error. In the final run, Google
     returned it briefly even though the console showed the Desktop client as
     enabled; a later `--check-live` succeeded without replacing credentials.
     Verify both the client and secret status, allow for propagation, and replace

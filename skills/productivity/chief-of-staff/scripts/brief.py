@@ -12,36 +12,9 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-KEYWORDS = {
-    "urgent": 8,
-    "blocker": 8,
-    "deadline": 7,
-    "decision": 7,
-    "approve": 6,
-    "approval": 6,
-    "customer": 6,
-    "launch": 6,
-    "exec": 6,
-    "board": 7,
-    "investor": 6,
-    "follow up": 5,
-    "action required": 7,
-    "review": 3,
-    "update": 2,
-}
 STOPWORDS = {
     "about", "after", "before", "could", "from", "have", "into", "meeting", "notes",
     "that", "their", "there", "these", "this", "today", "update", "with", "your",
-}
-STATUS_PRIORITY = {
-    "blocked": 100,
-    "awaiting update": 40,
-    "in progress": 50,
-    "not started": 30,
-    "ready for review": 20,
-    "in review": 10,
-    "on track": 0,
-    "complete": -100,
 }
 def hermes_home() -> Path:
     override = os.environ.get("HERMES_HOME")
@@ -76,16 +49,9 @@ def tokens(text: str) -> set[str]:
     }
 
 
-def keyword_score(text: str) -> tuple[int, list[str]]:
-    lowered = (text or "").casefold()
-    matches = [word for word in KEYWORDS if word in lowered]
-    return sum(KEYWORDS[word] for word in matches), matches
-
-
 def event_score(event: dict[str, Any], self_email: str) -> tuple[int, list[str]]:
-    text = f"{event.get('title', '')} {event.get('location', '')}"
-    score, hits = keyword_score(text)
-    reasons = [f"keyword:{hit}" for hit in hits]
+    score = 0
+    reasons = []
     attendees = event.get("attendees", [])
     others = [a for a in attendees if not a.get("self")]
     if len(others) >= 5:
@@ -106,9 +72,8 @@ def event_score(event: dict[str, Any], self_email: str) -> tuple[int, list[str]]
 
 
 def mail_score(message: dict[str, Any], self_email: str) -> tuple[int, list[str]]:
-    text = f"{message.get('subject', '')} {message.get('snippet', '')}"
-    score, hits = keyword_score(text)
-    reasons = [f"keyword:{hit}" for hit in hits]
+    score = 0
+    reasons = []
     if message.get("unread"):
         score += 2
         reasons.append("unread")
@@ -205,133 +170,46 @@ def linked_context(event: dict[str, Any], messages: list[dict[str, Any]], files:
     return {"mail": mail_matches[:2], "files": file_matches[:2]}
 
 
-def resource_id(url: str) -> str:
-    match = re.search(r"/(?:d|folders)/([^/?#]+)", url or "")
-    return match.group(1) if match else ""
-
-
-def build_workstreams(
-    trackers: list[dict[str, Any]],
-    mail: list[dict[str, Any]],
-    meetings: list[dict[str, Any]],
-    files: list[dict[str, Any]],
-    limit: int = 3,
-) -> list[dict[str, Any]]:
-    """Rank actionable tracker rows and attach their supporting mail and write target."""
-    candidates: list[tuple[int, int, int, dict[str, Any], dict[str, Any]]] = []
-    for tracker_index, tracker in enumerate(trackers):
-        for row_index, row in enumerate(tracker.get("rows", [])):
-            status = str(row.get("status") or "").casefold()
-            next_action = str(row.get("next") or "")
-            if status == "complete" or not next_action or "no further action" in next_action.casefold():
-                continue
-            priority = STATUS_PRIORITY.get(status, 5)
-            blocker = str(row.get("blocker") or "").casefold()
-            if blocker and not blocker.startswith("none"):
-                priority += 20
-            candidates.append((priority, tracker_index, row_index, tracker, row))
-    candidates.sort(key=lambda item: (-item[0], item[1], item[2]))
-
+def compact_sheet_evidence(previews: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Make structural row boundaries explicit without mapping headers to business fields."""
     output = []
-    for _, _, _, tracker, row in candidates[:limit]:
-        row_text = " ".join(str(row.get(key) or "") for key in ("lane", "pic", "latest", "next", "blocker"))
-        row_tokens = tokens(row_text)
-        evidence = str(row.get("evidence") or "")
-        supporting = next((item for item in mail if evidence and item.get("url") == evidence), None)
-        related_mail = sorted(
-            mail,
-            key=lambda item: -len(row_tokens & tokens(f"{item.get('subject', '')} {item.get('from', '')} {item.get('snippet', '')}")),
-        )[:2]
-        if supporting is None and related_mail:
-            supporting = related_mail[0]
-
-        next_lower = str(row.get("next") or "").casefold()
-        target: dict[str, Any] | None = None
-        if any(word in next_lower for word in ("move", "reschedule", "postpone", "cancel")):
-            event = max(
-                meetings,
-                key=lambda item: len(row_tokens & tokens(str(item.get("title") or ""))),
-                default=None,
-            )
-            if event and row_tokens & tokens(str(event.get("title") or "")):
-                target = {
-                    "label": "Calendar",
-                    "id": event.get("id"),
-                    "name": event.get("title"),
-                    "url": event.get("calendar_url"),
-                    "start": event.get("start"),
-                    "end": event.get("end"),
-                }
-        if target is None and any(word in next_lower for word in ("status", "lane")):
-            target = {"label": "Tracker", "id": tracker.get("id"), "name": tracker.get("name"), "url": tracker.get("url")}
-        if target is None:
-            artifact_id = resource_id(str(row.get("artifact") or ""))
-            artifact = next((item for item in files if artifact_id and item.get("id") == artifact_id), None)
-            if artifact:
-                label = {"slides": "Deck", "sheet": "Tracker"}.get(str(artifact.get("kind") or ""), "Drive")
-                target = {"label": label, "id": artifact.get("id"), "name": artifact.get("name"), "url": artifact.get("url")}
-        if target is None:
-            target = {"label": "Drive", "url": row.get("artifact")}
-
-        def compact_mail(item: dict[str, Any] | None) -> dict[str, Any]:
-            if not item:
-                return {}
-            return {key: item.get(key) for key in ("id", "thread_id", "url", "from", "subject")}
-
-        item = {
-            "outcome": row.get("lane"),
-            "status": row.get("status"),
-            "latest": row.get("latest"),
-            "next": row.get("next"),
-            "supporting_mail": compact_mail(supporting),
-            "related_mail": [
-                compact_mail(item)
-                for item in related_mail
-                if not supporting or item.get("id") != supporting.get("id")
-            ][:1],
-            "target": target,
-        }
-        output.append(item)
+    source_order = 0
+    for sheet in previews:
+        compact_tabs = []
+        for tab in sheet.get("tabs", []):
+            table = tab.get("table", {})
+            headers = {
+                str(item.get("column", "")): str(item.get("name", ""))
+                for item in table.get("columns", [])
+            }
+            row_units = []
+            for row in table.get("representative_rows", []):
+                source_order += 1
+                row_units.append({
+                    "source_order": source_order,
+                    "cells": [
+                        {
+                            "column": column,
+                            "header": headers.get(column, column),
+                            "value": value,
+                        }
+                        for column, value in row.get("values", {}).items()
+                    ],
+                })
+            compact_tabs.append({
+                "title": tab.get("title"),
+                "schema": table.get("columns", []),
+                "row_count": table.get("row_count", 0),
+                "row_units": row_units,
+                "validation_previews": tab.get("validation_previews", []),
+            })
+        output.append({
+            "id": sheet.get("id"),
+            "name": sheet.get("name") or sheet.get("title"),
+            "url": sheet.get("url"),
+            "tabs": compact_tabs,
+        })
     return output
-
-
-def render_initial_reply(packet: dict[str, Any]) -> str:
-    """Render ranked workstreams without exposing action commands or internal IDs."""
-    requested_top_n = max(1, int(packet.get("requested_top_n") or 3))
-    workstreams = packet.get("workstreams", [])[:requested_top_n]
-    if not workstreams:
-        raise ValueError("A preformatted brief requires at least one ranked workstream")
-
-    def display_text(value: Any) -> str:
-        return str(value).strip().replace("\u2018", "'").replace("\u2019", "'").replace("\u201c", '"').replace("\u201d", '"')
-
-    outcomes = [display_text(item.get("outcome") or "Untitled priority") for item in workstreams]
-    if len(outcomes) == 1:
-        outcome_summary = outcomes[0]
-    elif len(outcomes) == 2:
-        outcome_summary = f"{outcomes[0]} and {outcomes[1]}"
-    else:
-        outcome_summary = f"{', '.join(outcomes[:-1])}, and {outcomes[-1]}"
-    lines = [f"Today's workload centers on {outcome_summary}."]
-    for index, item in enumerate(workstreams, start=1):
-        latest = display_text(item.get("latest") or "This priority needs attention")
-        if latest[-1:] not in ".!?:":
-            latest += "."
-        next_action = display_text(item.get("next") or "Review the available evidence and choose the next action.")
-        supporting_mail = item.get("supporting_mail") or {}
-        target = item.get("target") or {}
-        mail_url = supporting_mail.get("url")
-        target_url = target.get("url")
-        target_label = target.get("label")
-        if not mail_url or not target_url or not target_label:
-            raise ValueError(f"Workstream {index} is missing its supporting mail or action-target link")
-        lines.extend([
-            "",
-            f"{index}. **{outcomes[index - 1]}**",
-            f"   {latest} [Mail]({mail_url}) [{target_label}]({target_url})",
-            f"   - **Recommended action item(s):** {next_action}",
-        ])
-    return "\n".join(lines)
 
 
 def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
@@ -347,18 +225,8 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
     events = snapshot.get("events", [])
     messages = snapshot.get("messages", [])
     files = snapshot.get("files", [])
-    trackers = [
-        {
-            "id": tracker.get("id"),
-            "name": tracker.get("name"),
-            "url": tracker.get("url"),
-            "rows": [
-                {key: row.get(key) for key in ("row", "lane", "pic", "status", "latest", "next", "blocker", "evidence", "artifact")}
-                for row in tracker.get("rows", [])
-            ],
-        }
-        for tracker in snapshot.get("trackers", [])
-    ]
+    sheet_previews = snapshot.get("sheets", [])
+    sheet_evidence = compact_sheet_evidence(sheet_previews)
     generated = parse_dt(snapshot.get("generated_at", ""), tz) or datetime.now(tz)
 
     ranked_events = []
@@ -378,10 +246,22 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
             "calendar_url": event.get("html_link"),
             "links": event.get("links", []),
             "signal_score": score,
+            "evidence_count": len(context["mail"]) + len(context["files"]),
+            "evidence_strength": sum(
+                len(item.get("match", []))
+                for item in context["mail"] + context["files"]
+            ),
             "signals": reasons,
             "related": context,
         })
-    ranked_events.sort(key=lambda e: (-e["signal_score"], e.get("start") or ""))
+    ranked_events.sort(
+        key=lambda e: (
+            -e["evidence_strength"],
+            -e["evidence_count"],
+            -e["signal_score"],
+            e.get("start") or "",
+        )
+    )
 
     ranked_mail = []
     for message in messages:
@@ -400,11 +280,15 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
             "stale_timing": age_days is not None and age_days > 1,
             "snippet": message.get("snippet"),
             "unread": message.get("unread"),
+            "important": message.get("important"),
             "links": message.get("links", []),
             "signal_score": score,
             "signals": reasons,
         })
     ranked_mail.sort(key=lambda m: (-m["signal_score"], -next((x.get("internal_ms", 0) for x in messages if x.get("id") == m.get("id")), 0)))
+    for item in ranked_events:
+        item.pop("evidence_count", None)
+        item.pop("evidence_strength", None)
     for item in ranked_events + ranked_mail:
         item.pop("signal_score", None)
 
@@ -419,22 +303,51 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
         "calendar": "error" if "calendar" in error_text else ("ok" if events else "ok_empty"),
         "gmail": "error" if "gmail" in error_text else ("ok" if messages else "ok_empty"),
         "drive": "error" if "drive" in error_text else ("ok" if files else "ok_empty"),
+        "sheets": "error" if "sheets" in error_text else ("ok" if sheet_previews else "ok_empty"),
     }
     packet = {
-        "schema": 1,
-        "instruction": f"Render workstreams[0:{top_n}] exactly once and in order; never split, merge, or re-rank them. If fewer than {top_n} actionable workstreams are available, render every available workstream without padding. Begin with a very short plain-text summary of today's workload in no more than three sentences and no heading. Then render up to {top_n} numbered items. Each item must have a bold outcome line, one concise evidence sentence using latest and ending with exactly two inline links (supporting_mail as Mail and target with its supplied label), and an indented sub-bullet labeled exactly `Recommended action item(s):` using next. No tables, inbox inventory, extra sections, closing question, scores, browser launches, or more tools; end after the final item's action sub-bullet. stale_timing means historical timing: verify it and never call it due today. ok_empty means success with zero results.",
+        "schema": 2,
+        "instruction": f"Select the top {top_n} distinct actionable outcomes from this packet using selection_rules, then follow response_contract exactly.",
+        "selection_rules": [
+            "Infer meaning only from exact live headers, row values, validations, messages, meetings, and files; never use remembered, learned, or repository-defined field/status/action mappings.",
+            "Prefer explicit current requests, literal same-day urgency or blockers, and cross-source corroboration; use Gmail Important/unread and recency only as generic signals.",
+            "Treat each independently actionable sheet_evidence.tabs.row_units entry or standalone request as a separate outcome. Group messages only when they clearly support that same outcome; never merge row_units because their app, field, or operation matches.",
+            "Ignore rows whose own text says no action remains. After explicit same-day or Gmail-Important blockers, rank remaining row_units by source_order; do not override that stable order with vague timing labels or an invented status ranking.",
+        ],
+        "response_contract": {
+            "summary": "Begin the response with exactly one unnumbered sentence and then item 1; write no heading, preamble, or second summary sentence.",
+            "item_count": top_n,
+            "item_template": [
+                "N. **Outcome**",
+                "   - **Evidence:** One complete sentence attributing each relied-on message. [RESOURCE_KIND](MATCHING_RESOURCE_URL) [Mail — SENDER](GMAIL_URL)",
+                "   - **Recommended action item(s):** Plain-language desired end state and scope, not implementation steps.",
+            ],
+            "link_rule": "Every evidence line must include exactly one real action-target link plus one distinct Mail link for every message whose unique facts or participant are relied on, bounded to at most three Mail links. Copy sender names exactly from mail.from. Choose the target from the relevant meetings.calendar_url, sheet_evidence.url, recent_files.url, or URL-valued cell in that selected row_unit; label Google Calendar as Calendar, spreadsheets as Sheet, documents as Doc, presentations as Slides, and other Drive resources as Drive. Never relabel a target or link unrelated mail.",
+            "self_check": [
+                "The response has one opening sentence, exactly the requested item count, and exactly three lines per item.",
+                "Each item has a separate Evidence line containing one target link and all relied-on Mail links; every sender name exactly matches live mail.from.",
+                "The response ends with the final Recommended action item(s) line and contains none of the forbidden content.",
+            ],
+            "forbidden": [
+                "raw IDs, helper names, flags, commands, row numbers, cell coordinates, scores, JSON, or schema commentary",
+                "extra bullets, conflict/focus sections, horizontal rules, closing questions, offers, or text after the last action line",
+            ],
+            "forbidden_tokens": ["`", "--", "calendar find", "calendar reschedule", "sheets inspect", "sheets set-cell", "slides replace-text"],
+        },
         "requested_top_n": top_n,
         "freshness": {"generated_at": snapshot.get("generated_at"), "timezone": tz_name, "window": snapshot.get("window")},
         "coverage": coverage,
         "source_status": source_status,
-        "workstreams": build_workstreams(trackers, ranked_mail, ranked_events, recent_files, top_n),
         "conflicts": conflicts(events, tz),
         "focus_blocks": focus_blocks(events, tz, window_start, args.work_start, args.work_end, args.min_focus_minutes),
         "meetings": ranked_events[: args.max_meetings],
         "mail": ranked_mail[: args.max_mail],
         "recent_files": recent_files,
-        "trackers": trackers,
+        "sheet_evidence": sheet_evidence,
     }
+    # Keep the strict presentation contract last so local models see it after
+    # the evidence they must interpret.
+    packet["response_contract"] = packet.pop("response_contract")
     return packet
 
 
@@ -450,9 +363,13 @@ def fit_packet(packet: dict[str, Any], max_chars: int) -> str:
         while len(items) > floor and len(encode()) > max_chars:
             items.pop()
 
-    def trim_tracker_rows(floor: int) -> None:
+    def trim_sheet_samples(floor: int) -> None:
         while len(encode()) > max_chars:
-            candidates = [tracker.get("rows", []) for tracker in packet.get("trackers", [])]
+            candidates = [
+                tab.get("row_units", [])
+                for sheet in packet.get("sheet_evidence", [])
+                for tab in sheet.get("tabs", [])
+            ]
             target = max(candidates, key=len, default=[])
             if len(target) <= floor:
                 break
@@ -462,22 +379,21 @@ def fit_packet(packet: dict[str, Any], max_chars: int) -> str:
     if len(encoded) <= max_chars:
         return encoded
 
-    # Preserve the six highest-signal messages long enough for the reference
-    # demo while shedding lower-value duplicates first. More aggressive stages
-    # still guarantee unusually small caller budgets are honored.
+    minimum_sheet_rows = max(3, int(packet.get("requested_top_n") or 3))
+
+    # Preserve the compact Sheet schema and enough representative rows for the
+    # model to interpret the table without repository-defined business fields.
     trim_list("recent_files", 4)
     trim_list("meetings", 5)
     trim_list("mail", 6)
-    # Data-ranked workstreams already preserve the actionable tracker rows, so
-    # prefer dropping their raw duplicates over losing meaningful mail.
-    trim_tracker_rows(0 if packet.get("workstreams") else 6)
+    trim_sheet_samples(max(8, minimum_sheet_rows))
     trim_list("meetings", 3)
     trim_list("recent_files", 2)
-    trim_tracker_rows(3)
+    trim_sheet_samples(max(6, minimum_sheet_rows))
     trim_list("conflicts", 3)
     trim_list("meetings", 1)
     trim_list("recent_files", 1)
-    trim_tracker_rows(1)
+    trim_sheet_samples(minimum_sheet_rows)
     trim_list("conflicts", 1)
     trim_list("focus_blocks", 2)
     trim_list("mail", 3)
@@ -487,7 +403,7 @@ def fit_packet(packet: dict[str, Any], max_chars: int) -> str:
         for mail in packet.get("mail", []):
             mail["snippet"] = (mail.get("snippet") or "")[:160]
 
-    for name in ("trackers", "recent_files", "meetings", "mail", "conflicts", "focus_blocks"):
+    for name in ("sheet_evidence", "recent_files", "meetings", "mail", "conflicts", "focus_blocks"):
         trim_list(name, 0)
 
     return encode()
@@ -504,7 +420,6 @@ def main() -> int:
     parser.add_argument("--work-start", type=int, default=8)
     parser.add_argument("--work-end", type=int, default=18)
     parser.add_argument("--min-focus-minutes", type=int, default=30)
-    parser.add_argument("--reply-only", action="store_true", help="Print the preformatted ranked-priorities reply")
     args = parser.parse_args()
     if args.top_n < 1:
         parser.error("--top must be a positive integer")
@@ -514,7 +429,7 @@ def main() -> int:
     try:
         snapshot = json.loads(args.snapshot.read_text(encoding="utf-8"))
         packet = build_packet(snapshot, args)
-        print(render_initial_reply(packet) if args.reply_only else fit_packet(packet, args.max_chars))
+        print(fit_packet(packet, args.max_chars))
         return 0
     except Exception as exc:
         print(json.dumps({"ok": False, "error": str(exc)}), file=sys.stderr)

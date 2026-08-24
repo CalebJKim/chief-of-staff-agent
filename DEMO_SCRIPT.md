@@ -31,7 +31,7 @@ The dedicated demo account contains a busy fictional RTX Spark Agent Runtime wor
 
 **Expected structure**
 
-Start with a very short summary of today's workload in no more than three sentences and without a heading. Follow it with exactly three succinct numbered items, with no scores, inbox inventory, or closing question. Each item has an evidence sentence with its two inline links, followed by an indented `Recommended action item(s):` sub-bullet. The expected content is:
+Start with a very short summary of today's workload in no more than three sentences and without a heading. Follow it with exactly three succinct numbered items, with no scores, inbox inventory, or closing question. Each item has an evidence sentence with one action-target link and a bounded Mail link for every message whose unique facts or participant it relies on, followed by an indented `Recommended action item(s):` sub-bullet. The expected content is:
 
 1. **Agent Runtime regression** — Priya's P0 duplicate-completion blocker. Next: move the existing release review to the earliest non-conflicting one-hour slot on the next business day and draft Priya and Daniel a confirmation. Inline Mail and Calendar links.
 2. **Agent Runtime Latency Evaluation** — Mateo completed it while the tracker remains `In progress`. Next: change only that lane to `Ready for review`. Inline Mail and Tracker links.

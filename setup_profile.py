@@ -82,6 +82,18 @@ def setup_profile(
             profile_name,
             "config",
             "set",
+            "skills.creation_nudge_interval",
+            "0",
+            "--force",
+        ]
+    )
+    runner(
+        [
+            "hermes",
+            "-p",
+            profile_name,
+            "config",
+            "set",
             "agent.max_turns",
             str(max_turns),
             "--force",
@@ -114,6 +126,7 @@ def main() -> int:
     status = "Created" if created else "Updated"
     print(f"{status} Hermes profile '{args.profile_name}' at {target}")
     print("Enabled toolsets: skills, terminal")
+    print("Skill self-creation nudges: disabled")
     print(f"Max agent steps: {args.max_turns}")
     print("Installed skills: chief-of-staff, ingest")
     print("Next: complete Google OAuth (see QUICKSTART.md).")

@@ -10,7 +10,8 @@ platform_toolsets:
 # Configure this interactively with `hermes skills config`; do not copy a
 # machine-specific disabled list into another profile.
 skills:
-  creation_nudge_interval: 15
+  # Repository-managed demo skills are read-only during runs.
+  creation_nudge_interval: 0
 
 agent:
   # The workflow normally needs only terminal + skills.

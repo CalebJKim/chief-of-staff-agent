@@ -173,8 +173,10 @@ class SeedWorkspaceTests(unittest.TestCase):
             for message, _labels in messages
         }
         priya_body = bodies_by_subject["BLOCKER: Agent Runtime duplicates tool-call completions"]
+        daniel_body = bodies_by_subject["New slot for the Agent Runtime release review"]
         self.assertNotIn("Daniel is checking the next available slot.", priya_body)
         self.assertIn("Please postpone the RTX Spark Agent Runtime release review scheduled for", priya_body)
+        self.assertIn("Reply in Priya's blocker thread with the confirmation and copy me", daniel_body)
         self.assertIn("IMPORTANT", labels_by_subject["BLOCKER: Agent Runtime duplicates tool-call completions"])
         self.assertIn("IMPORTANT", labels_by_subject["New slot for the Agent Runtime release review"])
         self.assertTrue(all(

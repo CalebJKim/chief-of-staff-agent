@@ -13,7 +13,7 @@ metadata:
 
 # Ingest Skill
 
-Pull a bounded, metadata-first Workspace snapshot for planning. It deliberately avoids full email bodies and document contents; retrieve those only after relevance is established.
+Pull a bounded, metadata-first Workspace snapshot for planning. It deliberately avoids full email bodies and document contents; retrieve those only after relevance is established. Recent Sheets are represented as compact structural previews with exact visible headers, representative rows, and validation constraints. No business-field mappings are learned or stored.
 
 ## When to Use
 
@@ -69,7 +69,7 @@ if [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="${HERMES_HOME:-$LOCALAPPDATA/herme
 
 1. Run ingestion once. Continue only when output says `"ok":true`.
 2. Inspect `coverage.errors`. Name any failed connector instead of treating missing data as an empty inbox or calendar.
-3. Pass the saved snapshot to the chief-of-staff packet builder. Do not print the full snapshot into model context.
+3. Pass the saved snapshot to the chief-of-staff packet builder. It emits one compact evidence packet for per-run interpretation; do not print the full snapshot into model context.
 4. Fetch a full Gmail thread or document only when the packet identifies it as relevant.
 
 ## Pitfalls

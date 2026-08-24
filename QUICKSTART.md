@@ -55,8 +55,10 @@ python setup_profile.py --profile-name "$PROFILE_NAME" --hermes-root "$HERMES_RO
 The dedicated profile contains only `chief-of-staff` and `ingest`; `--no-skills`
 prevents later Hermes updates from repopulating unrelated bundled skills. The
 setup script also enables only `skills` and `terminal` and sets Max Agent Steps
-to `40`. The default profile remains unchanged. Rerunning the script updates the
-demo installation without replacing an existing profile's model configuration.
+to `40`. It disables skill-creation nudges and marks the installed demo skills as
+repository-managed so they are read but not edited during a run. The default
+profile remains unchanged. Rerunning the script updates the demo installation
+without replacing an existing profile's model configuration.
 
 ## 3. Connect your own Google account
 
@@ -138,4 +140,4 @@ Say:
 
 > Hey chief of staff, what should we work on today?
 
-Then try `Take care of the first item.` or a modified follow-up such as `Take care of the first item, but use Thursday afternoon.` You can also make a direct Workspace request unrelated to the brief. The agent will use current Gmail, Calendar, and Drive data from the account you connected; a direct request to complete a displayed action does not trigger a redundant confirmation question. No changes to Hermes model/provider defaults or unrelated tools are required.
+Then try `Take care of the first item.` or a modified follow-up such as `Take care of the first item, but use Thursday afternoon.` You can also make a direct Workspace request unrelated to the brief. The agent uses live Gmail message IDs for reply recipients, Calendar's local timezone and working hours for rescheduling, and the Sheet's discovered schema and cell validation for updates. A direct request to complete a displayed action does not trigger a redundant confirmation question. No changes to Hermes model/provider defaults or unrelated tools are required.

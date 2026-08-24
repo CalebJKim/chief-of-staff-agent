@@ -12,7 +12,7 @@ fi
 
 ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
 
-if [ "${1:-}" = "gmail" ] && [ "${2:-}" = "draft" ]; then
+if [ "${1:-}" = "gmail" ] && { [ "${2:-}" = "draft" ] || [ "${2:-}" = "reply-draft" ]; }; then
   HAS_TRACKING=false
   HAS_CLOSING=false
   for argument in "$@"; do

@@ -2,13 +2,13 @@
 
 The seeder creates a self-contained RTX Spark Agent Runtime workspace in the Google account connected through OAuth. It contains no real account IDs, credentials, or reference-workspace links.
 
-The fictional scenario is fixed seed data. The Chief of Staff skill does not contain RTX Spark-specific actions: it reads the current Workspace evidence, renders the prescribed brief format, and decides follow-up operations from the user's current request.
+The fictional scenario is fixed seed data. The Chief of Staff skill does not contain RTX Spark-specific actions: it reads the current Workspace evidence, interprets a bounded generic schema/sample/validation packet, renders the prescribed brief format, and decides follow-up operations from the user's current request. Spreadsheet writes discover the live tab, header row, target row, target column, value type, validation, formula, and protection state before updating one verified cell; runtime code does not copy the seeded status list, map business fields, or assume fixed coordinates.
 
 ## What it creates
 
 - **6 meaningful Gmail messages**, all in Inbox and Unread:
   1. Priya reports a P0 duplicate tool-completion regression and asks to postpone the release review. Important.
-  2. Daniel asks for the earliest non-conflicting one-hour slot on the next business day and an unsent confirmation draft to Priya and Daniel. Important.
+  2. Daniel asks for the earliest non-conflicting one-hour slot on the next business day and an unsent confirmation reply in Priya's blocker thread with Daniel copied. Important.
   3. Mateo says the latency evaluation is complete and ready for review.
   4. Aisha reports that the completed reliability matrix is ready for review and asks for only that lane's status to change.
   5. Elena supplies the exact approved slide-4 headline.
@@ -29,7 +29,7 @@ The fictional scenario is fixed seed data. The Chief of Staff skill does not con
   - Tab: `Campaign Lanes`
   - Columns A:J: Lane, PIC, Status, Latest update, Next action, Due, Dependency/blocker, Evidence, Artifact, Notes.
   - Eight data rows with a validated, color-coded status dropdown, a frozen/filterable header, and task-specific column widths.
-  - The seeded evidence contains five strongly supported workstreams. It still ranks Agent Runtime regression, Agent Runtime Latency Evaluation, and Partner Readout Deck as the default top three, followed by Partner demo checklist and Reliability test matrix for top-four/top-five requests.
+  - The seeded evidence contains five strongly supported workstreams. When interpreted from the live headers and rows alongside Gmail, Calendar, and Drive evidence, it should yield Agent Runtime regression, Agent Runtime Latency Evaluation, and Partner Readout Deck as the default top three, followed by Partner demo checklist and Reliability test matrix for top-four/top-five requests.
 - **1 Google Doc**: `RTX Spark Agent Runtime Latency Evaluation`
   - Uses a structured internal-report layout with a branded title, section hierarchy, status and action callouts, and a true bulleted scope list.
   - States that the evaluation is complete and ready for review.
@@ -68,7 +68,7 @@ Start of Day writes only the bounded Workspace snapshot used to build the brief.
    - Execute and verify the authorized change without a redundant confirmation prompt.
 5. Requests unrelated to the displayed ranked list still work through the same focused Workspace helpers; they do not require rerunning Start of Day.
 
-The current seed is designed to produce a stable demo narrative, but the renderer and action flow contain no hardcoded project names, recipients, dates, statuses, or replacement text. Changing the seeded evidence changes the presented contents and subsequent actions.
+The current seed is designed to produce a stable demo narrative, but the interpretation and action flow contain no hardcoded project names, recipients, dates, status meanings/order, field aliases, or replacement text. Each run uses only the bounded live packet; it does not learn or retain per-user mappings. Changing the seeded evidence changes the presented contents and subsequent actions.
 
 ## Seed, reset, and cleanup
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import re
@@ -303,26 +304,37 @@ def fetch_drive(drive_service: Any, days_back: int, max_files: int) -> list[dict
     return files
 
 
-def fetch_trackers(credentials: Any, files: list[dict[str, Any]], max_rows: int = 14) -> list[dict[str, Any]]:
-    """Read compact rows from recently found tracker spreadsheets."""
+def _workspace_actions_module() -> Any:
+    path = Path(__file__).with_name("actions.py")
+    spec = importlib.util.spec_from_file_location("chief_of_staff_workspace_actions", path)
+    if not spec or not spec.loader:
+        raise RuntimeError(f"Could not load generic Workspace operations from {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def fetch_sheet_previews(
+    credentials: Any,
+    files: list[dict[str, Any]],
+    max_rows: int = 40,
+    max_columns: int = 20,
+    max_sample_rows: int = 12,
+) -> list[dict[str, Any]]:
+    """Read bounded spreadsheet structure and examples without semantic column mappings."""
     from googleapiclient.discovery import build
 
-    candidates = [item for item in files if item.get("kind") == "sheet" and "tracker" in item.get("name", "").casefold()]
+    candidates = [item for item in files if item.get("kind") == "sheet"]
     if not candidates:
         return []
-    sheets = build("sheets", "v4", credentials=credentials, cache_discovery=False)
+    api = build("sheets", "v4", credentials=credentials, cache_discovery=False)
+    preview = _workspace_actions_module().spreadsheet_preview
     output: list[dict[str, Any]] = []
-    for item in candidates[:2]:
-        values = sheets.spreadsheets().values().get(
-            spreadsheetId=item["id"], range=f"'Campaign Lanes'!A6:J{6 + max_rows}"
-        ).execute().get("values", [])
-        rows = []
-        for sheet_row, cells in enumerate(values[1:], start=7):
-            padded = list(cells) + [""] * (10 - len(cells))
-            if padded[0]:
-                rows.append({"row": sheet_row, "lane": padded[0], "pic": padded[1], "status": padded[2], "latest": padded[3], "next": padded[4], "blocker": padded[6], "evidence": padded[7], "artifact": padded[8]})
-        if rows:
-            output.append({"id": item["id"], "name": item["name"], "url": item.get("url", ""), "rows": rows})
+    for item in candidates[:5]:
+        structural = preview(api, item["id"], max_rows, max_columns, max_sample_rows)
+        structural["name"] = item.get("name", structural.get("title", ""))
+        structural["url"] = item.get("url", "")
+        output.append(structural)
     return output
 
 
@@ -352,7 +364,7 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
     events: list[dict[str, Any]] = []
     messages: list[dict[str, Any]] = []
     files: list[dict[str, Any]] = []
-    trackers: list[dict[str, Any]] = []
+    sheet_previews: list[dict[str, Any]] = []
     identity: dict[str, Any] = {}
     try:
         events, calendar_errors = fetch_calendars(calendar, start, end, args.max_events)
@@ -374,7 +386,7 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
     except Exception as exc:
         errors.append(f"drive: {exc}")
     try:
-        trackers = fetch_trackers(credentials, files)
+        sheet_previews = fetch_sheet_previews(credentials, files)
     except Exception as exc:
         errors.append(f"sheets: {exc}")
 
@@ -389,12 +401,13 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
             "events": len(events),
             "messages": len(messages),
             "files": len(files),
+            "sheets": len(sheet_previews),
             "errors": errors,
         },
         "events": events,
         "messages": messages,
         "files": files,
-        "trackers": trackers,
+        "sheets": sheet_previews,
     }
 
 

@@ -972,7 +972,7 @@ def create_emails(
             "sender": "Daniel Cho <daniel.cho@nvidia.example>",
             "subject": "New slot for the Agent Runtime release review",
             "body": (
-                f"Move the existing release review to the earliest non-conflicting one-hour slot on {display_date(follow_up_day)}. Draft a confirmation to Priya and me; do not send it.\n\n"
+                f"Move the existing release review to the earliest non-conflicting one-hour slot on {display_date(follow_up_day)}. Reply in Priya's blocker thread with the confirmation and copy me; do not send it.\n\n"
                 "Keep the event's current details and move it rather than creating a duplicate.\n\n"
                 f"Event: {release_review_url}\n\n"
                 "— Daniel"

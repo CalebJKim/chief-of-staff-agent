@@ -166,7 +166,9 @@ python setup_profile.py --profile-name "$PROFILE_NAME" --hermes-root "$HERMES_RO
 The script creates the profile with `--no-skills` when it is missing, copies the
 default profile's model configuration only on first creation, installs the two
 demo skills and `SOUL.md`, enables only the `skills` and `terminal` toolsets, and
-sets `agent.max_turns` to `40`. It is safe to rerun: an existing profile is not
+sets `agent.max_turns` to `40`. It also sets `skills.creation_nudge_interval` to
+`0` and installs an immutable-skill instruction so a demo run can read the two
+skills but cannot decide to rewrite them. It is safe to rerun: an existing profile is not
 recreated and its model configuration is not replaced. If that provider uses a
 secret in the default profile's `.env`, configure it separately with
 `hermes -p chief-of-staff-demo model`; do not commit or publish profile secrets.
@@ -197,18 +199,20 @@ Expected result: all tests pass across the three suites.
 # Windows PowerShell
 hermes -p $ProfileName skills list
 hermes -p $ProfileName config get agent.max_turns
+hermes -p $ProfileName config get skills.creation_nudge_interval
 ```
 
 ```bash
 # Linux/macOS
 hermes -p "$PROFILE_NAME" skills list
 hermes -p "$PROFILE_NAME" config get agent.max_turns
+hermes -p "$PROFILE_NAME" config get skills.creation_nudge_interval
 ```
 
 Confirm that `chief-of-staff` and `ingest` are the only skills in the profile.
-Confirm that the turn limit is `40`. Rerun `setup_profile.py` to refresh the
-skills, routing instructions, toolsets, and turn limit after pulling repository
-updates.
+Confirm that the turn limit is `40` and the skill-creation nudge interval is `0`.
+Rerun `setup_profile.py` to refresh the skills, routing instructions, toolsets,
+turn limit, and immutable-skill setting after pulling repository updates.
 
 The setup preserves Hermes model/provider defaults and unrelated profile
 settings. It installs `chief-of-staff` and `ingest`, enables `skills` and
@@ -353,7 +357,7 @@ python "$HERMES_HOME/skills/productivity/ingest/scripts/ingest.py"
 python "$HERMES_HOME/skills/productivity/chief-of-staff/scripts/brief.py" --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000
 ```
 
-The commands should report successful service access, a bounded evidence packet, and a ranked brief without Python tracebacks.
+The commands should report successful service access and a bounded evidence packet without Python tracebacks. The packet includes compact Sheet schemas, representative rows, and validation previews for the agent to interpret during Start of Day; it does not contain a repository-ranked action plan.
 
 Ingestion uses the same automatic weekday/weekend rule, so a weekend verification
 reads the upcoming Monday without an extra flag. If you seeded an explicitly
@@ -366,9 +370,7 @@ seeder:
 & $Python (Join-Path $env:HERMES_HOME "skills\productivity\chief-of-staff\scripts\brief.py") --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000
 ```
 
-The resulting action plan should contain three workstreams. The first should
-have a `calendar_move_and_draft` action; a missing first action usually means
-the selected Calendar window did not include the release-review meeting.
+The packet's `requested_top_n` should be `3`, `source_status` should show successful sources, and `sheets` should contain the live structural preview. The packet intentionally contains no preselected workstreams or stored action commands.
 
 Gmail does not guarantee the order returned by `messages.list`. Ingestion scans
 metadata for up to 120 matching Inbox messages, sorts that bounded set by
@@ -420,11 +422,13 @@ day:
 
 ```powershell
 # Windows PowerShell
+$env:HERMES_HOME = Join-Path $env:LOCALAPPDATA "hermes\profiles\chief-of-staff-demo"
 & $Python demo\reset_workspace.py
 ```
 
 ```bash
 # Linux/macOS
+export HERMES_HOME="$HOME/.hermes/profiles/chief-of-staff-demo"
 python demo/reset_workspace.py
 ```
 
@@ -432,11 +436,13 @@ Cleanup removes the reference workspace without recreating it:
 
 ```powershell
 # Windows PowerShell
+$env:HERMES_HOME = Join-Path $env:LOCALAPPDATA "hermes\profiles\chief-of-staff-demo"
 & $Python demo\seed_workspace.py --cleanup --confirm
 ```
 
 ```bash
 # Linux/macOS
+export HERMES_HOME="$HOME/.hermes/profiles/chief-of-staff-demo"
 python demo/seed_workspace.py --cleanup --confirm
 ```
 
@@ -503,6 +509,6 @@ Gmail deletion is immediate and cannot be undone; unrelated messages are untouch
 - `demo/` contains the reference-workspace seeder, reset wrapper, specification, and fixtures.
 - `config.example.yaml` documents the recommended tool surface.
 
-No sessions, OAuth credentials, account IDs, generated Workspace IDs, email/calendar fixtures from a real account, or model files are included. Broad ingestion is bounded and metadata/snippet-first; one-time codes are redacted before model context; the daily brief saves no executable action plan; Calendar moves reject conflicts by default; and tracker updates preserve lane ownership and validate statuses. A direct request to complete a displayed action authorizes that scoped write without a redundant confirmation question, while the helper still requires its internal `--confirm` guard and verifies every write.
+No sessions, OAuth credentials, account IDs, generated Workspace IDs, email/calendar fixtures from a real account, or model files are included. Broad ingestion is bounded and metadata/snippet-first; one-time codes are redacted before model context; the daily brief saves no executable action plan; Calendar rescheduling uses literal local dates, the live timezone, working hours, and conflict checks; Gmail reply recipients come from real message IDs, and reply bodies must contain substantive text plus any evidence-derived facts the caller marks as required before a draft can be created; spreadsheet updates discover the live header/row intersection and enforce that exact cell's validation, formula, protection, and current-value state. A direct request to complete a displayed action authorizes that scoped write without a redundant confirmation question, while each mutation still requires its internal `--confirm` guard and read-back verification.
 
-The tracker-specific update path expects a tab named `Campaign Lanes` with columns A:J matching the demonstrated schema. General Gmail, Calendar, and Drive planning works without that sheet. See [`demo/DEMO_SPEC.md`](demo/DEMO_SPEC.md) for the exact reference data and manual fallback procedure.
+The seeded Sheet still defines the fictional demo's table and dropdowns, but runtime code does not depend on its tab name, row numbers, column letters, or status list. See [`demo/DEMO_SPEC.md`](demo/DEMO_SPEC.md) for the exact reference data and manual fallback procedure.
