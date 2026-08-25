@@ -14,6 +14,11 @@ from install import install_agent
 DEFAULT_PROFILE_NAME = "chief-of-staff-demo"
 DEFAULT_MAX_TURNS = 40
 PROFILE_DESCRIPTION = "Isolated Chief of Staff demo"
+DEMO_MODEL = "qwen3.6:35b-a3b-mtp-q4_K_M"
+DEMO_PROVIDER = "ollama"
+DEMO_BASE_URL = "http://localhost:11434/v1"
+DEMO_MODEL_NAME = "Qwen3.6 35BA3B MTP"
+DEMO_REASONING_EFFORT = "medium"
 
 
 def default_hermes_root() -> Path:
@@ -37,7 +42,7 @@ def setup_profile(
     max_turns: int = DEFAULT_MAX_TURNS,
     runner: Callable[[Sequence[str]], None] = run_command,
 ) -> tuple[Path, bool]:
-    """Create or refresh the dedicated profile without replacing existing model config."""
+    """Create or refresh the dedicated profile and its repository-selected model."""
     if max_turns < 1:
         raise ValueError("max_turns must be at least 1")
 
@@ -62,6 +67,35 @@ def setup_profile(
         default_config = hermes_root / "config.yaml"
         if default_config.exists():
             shutil.copy2(default_config, target / "config.yaml")
+
+    # Pulling an existing Ollama tag is an inexpensive manifest check, while a
+    # new machine gets the exact model required by the demo.
+    runner(["ollama", "pull", DEMO_MODEL])
+
+    model_settings = {
+        "model.default": DEMO_MODEL,
+        "model.provider": DEMO_PROVIDER,
+        "model.base_url": DEMO_BASE_URL,
+        "providers.ollama.name": DEMO_MODEL_NAME,
+        "providers.ollama.base_url": DEMO_BASE_URL,
+        "providers.ollama.model": DEMO_MODEL,
+        "providers.ollama.discover_models": "false",
+        "providers.ollama.models": json.dumps({DEMO_MODEL: {}}, separators=(",", ":")),
+        "agent.reasoning_effort": DEMO_REASONING_EFFORT,
+    }
+    for key, value in model_settings.items():
+        runner(
+            [
+                "hermes",
+                "-p",
+                profile_name,
+                "config",
+                "set",
+                key,
+                value,
+                "--force",
+            ]
+        )
 
     runner(
         [
@@ -125,6 +159,7 @@ def main() -> int:
 
     status = "Created" if created else "Updated"
     print(f"{status} Hermes profile '{args.profile_name}' at {target}")
+    print(f"Model: {DEMO_MODEL} ({DEMO_PROVIDER}, {DEMO_REASONING_EFFORT} reasoning)")
     print("Enabled toolsets: skills, terminal")
     print("Skill self-creation nudges: disabled")
     print(f"Max agent steps: {args.max_turns}")

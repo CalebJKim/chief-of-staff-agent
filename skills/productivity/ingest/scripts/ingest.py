@@ -8,6 +8,8 @@ import json
 import os
 import re
 import sys
+import time as time_module
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -22,6 +24,8 @@ GOOGLE_MIMES = {
 URL_RE = re.compile(r"https?://[^\s<>'\"]+")
 DEFAULT_MAX_MESSAGES = 20
 DEFAULT_MAIL_SCAN_LIMIT = 120
+GMAIL_METADATA_BATCH_SIZE = 10
+GMAIL_METADATA_BATCH_ATTEMPTS = 3
 OTP_RE = re.compile(
     r"(?i)\b(verification(?:\s+code)?|security\s+code|one[- ]time\s+(?:code|password)|otp|code)"
     r"(\s*(?:is|:)?\s*)\d{4,8}\b"
@@ -240,14 +244,56 @@ def fetch_mail(
         if not page:
             break
 
+    metadata: dict[str, dict[str, Any]] = {}
+    for start in range(0, len(refs), GMAIL_METADATA_BATCH_SIZE):
+        pending_ids = [ref["id"] for ref in refs[start:start + GMAIL_METADATA_BATCH_SIZE]]
+        for attempt in range(GMAIL_METADATA_BATCH_ATTEMPTS):
+            failures: dict[str, Exception] = {}
+
+            def callback(request_id: str, response: dict[str, Any], exception: Exception | None) -> None:
+                if exception is None:
+                    metadata[request_id] = response
+                else:
+                    failures[request_id] = exception
+
+            batch = gmail_service.new_batch_http_request()
+            for message_id in pending_ids:
+                batch.add(
+                    gmail_service.users().messages().get(
+                        userId="me",
+                        id=message_id,
+                        format="metadata",
+                        metadataHeaders=["From", "To", "Cc", "Subject", "Date", "Reply-To"],
+                    ),
+                    callback=callback,
+                    request_id=message_id,
+                )
+            batch.execute()
+            if not failures:
+                break
+
+            retryable = {
+                message_id: error
+                for message_id, error in failures.items()
+                if getattr(getattr(error, "resp", None), "status", None) in {429, 500, 502, 503, 504}
+            }
+            non_retryable = {
+                message_id: error
+                for message_id, error in failures.items()
+                if message_id not in retryable
+            }
+            if non_retryable or attempt == GMAIL_METADATA_BATCH_ATTEMPTS - 1:
+                terminal_failures = non_retryable or failures
+                details = "; ".join(
+                    f"{message_id}: {error}" for message_id, error in terminal_failures.items()
+                )
+                raise RuntimeError(f"Gmail metadata batch failed: {details}")
+            pending_ids = list(retryable)
+            time_module.sleep(2 ** attempt)
+
     messages: list[dict[str, Any]] = []
     for ref in refs:
-        msg = gmail_service.users().messages().get(
-            userId="me",
-            id=ref["id"],
-            format="metadata",
-            metadataHeaders=["From", "To", "Cc", "Subject", "Date", "Reply-To"],
-        ).execute()
+        msg = metadata[ref["id"]]
         headers = msg.get("payload", {}).get("headers", [])
         snippet = redact_sensitive(re.sub(r"\s+", " ", msg.get("snippet", "")).strip())
         messages.append(
@@ -360,35 +406,51 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
         tz_name = "UTC"
         start, end = _calendar_window(args.date, args.days_ahead, tz_name)
 
-    errors: list[str] = []
     events: list[dict[str, Any]] = []
     messages: list[dict[str, Any]] = []
     files: list[dict[str, Any]] = []
     sheet_previews: list[dict[str, Any]] = []
     identity: dict[str, Any] = {}
-    try:
-        events, calendar_errors = fetch_calendars(calendar, start, end, args.max_events)
-        errors.extend(calendar_errors)
-    except Exception as exc:
-        errors.append(f"calendar: {exc}")
-    try:
-        messages, identity = fetch_mail(
+    component_errors: dict[str, str] = {}
+    calendar_errors: list[str] = []
+    with ThreadPoolExecutor(max_workers=4, thread_name_prefix="workspace-ingest") as executor:
+        calendar_future = executor.submit(fetch_calendars, calendar, start, end, args.max_events)
+        mail_future = executor.submit(
+            fetch_mail,
             gmail,
             args.days_back,
             args.max_messages,
             args.gmail_query,
             args.mail_scan_limit,
         )
-    except Exception as exc:
-        errors.append(f"gmail: {exc}")
-    try:
-        files = fetch_drive(drive, args.days_back, args.max_files)
-    except Exception as exc:
-        errors.append(f"drive: {exc}")
-    try:
-        sheet_previews = fetch_sheet_previews(credentials, files)
-    except Exception as exc:
-        errors.append(f"sheets: {exc}")
+        drive_future = executor.submit(fetch_drive, drive, args.days_back, args.max_files)
+
+        try:
+            files = drive_future.result()
+        except Exception as exc:
+            component_errors["drive"] = str(exc)
+        sheet_future = executor.submit(fetch_sheet_previews, credentials, files) if files else None
+
+        try:
+            events, calendar_errors = calendar_future.result()
+        except Exception as exc:
+            component_errors["calendar"] = str(exc)
+        try:
+            messages, identity = mail_future.result()
+        except Exception as exc:
+            component_errors["gmail"] = str(exc)
+        if sheet_future:
+            try:
+                sheet_previews = sheet_future.result()
+            except Exception as exc:
+                component_errors["sheets"] = str(exc)
+
+    errors = list(calendar_errors)
+    errors.extend(
+        f"{component}: {component_errors[component]}"
+        for component in ("calendar", "gmail", "drive", "sheets")
+        if component in component_errors
+    )
 
     return {
         "schema": 1,

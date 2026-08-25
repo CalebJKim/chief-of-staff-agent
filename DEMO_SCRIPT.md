@@ -4,7 +4,7 @@
 
 Show a succinct, evidence-backed morning brief followed by two safe cross-Workspace actions. The third workstream remains available as an optional backup. The interactive flow should finish within six minutes after the workspace is seeded.
 
-The demo changes no Hermes model/provider defaults. It uses the repo-installed `chief-of-staff` and `ingest` skills with terminal access. Workspace links appear inline for Ctrl-clicking; the agent never opens Chrome.
+The dedicated demo profile uses `qwen3.6:35b-a3b-mtp-q4_K_M` through local Ollama with medium reasoning. The normal Hermes profile remains unchanged. The demo uses the repo-installed `chief-of-staff` and `ingest` skills with terminal access. Workspace links appear inline for Ctrl-clicking; the agent never opens Chrome.
 
 ## Preflight
 

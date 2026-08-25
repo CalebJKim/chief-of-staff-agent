@@ -6,7 +6,7 @@ is in [docs/GOOGLE_DESKTOP_OAUTH.md](docs/GOOGLE_DESKTOP_OAUTH.md).
 
 ## 1. Install prerequisites
 
-Install [Hermes Agent](https://hermes-agent.nousresearch.com/docs), Python 3.11+, and clone this repository.
+Install [Hermes Agent](https://hermes-agent.nousresearch.com/docs), [Ollama](https://ollama.com/download), Python 3.11+, and clone this repository.
 
 Windows PowerShell:
 
@@ -57,8 +57,10 @@ prevents later Hermes updates from repopulating unrelated bundled skills. The
 setup script also enables only `skills` and `terminal` and sets Max Agent Steps
 to `40`. It disables skill-creation nudges and marks the installed demo skills as
 repository-managed so they are read but not edited during a run. The default
-profile remains unchanged. Rerunning the script updates the demo installation
-without replacing an existing profile's model configuration.
+profile remains unchanged. The script pulls and selects
+`qwen3.6:35b-a3b-mtp-q4_K_M` with medium reasoning in the demo profile. Rerunning
+it refreshes that demo model selection and the repository-managed installation
+without recreating the profile or changing unrelated settings.
 
 ## 3. Connect your own Google account
 
@@ -140,4 +142,4 @@ Say:
 
 > Hey chief of staff, what should we work on today?
 
-Then try `Take care of the first item.` or a modified follow-up such as `Take care of the first item, but use Thursday afternoon.` You can also make a direct Workspace request unrelated to the brief. The agent uses live Gmail message IDs for reply recipients, Calendar's local timezone and working hours for rescheduling, and the Sheet's discovered schema and cell validation for updates. A direct request to complete a displayed action does not trigger a redundant confirmation question. No changes to Hermes model/provider defaults or unrelated tools are required.
+Then try `Take care of the first item.` or a modified follow-up such as `Take care of the first item, but use Thursday afternoon.` You can also make a direct Workspace request unrelated to the brief. The agent uses live Gmail message IDs for reply recipients, Calendar's local timezone and working hours for rescheduling, and the Sheet's discovered schema and cell validation for updates. A direct request to complete a displayed action does not trigger a redundant confirmation question. The dedicated profile uses the repository-tested MTP model; the normal Hermes profile and unrelated tools are unchanged.

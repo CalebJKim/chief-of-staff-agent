@@ -7,6 +7,7 @@ import importlib.util
 import io
 import json
 import tempfile
+import threading
 import unittest
 from contextlib import redirect_stdout
 from datetime import date
@@ -37,6 +38,54 @@ class IngestTests(unittest.TestCase):
         self.assertEqual(snapshot["source"], "fixture")
         self.assertEqual(snapshot["coverage"]["events"], 4)
         self.assertLessEqual(len(snapshot["messages"]), ingest.DEFAULT_MAX_MESSAGES)
+
+    def test_live_collection_overlaps_independent_workspace_reads(self):
+        barrier = threading.Barrier(3)
+        drive_complete = threading.Event()
+
+        def calendars(_api, _start, _end, _limit):
+            barrier.wait(timeout=2)
+            return ([{"id": "event-1"}], [])
+
+        def mail(_api, _days_back, _max_messages, _query, _scan_limit):
+            barrier.wait(timeout=2)
+            return ([{"id": "message-1"}], {"email": "demo@example.test"})
+
+        def drive(_api, _days_back, _max_files):
+            barrier.wait(timeout=2)
+            drive_complete.set()
+            return [{"id": "sheet-1", "kind": "sheet"}]
+
+        def sheets(_credentials, files):
+            self.assertTrue(drive_complete.is_set())
+            self.assertEqual("sheet-1", files[0]["id"])
+            return [{"id": "sheet-1"}]
+
+        args = argparse.Namespace(
+            fixture=None,
+            date="2026-08-25",
+            days_ahead=2,
+            days_back=30,
+            max_events=60,
+            max_messages=20,
+            gmail_query=None,
+            mail_scan_limit=120,
+            max_files=30,
+        )
+        with patch.object(ingest, "load_credentials", return_value=object()), patch(
+            "googleapiclient.discovery.build", side_effect=lambda name, *_args, **_kwargs: name
+        ), patch.object(ingest, "_calendar_timezone", return_value="UTC"), patch.object(
+            ingest, "fetch_calendars", side_effect=calendars
+        ), patch.object(ingest, "fetch_mail", side_effect=mail), patch.object(
+            ingest, "fetch_drive", side_effect=drive
+        ), patch.object(ingest, "fetch_sheet_previews", side_effect=sheets):
+            snapshot = ingest.collect(args)
+
+        self.assertEqual(1, snapshot["coverage"]["events"])
+        self.assertEqual(1, snapshot["coverage"]["messages"])
+        self.assertEqual(1, snapshot["coverage"]["files"])
+        self.assertEqual(1, snapshot["coverage"]["sheets"])
+        self.assertEqual([], snapshot["coverage"]["errors"])
 
     def test_mail_output_stays_at_twenty_after_broader_scan(self):
         self.assertEqual(20, ingest.DEFAULT_MAX_MESSAGES)
@@ -142,6 +191,19 @@ class IngestTests(unittest.TestCase):
                 })
 
         messages = Messages()
+        batch_sizes = []
+
+        class Batch:
+            def __init__(self):
+                self.requests = []
+
+            def add(self, request, callback, request_id):
+                self.requests.append((request, callback, request_id))
+
+            def execute(self):
+                batch_sizes.append(len(self.requests))
+                for request, callback, request_id in self.requests:
+                    callback(request_id, request.execute(), None)
 
         class Users:
             def getProfile(self, **_kwargs):
@@ -154,10 +216,82 @@ class IngestTests(unittest.TestCase):
             def users(self):
                 return Users()
 
+            def new_batch_http_request(self):
+                return Batch()
+
         result, identity = ingest.fetch_mail(Api(), 30, 2, None, scan_limit=4)
 
         self.assertEqual(["priority-1", "priority-2"], [item["id"] for item in result])
         self.assertEqual(4, identity["mail_scanned"])
+        self.assertEqual([4], batch_sizes)
+
+    def test_mail_metadata_batch_retries_only_rate_limited_messages(self):
+        class Request:
+            def __init__(self, value):
+                self.value = value
+
+            def execute(self):
+                return self.value
+
+        class RateLimited(Exception):
+            def __init__(self):
+                super().__init__("rate limited")
+                self.resp = SimpleNamespace(status=429)
+
+        attempts = {"message-1": 0, "message-2": 0}
+        batch_sizes = []
+
+        class Messages:
+            def list(self, **_kwargs):
+                return Request({"messages": [{"id": "message-1"}, {"id": "message-2"}]})
+
+            def get(self, **kwargs):
+                message_id = kwargs["id"]
+                return Request({
+                    "id": message_id,
+                    "threadId": f"thread-{message_id}",
+                    "internalDate": "1000",
+                    "labelIds": ["INBOX"],
+                    "payload": {"headers": [{"name": "Subject", "value": message_id}]},
+                })
+
+        messages = Messages()
+
+        class Batch:
+            def __init__(self):
+                self.requests = []
+
+            def add(self, request, callback, request_id):
+                self.requests.append((request, callback, request_id))
+
+            def execute(self):
+                batch_sizes.append(len(self.requests))
+                for request, callback, request_id in self.requests:
+                    attempts[request_id] += 1
+                    error = RateLimited() if request_id == "message-1" and attempts[request_id] == 1 else None
+                    callback(request_id, None if error else request.execute(), error)
+
+        class Users:
+            def getProfile(self, **_kwargs):
+                return Request({"emailAddress": "demo@example.test"})
+
+            def messages(self):
+                return messages
+
+        class Api:
+            def users(self):
+                return Users()
+
+            def new_batch_http_request(self):
+                return Batch()
+
+        with patch.object(ingest.time_module, "sleep") as sleep:
+            result, _identity = ingest.fetch_mail(Api(), 30, 2, None, scan_limit=2)
+
+        self.assertEqual({"message-1": 2, "message-2": 1}, attempts)
+        self.assertEqual([2, 1], batch_sizes)
+        self.assertEqual({"message-1", "message-2"}, {item["id"] for item in result})
+        sleep.assert_called_once_with(1)
 
     def test_cloud_mutation_requires_confirmation(self):
         with self.assertRaisesRegex(RuntimeError, "without --confirm"):

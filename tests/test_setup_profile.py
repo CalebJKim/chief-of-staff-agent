@@ -4,7 +4,15 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from setup_profile import DEFAULT_MAX_TURNS, setup_profile
+from setup_profile import (
+    DEFAULT_MAX_TURNS,
+    DEMO_BASE_URL,
+    DEMO_MODEL,
+    DEMO_MODEL_NAME,
+    DEMO_PROVIDER,
+    DEMO_REASONING_EFFORT,
+    setup_profile,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,6 +50,26 @@ class SetupProfileTests(unittest.TestCase):
         self.assertTrue((target / "skills" / "productivity" / "chief-of-staff" / "SKILL.md").exists())
         self.assertTrue((target / "skills" / "productivity" / "ingest" / "SKILL.md").exists())
         self.assertTrue((target / "SOUL.md").exists())
+        self.assertIn(["ollama", "pull", DEMO_MODEL], self.commands)
+        expected_model_settings = {
+            "model.default": DEMO_MODEL,
+            "model.provider": DEMO_PROVIDER,
+            "model.base_url": DEMO_BASE_URL,
+            "providers.ollama.name": DEMO_MODEL_NAME,
+            "providers.ollama.base_url": DEMO_BASE_URL,
+            "providers.ollama.model": DEMO_MODEL,
+            "providers.ollama.discover_models": "false",
+            "providers.ollama.models": '{"qwen3.6:35b-a3b-mtp-q4_K_M":{}}',
+            "agent.reasoning_effort": DEMO_REASONING_EFFORT,
+        }
+        for key, value in expected_model_settings.items():
+            self.assertIn(
+                [
+                    "hermes", "-p", "chief-of-staff-demo", "config", "set",
+                    key, value, "--force",
+                ],
+                self.commands,
+            )
         self.assertIn(
             [
                 "hermes", "-p", "chief-of-staff-demo", "config", "set",
@@ -64,12 +92,12 @@ class SetupProfileTests(unittest.TestCase):
             self.commands,
         )
 
-    def test_existing_profile_is_updated_without_replacing_config(self) -> None:
+    def test_existing_profile_is_refreshed_without_recreating_it(self) -> None:
         target = self.hermes_root / "profiles" / "chief-of-staff-demo"
         target.mkdir(parents=True)
         (target / "profile.yaml").write_text("name: chief-of-staff-demo\n", encoding="utf-8")
-        (target / "config.yaml").write_text("model: keep-me\n", encoding="utf-8")
-        (self.hermes_root / "config.yaml").write_text("model: do-not-copy\n", encoding="utf-8")
+        (target / "config.yaml").write_text("custom_setting: keep-me\n", encoding="utf-8")
+        (self.hermes_root / "config.yaml").write_text("custom_setting: do-not-copy\n", encoding="utf-8")
 
         installed, created = setup_profile(
             ROOT,
@@ -80,8 +108,16 @@ class SetupProfileTests(unittest.TestCase):
 
         self.assertFalse(created)
         self.assertEqual(target, installed)
-        self.assertEqual("model: keep-me\n", (target / "config.yaml").read_text(encoding="utf-8"))
+        self.assertEqual("custom_setting: keep-me\n", (target / "config.yaml").read_text(encoding="utf-8"))
         self.assertFalse(any(command[1:3] == ["profile", "create"] for command in self.commands))
+        self.assertIn(["ollama", "pull", DEMO_MODEL], self.commands)
+        self.assertIn(
+            [
+                "hermes", "-p", "chief-of-staff-demo", "config", "set",
+                "model.default", DEMO_MODEL, "--force",
+            ],
+            self.commands,
+        )
         self.assertIn(
             [
                 "hermes", "-p", "chief-of-staff-demo", "config", "set",

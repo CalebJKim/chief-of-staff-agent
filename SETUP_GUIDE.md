@@ -8,6 +8,7 @@ seeding, verification, cleanup, and the maintainer Git workflow.
 
 - Windows on ARM64
 - Hermes Agent 0.20.4 (the repository originally targeted 0.20.1)
+- Ollama with `qwen3.6:35b-a3b-mtp-q4_K_M`
 - Python 3.11
 - PowerShell
 - Google Workspace APIs: Gmail, Calendar, Drive, Docs, Sheets, and Slides
@@ -43,7 +44,7 @@ git push --set-upstream origin demo_updates
 
 ## 2. Install prerequisites
 
-Install Hermes Agent, Git, and Python 3.11 or newer. On Windows:
+Install Hermes Agent, Ollama, Git, and Python 3.11 or newer. On Windows:
 
 ```powershell
 winget install --id Python.Python.3.11 --exact --scope user
@@ -56,6 +57,7 @@ loaded, then verify:
 python --version
 python -m pip --version
 hermes --version
+ollama --version
 ```
 
 If Hermes is installed but a standalone Python is not yet available, its
@@ -94,23 +96,26 @@ calendar event offsets.
 & $Python -m unittest discover -s skills/productivity/chief-of-staff/tests -v
 ```
 
-Expected result: 73 tests pass across the three suites.
+Expected result: 76 tests pass across the three suites.
 
 ## 5. Create or refresh the isolated Hermes profile
 
 ```powershell
 & $Python setup_profile.py --profile-name $ProfileName --hermes-root $HermesRoot
 hermes -p $ProfileName skills list
+hermes -p $ProfileName config get model.default
 hermes -p $ProfileName config get agent.max_turns
 hermes -p $ProfileName config get skills.creation_nudge_interval
 ```
 
-The setup script creates the dedicated profile if needed, preserves the selected
-model configuration, installs only `ingest` and `chief-of-staff`, enables the
-`skills` and `terminal` toolsets, and sets Max Agent Steps to `40`. It can be
-rerun after repository updates without recreating the profile. It also disables
-skill-creation nudges and installs repository-managed-skill instructions; the
-agent can load the skills but must not modify them during a demo run.
+The setup script creates the dedicated profile if needed, pulls and selects
+`qwen3.6:35b-a3b-mtp-q4_K_M` through local Ollama with medium reasoning, installs
+only `ingest` and `chief-of-staff`, enables the `skills` and `terminal` toolsets,
+and sets Max Agent Steps to `40`. It can be rerun after repository updates
+without recreating the profile. The normal Hermes profile and unrelated settings
+remain unchanged. The script also disables skill-creation nudges and installs
+repository-managed-skill instructions; the agent can load the skills but must
+not modify them during a demo run.
 
 Optional Hermes health checks:
 

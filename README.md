@@ -18,7 +18,7 @@ Use a dedicated test or demo Google account. Seeding and cleanup modify real Goo
 
 ## 1. Install prerequisites
 
-You need Git, Python 3.11 or newer, [Hermes Agent](https://hermes-agent.nousresearch.com/docs/getting-started/installation), and a tool-calling model supported by Hermes.
+You need Git, Python 3.11 or newer, [Hermes Agent](https://hermes-agent.nousresearch.com/docs/getting-started/installation), and [Ollama](https://ollama.com/download). The profile setup pulls the demo's exact tool-calling model.
 
 ### Windows PowerShell
 
@@ -41,6 +41,7 @@ Close and reopen PowerShell so the new commands are on `PATH`, then verify them:
 git --version
 python --version
 hermes --version
+ollama --version
 ```
 
 If `python` opens the Microsoft Store or is not found, the new PowerShell window is important. If it still fails, turn off the `python.exe` App Installer alias in **Settings > Apps > Advanced app settings > App execution aliases**.
@@ -61,15 +62,15 @@ python3 --version
 hermes --version
 ```
 
-## 2. Configure a Hermes model
+## 2. Start Ollama
 
-Run the Hermes model picker and configure a provider/model that supports tool calling:
+Make sure Ollama is installed and running:
 
 ```bash
-hermes model
+ollama list
 ```
 
-If Hermes already has a working model, keep the existing configuration. Use a current Hermes release rather than requiring one exact version.
+The profile setup pulls `qwen3.6:35b-a3b-mtp-q4_K_M` and selects it only in the dedicated demo profile. Your normal Hermes profile and its current model remain unchanged. Use a current Hermes release rather than requiring one exact version.
 
 ## 3. Clone the demo branch
 
@@ -163,15 +164,15 @@ Or on Linux/macOS:
 python setup_profile.py --profile-name "$PROFILE_NAME" --hermes-root "$HERMES_ROOT"
 ```
 
-The script creates the profile with `--no-skills` when it is missing, copies the
-default profile's model configuration only on first creation, installs the two
-demo skills and `SOUL.md`, enables only the `skills` and `terminal` toolsets, and
-sets `agent.max_turns` to `40`. It also sets `skills.creation_nudge_interval` to
-`0` and installs an immutable-skill instruction so a demo run can read the two
-skills but cannot decide to rewrite them. It is safe to rerun: an existing profile is not
-recreated and its model configuration is not replaced. If that provider uses a
-secret in the default profile's `.env`, configure it separately with
-`hermes -p chief-of-staff-demo model`; do not commit or publish profile secrets.
+The script creates the profile with `--no-skills` when it is missing, pulls and
+selects `qwen3.6:35b-a3b-mtp-q4_K_M` through local Ollama with medium reasoning,
+installs the two demo skills and `SOUL.md`, enables only the `skills` and
+`terminal` toolsets, and sets `agent.max_turns` to `40`. It also sets
+`skills.creation_nudge_interval` to `0` and installs an immutable-skill
+instruction so a demo run can read the two skills but cannot decide to rewrite
+them. It is safe to rerun: an existing profile is not recreated; the demo model
+selection and repository-managed settings are refreshed while unrelated profile
+settings remain in place. No model secret is required because Ollama is local.
 
 ## 6. Run the offline tests
 
@@ -198,6 +199,7 @@ Expected result: all tests pass across the three suites.
 ```powershell
 # Windows PowerShell
 hermes -p $ProfileName skills list
+hermes -p $ProfileName config get model.default
 hermes -p $ProfileName config get agent.max_turns
 hermes -p $ProfileName config get skills.creation_nudge_interval
 ```
@@ -205,18 +207,21 @@ hermes -p $ProfileName config get skills.creation_nudge_interval
 ```bash
 # Linux/macOS
 hermes -p "$PROFILE_NAME" skills list
+hermes -p "$PROFILE_NAME" config get model.default
 hermes -p "$PROFILE_NAME" config get agent.max_turns
 hermes -p "$PROFILE_NAME" config get skills.creation_nudge_interval
 ```
 
 Confirm that `chief-of-staff` and `ingest` are the only skills in the profile.
-Confirm that the turn limit is `40` and the skill-creation nudge interval is `0`.
-Rerun `setup_profile.py` to refresh the skills, routing instructions, toolsets,
-turn limit, and immutable-skill setting after pulling repository updates.
+Confirm that the model is `qwen3.6:35b-a3b-mtp-q4_K_M`, the turn limit is `40`,
+and the skill-creation nudge interval is `0`. Rerun `setup_profile.py` to refresh
+the model selection, skills, routing instructions, toolsets, turn limit, and
+immutable-skill setting after pulling repository updates.
 
-The setup preserves Hermes model/provider defaults and unrelated profile
+The setup preserves the normal Hermes profile and unrelated demo-profile
 settings. It installs `chief-of-staff` and `ingest`, enables `skills` and
-`terminal`, and applies the demo's bounded agent-step limit.
+`terminal`, selects the repository-tested local MTP model, and applies the
+demo's bounded agent-step limit.
 
 ## 8. Create Google OAuth credentials
 
@@ -498,7 +503,7 @@ Gmail deletion is immediate and cannot be undone; unrelated messages are untouch
 - **OAuth state mismatch**: generate a new URL with `--auth-url` and submit only the redirect URL produced by that same attempt.
 - **Time-zone error on Windows**: activate the repository environment and rerun `pip install -r requirements.txt`; `tzdata` is required.
 - **Hermes cannot find the skills**: confirm `HERMES_HOME`, rerun `install.py`, then run `hermes -p chief-of-staff-demo skills list`.
-- **Hermes has no usable model**: run `hermes model` and choose a tool-calling provider/model.
+- **Hermes has no usable demo model**: start Ollama and rerun `setup_profile.py`; it pulls and selects the exact MTP model in the dedicated profile.
 
 ## Repository contents and safety
 
