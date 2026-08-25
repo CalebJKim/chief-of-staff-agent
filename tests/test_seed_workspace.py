@@ -73,11 +73,15 @@ class SeedWorkspaceTests(unittest.TestCase):
         )
 
     def test_tracker_reschedules_to_the_next_business_day(self) -> None:
-        thursday = seed_workspace.tracker_rows("slides", "doc", "sheet", {}, date(2026, 8, 20))
+        thursday = seed_workspace.tracker_rows(
+            "slides", "doc", "sheet", {}, date(2026, 8, 20), "calendar"
+        )
         friday = seed_workspace.tracker_rows("slides", "doc", "sheet", {}, date(2026, 8, 21))
 
         self.assertIn("earliest non-conflicting one-hour slot on Friday", thursday[1][4])
         self.assertIn("earliest non-conflicting one-hour slot on Monday", friday[1][4])
+        self.assertEqual("calendar", thursday[1][8])
+        self.assertEqual("sheet", friday[1][8])
 
     def test_background_mail_is_low_signal_unread_and_on_one_day(self) -> None:
         reference = datetime(2026, 8, 21, 12, 0, tzinfo=ZoneInfo("America/Los_Angeles"))
@@ -148,11 +152,11 @@ class SeedWorkspaceTests(unittest.TestCase):
         self.assertTrue(all(message_id.startswith(f"<{seed_workspace.MARKER}-") for message_id in message_ids))
         self.assertTrue(all(message_id.endswith("@demo.example>") for message_id in message_ids))
         meaningful_subjects = {
-            "BLOCKER: Agent Runtime duplicates tool-call completions",
-            "New slot for the Agent Runtime release review",
-            "READY: Agent Runtime latency evaluation",
-            "READY: Reliability test matrix",
-            "For next week: approved Partner Readout headline",
+            "BLOCKER: RTX AI Assistant repeats completed tasks",
+            "New slot for the RTX AI Assistant launch review",
+            "READY: Customer demo readiness check",
+            "For later: Creator demo feedback summary",
+            "For next week: approved Partner Preview headline",
             "ACTION: Partner demo checklist ready to start",
         }
         self.assertEqual({"bug", "scheduling", "evaluation", "reliability", "copy", "checklist"}, set(evidence))
@@ -172,19 +176,21 @@ class SeedWorkspaceTests(unittest.TestCase):
             message["Subject"]: message.get_payload(decode=True).decode("utf-8")
             for message, _labels in messages
         }
-        priya_body = bodies_by_subject["BLOCKER: Agent Runtime duplicates tool-call completions"]
-        daniel_body = bodies_by_subject["New slot for the Agent Runtime release review"]
+        priya_body = bodies_by_subject["BLOCKER: RTX AI Assistant repeats completed tasks"]
+        daniel_body = bodies_by_subject["New slot for the RTX AI Assistant launch review"]
         self.assertNotIn("Daniel is checking the next available slot.", priya_body)
-        self.assertIn("Please postpone the RTX Spark Agent Runtime release review scheduled for", priya_body)
+        self.assertIn("sometimes performs the same task twice", priya_body)
+        self.assertNotIn("tool-call", priya_body.casefold())
+        self.assertIn("Please postpone the RTX AI Assistant launch review scheduled for", priya_body)
         self.assertIn("Reply in Priya's blocker thread with the confirmation and copy me", daniel_body)
-        self.assertIn("IMPORTANT", labels_by_subject["BLOCKER: Agent Runtime duplicates tool-call completions"])
-        self.assertIn("IMPORTANT", labels_by_subject["New slot for the Agent Runtime release review"])
+        self.assertIn("IMPORTANT", labels_by_subject["BLOCKER: RTX AI Assistant repeats completed tasks"])
+        self.assertIn("IMPORTANT", labels_by_subject["New slot for the RTX AI Assistant launch review"])
         self.assertTrue(all(
             "IMPORTANT" not in labels
             for subject, labels in labels_by_subject.items()
             if subject not in {
-                "BLOCKER: Agent Runtime duplicates tool-call completions",
-                "New slot for the Agent Runtime release review",
+                "BLOCKER: RTX AI Assistant repeats completed tasks",
+                "New slot for the RTX AI Assistant launch review",
             }
         ))
         for message, _ in messages[
@@ -251,9 +257,13 @@ class SeedWorkspaceTests(unittest.TestCase):
         requests = docs.documents().batchUpdate.call_args.kwargs["body"]["requests"]
         self.assertIn("insertText", requests[0])
         document_text = requests[0]["insertText"]["text"]
-        self.assertIn("EVALUATION REPORT  •  INTERNAL", document_text)
+        self.assertIn("RTX AI Assistant Customer Demo Readiness Check", document_text)
+        self.assertIn("READINESS REPORT  •  INTERNAL", document_text)
         self.assertIn("Complete — ready for review.", document_text)
-        self.assertNotIn("- Interactive tool-call latency", document_text)
+        self.assertIn("Response time during common assistant requests", document_text)
+        self.assertIn("Recovery when an action cannot be completed", document_text)
+        self.assertNotIn("tool-call", document_text.casefold())
+        self.assertNotIn("latency", document_text.casefold())
         self.assertEqual(1, sum("createParagraphBullets" in request for request in requests))
         named_styles = {
             request["updateParagraphStyle"]["paragraphStyle"].get("namedStyleType")
@@ -299,13 +309,15 @@ class SeedWorkspaceTests(unittest.TestCase):
         update = sheets.spreadsheets().values().update.call_args.kwargs
         self.assertEqual("'Campaign Lanes'!A1:J14", update["range"])
         self.assertEqual(14, len(update["body"]["values"]))
-        partner_row = next(row for row in update["body"]["values"] if row and row[0] == "Partner Readout Deck")
+        self.assertEqual("RTX AI Assistant Launch Tracker", update["body"]["values"][0][0])
+        partner_row = next(row for row in update["body"]["values"] if row and row[0] == "Partner Preview Deck")
         self.assertIn("APPROVED HEADLINE PLACEHOLDER", partner_row[4])
-        self.assertIn("Meet the RTX Spark Agent Runtime", partner_row[4])
-        reliability_row = next(row for row in update["body"]["values"] if row and row[0] == "Reliability test matrix")
+        self.assertIn("Meet the RTX AI Assistant", partner_row[4])
+        reliability_row = next(row for row in update["body"]["values"] if row and row[0] == "Creator Demo Feedback Summary")
         checklist_row = next(row for row in update["body"]["values"] if row and row[0] == "Partner demo checklist")
         self.assertEqual("In review", reliability_row[2])
         self.assertIn("status to Ready for review", reliability_row[4])
+        self.assertEqual("Later this month", reliability_row[5])
         self.assertEqual("Not started", checklist_row[2])
         self.assertIn("status to In progress", checklist_row[4])
         validation_request = next(
@@ -385,6 +397,8 @@ class SeedWorkspaceTests(unittest.TestCase):
             for request in requests
             if "insertText" in request
         }
+        self.assertEqual("RTX AI ASSISTANT  /  PARTNER PREVIEW", inserted_text["rtx_kicker_1"])
+        self.assertEqual("RTX AI Assistant\nPartner Preview", inserted_text["rtx_title_1"])
         self.assertIn("APPROVED HEADLINE PLACEHOLDER", inserted_text["rtx_body_4"])
         emphasized_ranges = [
             request["updateTextStyle"]["textRange"]
@@ -426,6 +440,7 @@ class SeedWorkspaceTests(unittest.TestCase):
         for call, (day_offsets, *_rest) in zip(calls[8:11], seed_workspace.OVERLAP_EVENTS):
             self.assertEqual([seed_workspace.recurrence_for_days(day_offsets)], call.kwargs["body"]["recurrence"])
         self.assertNotIn("recurrence", calls[11].kwargs["body"])
+        self.assertEqual("RTX AI Assistant launch review", calls[11].kwargs["body"]["summary"])
 
     def test_added_meeting_series_overlap_at_three_distinct_times(self) -> None:
         def minutes(value: str) -> int:

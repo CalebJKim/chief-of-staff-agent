@@ -97,7 +97,7 @@ Credentials remain under your local `HERMES_HOME`. Never commit them.
 
 ## 4. Optional: populate the reference workspace
 
-After OAuth is verified, create the same realistic workspace in your own account: 6 meaningful Gmail messages, 70 older low-signal messages, 12 Calendar resources (47 visible weekly instances), and an RTX Spark Agent Runtime folder containing a delivery-tracker Sheet, latency-evaluation Doc, and partner-readout deck. Gmail ingestion scans up to 120 matching Inbox messages, sorts them by `internalDate`, and retains the newest 20. The demo date is today on weekdays and the upcoming Monday on weekends.
+After OAuth is verified, create the same realistic workspace in your own account: 6 meaningful Gmail messages, 70 older low-signal messages, 12 Calendar resources (47 visible weekly instances), and an RTX AI Assistant folder containing a launch-tracker Sheet, customer-demo-readiness Doc, and partner-preview deck. Gmail ingestion scans up to 120 matching Inbox messages, sorts them by `internalDate`, and retains the newest 20. The demo date is today on weekdays and the upcoming Monday on weekends.
 
 ```powershell
 # Windows PowerShell

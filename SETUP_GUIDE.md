@@ -165,9 +165,9 @@ for Gmail, Calendar, Drive, Docs, Sheets, and Slides.
 
 The seeder writes demo content to the connected Google account. It creates six
 meaningful Gmail messages, 70 older low-signal messages, 12 Calendar resources
-(47 visible weekly meeting instances), and an `RTX Spark Agent Runtime Demo`
-Drive folder with a delivery-tracker Sheet, latency-evaluation Doc, and
-partner-readout deck. Gmail ingestion scans metadata for up to 120 matching
+(47 visible weekly meeting instances), and an `RTX AI Assistant Demo`
+Drive folder with a launch-tracker Sheet, customer-demo-readiness Doc, and
+partner-preview deck. Gmail ingestion scans metadata for up to 120 matching
 Inbox messages, sorts by Gmail's `internalDate`, and retains the newest 20,
 which keeps all six meaningful messages in scope. Seed the automatic demo day
 with:
@@ -265,9 +265,9 @@ The original full acceptance checks passed on August 21, 2026:
 - Gmail, Calendar, Drive, Docs, Sheets, and Slides service verification.
 - Creation and read-back of 76 demo messages (6 meaningful and 70
   background), 12 calendar resources producing 47 visible weekly instances,
-  one Agent Runtime folder, one 14-row delivery tracker, one latency-evaluation
-  Doc, and one 6-slide partner-readout deck.
-- Decision-packet generation with generic Sheet schema/sample/validation evidence and no repository-defined field mappings, status ranking, or action routing. The live agent interpreted it into the expected regression, evaluation, and deck order with inline Mail and action links.
+  one RTX AI Assistant folder, one 14-row launch tracker, one customer-demo-readiness
+  Doc, and one 6-slide partner-preview deck.
+- Decision-packet generation with generic Sheet schema/sample/validation evidence and no repository-defined field mappings, status ranking, or action routing. The live agent interpreted it into the expected repeated-task issue, readiness check, and deck order with inline Mail and action links.
 - A real Hermes prompt using the installed skill and configured local model:
   `Hey chief of staff, what should we work on today?`
 - The final acceptance reset/reseed took 42.2 seconds. The complete four-prompt
@@ -349,7 +349,7 @@ expected top-three priorities and schedule recommendations.
     enabled; a later `--check-live` succeeded without replacing credentials.
     Verify both the client and secret status, allow for propagation, and replace
     credentials only if the error persists.
-12. The final live action audit verified one moved release-review event with no
+12. The final live action audit verified one moved launch-review event with no
     duplicate, one unsent threaded Priya draft with Daniel copied, only the
-    evaluation status changed in Sheets, and only the slide-4 placeholder
+    readiness-check status changed in Sheets, and only the slide-4 placeholder
     changed in Slides.

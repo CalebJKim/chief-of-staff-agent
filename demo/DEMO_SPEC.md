@@ -1,19 +1,19 @@
 # Workspace seed specification
 
-The seeder creates a self-contained RTX Spark Agent Runtime workspace in the Google account connected through OAuth. It contains no real account IDs, credentials, or reference-workspace links.
+The seeder creates a self-contained RTX AI Assistant launch workspace in the Google account connected through OAuth. It contains no real account IDs, credentials, or reference-workspace links.
 
-The fictional scenario is fixed seed data. The Chief of Staff skill does not contain RTX Spark-specific actions: it reads the current Workspace evidence, interprets a bounded generic schema/sample/validation packet, renders the prescribed brief format, and decides follow-up operations from the user's current request. Spreadsheet writes discover the live tab, header row, target row, target column, value type, validation, formula, and protection state before updating one verified cell; runtime code does not copy the seeded status list, map business fields, or assume fixed coordinates.
+The fictional scenario is fixed seed data. The Chief of Staff skill does not contain scenario-specific actions: it reads the current Workspace evidence, interprets a bounded generic schema/sample/validation packet, renders the prescribed brief format, and decides follow-up operations from the user's current request. Spreadsheet writes discover the live tab, header row, target row, target column, value type, validation, formula, and protection state before updating one verified cell; runtime code does not copy the seeded status list, map business fields, or assume fixed coordinates.
 
 ## What it creates
 
 - **6 meaningful Gmail messages**, all in Inbox and Unread:
-  1. Priya reports a P0 duplicate tool-completion regression and asks to postpone the release review. Important.
+  1. Priya reports that the latest assistant demo sometimes performs the same task twice and asks to postpone the launch review. Important.
   2. Daniel asks for the earliest non-conflicting one-hour slot on the next business day and an unsent confirmation reply in Priya's blocker thread with Daniel copied. Important.
-  3. Mateo says the latency evaluation is complete and ready for review.
-  4. Aisha reports that the completed reliability matrix is ready for review and asks for only that lane's status to change.
+  3. Mateo says the customer demo readiness check is complete and ready for review.
+  4. Aisha reports that the completed creator demo feedback summary is ready for review and asks for only that lane's status to change.
   5. Elena supplies the exact approved slide-4 headline.
   6. Jordan confirms that the partner-demo checklist is ready to start and asks for only that lane's status to change.
-  - These six messages support five distinct actionable workstreams; Priya and Daniel jointly support the release-review workstream.
+  - These six messages support five distinct actionable workstreams; Priya and Daniel jointly support the launch-review workstream.
 - **70 background Gmail messages** from unique fictional people:
   - Each has a unique sender, natural unnumbered subject, timestamp, and harmless low-signal body.
   - They are Inbox and Unread but not Important.
@@ -23,17 +23,17 @@ The fictional scenario is fixed seed data. The Chief of Staff skill does not con
 - **12 Calendar resources** producing 47 visible meeting instances across one workweek:
   - Eight routine weekday series.
   - Three two-day series that overlap existing meetings at different times.
-  - One `RTX Spark Agent Runtime release review` on the resolved demo day.
+  - One `RTX AI Assistant launch review` on the resolved demo day.
   - Busy blocks on the next business day force scheduling actions to use current availability rather than a predetermined time.
-- **1 Google Sheet**: `RTX Spark Delivery Tracker`
+- **1 Google Sheet**: `RTX AI Assistant Launch Tracker`
   - Tab: `Campaign Lanes`
   - Columns A:J: Lane, PIC, Status, Latest update, Next action, Due, Dependency/blocker, Evidence, Artifact, Notes.
   - Eight data rows with a validated, color-coded status dropdown, a frozen/filterable header, and task-specific column widths.
-  - The seeded evidence contains five strongly supported workstreams. When interpreted from the live headers and rows alongside Gmail, Calendar, and Drive evidence, it should yield Agent Runtime regression, Agent Runtime Latency Evaluation, and Partner Readout Deck as the default top three, followed by Partner demo checklist and Reliability test matrix for top-four/top-five requests.
-- **1 Google Doc**: `RTX Spark Agent Runtime Latency Evaluation`
+  - The seeded evidence contains five strongly supported workstreams. When interpreted from the live headers and rows alongside Gmail, Calendar, and Drive evidence, it should yield RTX AI Assistant demo issue, Customer Demo Readiness Check, and Partner Preview Deck as the default top three, followed by Partner demo checklist and Creator Demo Feedback Summary for top-four/top-five requests.
+- **1 Google Doc**: `RTX AI Assistant Customer Demo Readiness Check`
   - Uses a structured internal-report layout with a branded title, section hierarchy, status and action callouts, and a true bulleted scope list.
-  - States that the evaluation is complete and ready for review.
-- **1 Google Slides deck**: `RTX Spark Partner Readout`
+  - States that the readiness check is complete and ready for review.
+- **1 Google Slides deck**: `RTX AI Assistant Partner Preview`
   - Six slides rendered from a reusable dark visual template with consistent typography, accent bars, content cards, footers, and page numbers.
   - Slide 4 contains `APPROVED HEADLINE PLACEHOLDER` and keeps all surrounding content intact.
 
@@ -103,9 +103,9 @@ Gmail deletion is permanent; the Drive folder goes to Trash. If cleanup is parti
 If an organization policy prevents one resource from being created, reproduce the names and evidence above. The most important constraints are:
 
 1. Keep the six meaningful messages newer than the background mail, with Priya and Daniel marked Important.
-2. Use one existing release-review event on the demo day and enough next-business-day calendar activity to exercise availability-aware scheduling.
-3. Keep the Sheet tab named `Campaign Lanes` with the A:J schema and exact evaluation lane name.
-4. Put the exact placeholder and approved replacement text in the Partner Readout evidence.
+2. Use one existing launch-review event on the demo day and enough next-business-day calendar activity to exercise availability-aware scheduling.
+3. Keep the Sheet tab named `Campaign Lanes` with the A:J schema and exact readiness-check lane name.
+4. Put the exact placeholder and approved replacement text in the Partner Preview evidence.
 
 The skill resolves resources from current evidence and generated IDs; it does not depend on IDs committed to the repository.
 

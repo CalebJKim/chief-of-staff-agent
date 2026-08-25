@@ -11,7 +11,7 @@ The optional seeder creates data in the Google account you authorize:
 - 6 meaningful Gmail messages supporting 5 distinct workstreams, all Inbox and Unread; the two release-blocker messages are Important.
 - 70 older, unread, low-signal messages from fictional people; none are Important.
 - 12 Calendar resources producing 47 visible meeting instances across one workweek, including three lightly overlapping series.
-- An `RTX Spark Agent Runtime Demo` Drive folder containing a polished 14-row delivery-tracker Sheet with color-coded statuses, a structured internal-report latency-evaluation Doc, and a 6-slide partner-readout deck built from a reusable visual template.
+- An `RTX AI Assistant Demo` Drive folder containing a polished 14-row launch-tracker Sheet with color-coded statuses, a plain-language customer-demo-readiness Doc, and a 6-slide partner-preview deck built from a reusable visual template.
 - A local state file under `HERMES_HOME` containing only the generated resource IDs needed for reset and cleanup.
 
 Use a dedicated test or demo Google account. Seeding and cleanup modify real Google Workspace data in the connected account, and cleanup permanently deletes the exact seeded Gmail message IDs.
@@ -402,11 +402,11 @@ At the prompt, say:
 
 > Hey chief of staff, what should we work on today?
 
-The reply begins with a summary of today's workload in no more than three sentences. It returns three priorities by default; requests such as `What are the top 5 things we should work on today?` return that many when available. The expected default top three, in order, are the Agent Runtime regression, the completed latency evaluation, and the Partner Readout deck. The seeded top four and five continue with Partner demo checklist and Reliability test matrix. Each item includes inline links to its supporting mail and action target followed by a `Recommended action item(s):` sub-bullet. Continue with:
+The reply begins with a summary of today's workload in no more than three sentences. It returns three priorities by default; requests such as `What are the top 5 things we should work on today?` return that many when available. The expected default top three, in order, are the RTX AI Assistant repeated-task issue, the completed Customer Demo Readiness Check, and the Partner Preview Deck. The seeded top four and five continue with Partner demo checklist and Creator Demo Feedback Summary. Each item includes inline links to its supporting mail and action target followed by a `Recommended action item(s):` sub-bullet. Continue with:
 
-- `Take the action items for the first thing.` This resolves item one from conversation history, checks current availability, moves the existing release review to the earliest valid non-conflicting slot, and creates an unsent threaded draft to Priya with Daniel copied. The request authorizes the displayed actions; the agent does not ask for confirmation again.
+- `Take the action items for the first thing.` This resolves item one from conversation history, checks current availability, moves the existing launch review to the earliest valid non-conflicting slot, and creates an unsent threaded draft to Priya with Daniel copied. The request authorizes the displayed actions; the agent does not ask for confirmation again.
 - Natural wording such as `Can you take care of the first item on the list for me?` follows the same evidence-driven flow without rerunning Start of Day. Added constraints such as `but use Thursday afternoon` override the earlier recommendation.
-- `Take the action items for the second thing.` This changes only the `Agent Runtime Latency Evaluation` tracker status to `Ready for review`.
+- `Take the action items for the second thing.` This changes only the `Customer Demo Readiness Check` tracker status to `Ready for review`.
 - Optional backup: `Take the action items for the third thing.` This replaces only the slide-4 placeholder with Elena's approved headline.
 
 The three-item plan is conversational context, not a capability boundary. Direct Gmail, Calendar, Drive, Docs, Sheets, and Slides requests outside the plan use the same focused helpers and current Workspace data.

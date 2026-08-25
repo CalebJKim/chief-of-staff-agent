@@ -131,6 +131,9 @@ class SkillRuntimeTests(unittest.TestCase):
         self.assertIn("bounded to at most three Mail links", skill)
         self.assertIn("creates recommendations only", skill)
         self.assertNotIn("RTX Spark", skill)
+        self.assertNotIn("RTX AI Assistant", skill)
+        self.assertNotIn("Customer Demo Readiness Check", skill)
+        self.assertNotIn("repeated-task", skill)
         self.assertNotIn("Ready for review", skill)
         self.assertNotIn("APPROVED HEADLINE", skill)
 

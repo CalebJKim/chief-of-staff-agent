@@ -21,7 +21,7 @@ Desktop. Profile selection does not modify the default profile's configuration.
 
 ## Opening
 
-The dedicated demo account contains a busy fictional RTX Spark Agent Runtime workweek, 76 unread Inbox messages, and a Drive tracker/report/deck. Only six messages contain meaningful work, supporting five distinct workstreams. The chief of staff should cut through that noise and identify three grouped outcomes by default across Mail, Calendar, and Drive.
+The dedicated demo account contains a busy fictional RTX AI Assistant launch workweek, 76 unread Inbox messages, and a Drive tracker/report/deck. Only six messages contain meaningful work, supporting five distinct workstreams. The chief of staff should cut through that noise and identify three grouped outcomes by default across Mail, Calendar, and Drive.
 
 ## Query 1 — Morning priorities
 
@@ -33,9 +33,9 @@ The dedicated demo account contains a busy fictional RTX Spark Agent Runtime wor
 
 Start with a very short summary of today's workload in no more than three sentences and without a heading. Follow it with exactly three succinct numbered items, with no scores, inbox inventory, or closing question. Each item has an evidence sentence with one action-target link and a bounded Mail link for every message whose unique facts or participant it relies on, followed by an indented `Recommended action item(s):` sub-bullet. The expected content is:
 
-1. **Agent Runtime regression** — Priya's P0 duplicate-completion blocker. Next: move the existing release review to the earliest non-conflicting one-hour slot on the next business day and draft Priya and Daniel a confirmation. Inline Mail and Calendar links.
-2. **Agent Runtime Latency Evaluation** — Mateo completed it while the tracker remains `In progress`. Next: change only that lane to `Ready for review`. Inline Mail and Tracker links.
-3. **Partner Readout Deck** — Elena approved the exact slide-4 headline. Next: replace only the placeholder. Inline Mail and Deck links.
+1. **RTX AI Assistant demo issue** — Priya reports that the latest demo sometimes performs the same task twice. Next: move the existing launch review to the earliest non-conflicting one-hour slot on the next business day and draft Priya and Daniel a confirmation. Inline Mail and Calendar links.
+2. **Customer Demo Readiness Check** — Mateo completed testing of common assistant requests while the tracker remains `In progress`. Next: change only that lane to `Ready for review`. Inline Mail and Tracker links.
+3. **Partner Preview Deck** — Elena approved the exact slide-4 headline. Next: replace only the placeholder. Inline Mail and Deck links.
 
 Point out that each priority groups evidence and the action target instead of listing Mail, Calendar, and Drive as separate tasks.
 
@@ -56,7 +56,7 @@ Equivalent natural wording such as `Can you take care of the first item on the l
 **Expected result**
 
 - The agent refreshes the relevant event window and finds the earliest one-hour opening that does not overlap another event.
-- The existing `RTX Spark Agent Runtime release review` moves to that runtime-selected slot; no duplicate event is created.
+- The existing `RTX AI Assistant launch review` moves to that runtime-selected slot; no duplicate event is created.
 - An unsent reply draft is created in Priya's original thread with Daniel copied.
 - The response is one short confirmation with inline Calendar and Draft links.
 
@@ -80,7 +80,7 @@ You can also ask for a direct Workspace action unrelated to the displayed ranked
 
 **Expected result**
 
-- Only the `Agent Runtime Latency Evaluation` status changes from `In progress` to `Ready for review`.
+- Only the `Customer Demo Readiness Check` status changes from `In progress` to `Ready for review`.
 - Owner, latest update, next action, due date, blocker, evidence, artifact, and notes remain unchanged.
 - The response is one short verified confirmation with the inline Tracker link.
 
@@ -92,7 +92,7 @@ You can also ask for a direct Workspace action unrelated to the displayed ranked
 
 **Expected result**
 
-- Only `APPROVED HEADLINE PLACEHOLDER` on slide 4 becomes `Meet the RTX Spark Agent Runtime: a faster path from intent to completed work.`
+- Only `APPROVED HEADLINE PLACEHOLDER` on slide 4 becomes `Meet the RTX AI Assistant: helping turn everyday requests into completed work.`
 - The rest of slide 4 and the other five slides remain unchanged.
 - The response is one short verified confirmation with the inline Deck link.
 
