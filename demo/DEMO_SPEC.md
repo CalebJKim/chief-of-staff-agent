@@ -31,6 +31,11 @@ $HERMES_HOME/chief-of-staff-workspace-state.json
 
 The reset and cleanup commands use this file to delete imported mail/events and move generated Drive files to trash.
 
+
+## Template fidelity
+
+The Sheet, Doc, and Slides are imported from exact Office exports of the reference workspace stored under `demo/templates/`. This preserves the tracker styling, conditional formatting, document structure, and slide design instead of rebuilding approximations through API calls. The imported files receive fresh Google IDs and are linked dynamically from seeded mail and calendar entries.
+
 ## Seed
 
 First connect your own Google account as described in `QUICKSTART.md`. Then:

@@ -16,6 +16,7 @@ from zoneinfo import ZoneInfo
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "skills" / "productivity" / "ingest" / "scripts"))
 from actions import credentials  # noqa: E402
+from baseline import reset_sheet_baseline  # noqa: E402
 from googleapiclient.discovery import build  # noqa: E402
 
 MARKER = "chief-of-staff-reference-workspace-v1"
@@ -83,108 +84,16 @@ def create_folder(drive) -> dict:
     return {"id": item["id"], "url": item.get("webViewLink", f"https://drive.google.com/drive/folders/{item['id']}")}
 
 
-def create_doc(docs, drive, folder_id: str) -> dict:
-    result = docs.documents().create(body={"title": "RTX Spark Campaign Plan"}).execute()
-    doc_id = result["documentId"]
-    text = (
-        "RTX Spark Campaign Plan\n\n"
-        "Campaign objective\n"
-        "Make RTX Spark the clearest example of useful local AI agents: fast, private, efficient, and ready for real work.\n\n"
-        "Narrative\n"
-        "Lead with agents and user outcomes. Use specifications and approved performance claims as evidence, not as the opening story.\n\n"
-        "Workstreams\n"
-        "1. Executive storyline and IFA keynote structure\n"
-        "2. Inference performance claims and legal qualification\n"
-        "3. Exec Review deck and Agent Messaging consistency\n"
-        "4. IFA demo slate, owners, and partner commitments\n"
-        "5. Marketing shoot venue, storyboard, budget, and crew hold\n"
-        "6. Local AI Summit demo QA and AV readiness\n\n"
-        "Current decisions\n"
-        "- Approve the agent-first keynote storyline\n"
-        "- Align on IFA demos and owners\n"
-        "- Choose a replacement marketing shoot date\n"
-        "- Assign the retail demo owner\n\n"
-        "Operating rule\n"
-        "Do not propagate provisional performance language. Once Product and Legal approve the wording, update slide 4, Agent Messaging, and dependent campaign surfaces without drift.\n"
-    )
-    docs.documents().batchUpdate(documentId=doc_id, body={"requests": [{"insertText": {"location": {"index": 1}, "text": text}}]}).execute()
-    move_to_folder(drive, doc_id, folder_id)
-    return {"id": doc_id, "url": f"https://docs.google.com/document/d/{doc_id}/edit"}
+def upload_template(drive, folder_id: str, filename: str, name: str, mime_type: str) -> dict:
+    from googleapiclient.http import MediaFileUpload
+    source = ROOT / "demo" / "templates" / filename
+    source_mimes = {"application/vnd.google-apps.document": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.google-apps.spreadsheet": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.google-apps.presentation": "application/vnd.openxmlformats-officedocument.presentationml.presentation"}
+    result = drive.files().create(body={"name": name, "parents": [folder_id], "mimeType": mime_type}, media_body=MediaFileUpload(str(source), mimetype=source_mimes[mime_type], resumable=False), fields="id,name,mimeType,webViewLink").execute()
+    return {"id": result["id"], "url": result.get("webViewLink", "")}
 
-
-SLIDES = [
-    ("RTX Spark\nExec Review", "Campaign plan\nDecision-ready working deck"),
-    ("Lead with the agent", "THE PROMISE\nUseful AI coworkers running locally\n\nTHE PROOF\nPerformance, privacy, and readiness support that promise\n\nTHE ASK\nApprove the agent-first keynote storyline"),
-    ("Campaign state at a glance", "8 ACTIVE LANES\n4 awaiting updates • 2 blocked\n\nATTENTION TODAY\nClaims approval • Exec deck • Marketing shoot date"),
-    ("Inference performance — update required", "Performance to go here - Mike Chen to provide\n\nOWNER\nMike Chen / Marketing"),
-    ("One claim across every surface", "IFA DECK\nAgent Messaging • Campaign plan • Creative assets\n\nDECISION GATE\nApprove wording and disclaimer once, then propagate without drift.\n\nCONTROL\nDo not invent, extrapolate, or preserve superseded multipliers."),
-    ("Move the detail out of the live flow", "RECOMMENDATION\nCut this standalone detail slide from the live presentation.\n\nWHY\nIt duplicates the storyline and delays the decisions.\n\nUSE\nKeep supporting detail in the appendix or presenter notes; carry the essential point into slide 7."),
-    ("IFA demos — alignment needed", "DECISION\nAlign on the demo slate that best proves the agent-first story.\n\nKNOWN\nThe event brief requires this decision.\n\nOPEN\nConfirm the proposed demos and owners before final review."),
-    ("Execution dependencies", "CLAIMS\nApproval unlocks deck, messaging, and creative updates\n\nOWNERS\nTwo campaign lanes still need current PIC updates\n\nPARTNERS\nCommitments must map back to the approved keynote and demo decisions"),
-    ("Marketing shoot — decision required", "BLOCKER\nThe planned venue is unavailable.\n\nDECISION\nChoose a replacement shoot date.\n\nIMPACT\nPriya cannot rebook the venue or protect downstream crew holds until the date is set."),
-    ("Two decisions to leave with", "1  APPROVE THE PROPOSED KEYNOTE STORYLINE\nLead with agents; use specifications as evidence.\n\n2  ALIGN ON THE DEMOS FOR IFA\nConfirm the slate and owners that prove the story.\n\nWorking files\nCampaign tracker • Campaign plan"),
-]
-
-
-def create_slides(slides, drive, folder_id: str) -> dict:
-    result = slides.presentations().create(body={"title": "RTX Spark Exec Review"}).execute()
-    presentation_id = result["presentationId"]
-    requests = []
-    if result.get("slides"):
-        requests.append({"deleteObject": {"objectId": result["slides"][0]["objectId"]}})
-    for index, (title, body) in enumerate(SLIDES, 1):
-        slide_id = f"rtx_slide_{index}"
-        title_id = f"rtx_title_{index}"
-        body_id = f"rtx_body_{index}"
-        requests.extend([
-            {"createSlide": {"objectId": slide_id, "slideLayoutReference": {"predefinedLayout": "BLANK"}}},
-            {"createShape": {"objectId": title_id, "shapeType": "TEXT_BOX", "elementProperties": {"pageObjectId": slide_id, "size": {"width": {"magnitude": 620, "unit": "PT"}, "height": {"magnitude": 90, "unit": "PT"}}, "transform": {"scaleX": 1, "scaleY": 1, "translateX": 45, "translateY": 35, "unit": "PT"}}}},
-            {"insertText": {"objectId": title_id, "text": title}},
-            {"updateTextStyle": {"objectId": title_id, "style": {"fontSize": {"magnitude": 26, "unit": "PT"}, "bold": True, "foregroundColor": {"opaqueColor": {"rgbColor": {"red": 0.12, "green": 0.20, "blue": 0.32}}}}, "textRange": {"type": "ALL"}, "fields": "fontSize,bold,foregroundColor"}},
-            {"createShape": {"objectId": body_id, "shapeType": "TEXT_BOX", "elementProperties": {"pageObjectId": slide_id, "size": {"width": {"magnitude": 620, "unit": "PT"}, "height": {"magnitude": 280, "unit": "PT"}}, "transform": {"scaleX": 1, "scaleY": 1, "translateX": 50, "translateY": 145, "unit": "PT"}}}},
-            {"insertText": {"objectId": body_id, "text": body}},
-            {"updateTextStyle": {"objectId": body_id, "style": {"fontSize": {"magnitude": 16, "unit": "PT"}, "foregroundColor": {"opaqueColor": {"rgbColor": {"red": 0.18, "green": 0.22, "blue": 0.28}}}}, "textRange": {"type": "ALL"}, "fields": "fontSize,foregroundColor"}},
-        ])
-    slides.presentations().batchUpdate(presentationId=presentation_id, body={"requests": requests}).execute()
-    move_to_folder(drive, presentation_id, folder_id)
-    return {"id": presentation_id, "url": f"https://docs.google.com/presentation/d/{presentation_id}/edit"}
-
-
-def tracker_rows(slides_url: str, doc_url: str, sheet_url: str, evidence: dict[str, str]) -> list[list[str]]:
-    return [
-        ["Lane", "PIC", "Status", "Latest update", "Next action", "Due", "Dependency / blocker", "Evidence", "Artifact", "Notes"],
-        ["Product performance claims", "Mike Chen", "Awaiting update", "Performance validation is still pending; the tracker does not yet contain approved inference figures.", "Get Mike’s approved performance package, then update slide 4 and dependent campaign copy.", "", "Awaiting approved Product performance evidence.", "Pending Product confirmation", slides_url, "Required qualification must accompany all figures."],
-        ["Exec Review deck", "Elena Park", "Awaiting update", "The Exec Review deck still uses provisional performance language and has not incorporated the latest review notes.", "Apply approved numbers when received; reconcile slide 6, slide 7, and slide 10 feedback before the Exec Review.", "", "Blocked on approved figures and final review direction.", "Pending Mike and Aisha updates", slides_url, "Two decisions: keynote storyline and IFA demos/owners."],
-        ["Agent Messaging", "Workspace Owner", "Awaiting update", "Agent Messaging still carries provisional performance wording and is waiting on the approved claims package.", "Replace provisional wording after Product confirmation and align it exactly with slide 4.", "", "Awaiting approved performance wording and qualification.", "Pending Product / Legal confirmation", doc_url, "Lead with agents; use specifications as proof."],
-        ["Marketing shoot", "Priya Nair", "Blocked", "The planned venue is unavailable. Northstar is holding Studio B Friday and Studio C Tuesday until 4:30 PM.", "Choose Studio B Friday or Studio C Tuesday before the hold expires.", "", "Executive replacement-date decision; venue and preferred crew will be released without it.", evidence.get("priya", "Priya update"), sheet_url, "Missing the hold risks a campaign slip."],
-        ["Partner enablement", "Aisha Rahman", "On track", "The VP requested a review of the partner slides, and the staged Windows pilot passed its smoke check and is ready for an inclusion decision.", "Review the partner section and decide whether the pilot belongs in the demo.", "", "Keynote and IFA demo-owner decisions remain open.", "Partner review evidence", slides_url, "Production inclusion is not yet approved."],
-        ["Social rollout", "Rafael Costa", "Awaiting update", "No current status has been received.", "Request asset readiness, timing, and blockers from Rafael.", "", "PIC status", "Email / Slack", "", "Follow-up draft needed."],
-        ["Retail demo readiness", "Grant Walker", "Blocked", "Aisha confirmed that the retail demo lane still has no final owner, so the IFA demo slate cannot be presented as closed.", "Assign the final retail demo owner and confirm coverage during the Exec Review.", "", "Final retail demo owner is unassigned.", evidence.get("aisha", "Aisha update"), slides_url, "No direct current update from Grant was received."],
-        ["Legal intake LGL-2026-0847", "Daniel Cho", "Awaiting update", "Legal intake is open and the tracker has no recorded clearance for the performance wording.", "Confirm Daniel’s clearance and record the required qualification before campaign-wide propagation.", "", "Awaiting legal confirmation of wording and disclaimer.", "Pending Daniel / Product evidence", sheet_url, "Leadership review and external-copy clearance may differ."],
-    ]
-
-
-def create_sheet(sheets, drive, folder_id: str, slides_url: str, doc_url: str) -> dict:
-    result = sheets.spreadsheets().create(body={"properties": {"title": "RTX Spark Campaign Tracker"}, "sheets": [{"properties": {"title": "Campaign Lanes", "gridProperties": {"rowCount": 100, "columnCount": 12, "frozenRowCount": 6, "hideGridlines": True}}}]}).execute()
-    spreadsheet_id = result["spreadsheetId"]
-    sheet_id = result["sheets"][0]["properties"]["sheetId"]
-    sheet_url = result.get("spreadsheetUrl", f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit")
-    rows = [["RTX Spark Campaign Tracker"], ["Decision-ready view of campaign execution"], ["Awaiting updates", "4", "", "Blocked", "2", "", "Active lanes", "8", "Last refreshed", local_now().date().isoformat()], ["Statuses are updated from current owner evidence; use the Artifact column to open the working file or decision source."], [], *tracker_rows(slides_url, doc_url, sheet_url, {})]
-    sheets.spreadsheets().values().update(spreadsheetId=spreadsheet_id, range="'Campaign Lanes'!A1:J14", valueInputOption="USER_ENTERED", body={"values": rows}).execute()
-    requests = [
-        {"mergeCells": {"range": {"sheetId": sheet_id, "startRowIndex": 0, "endRowIndex": 1, "startColumnIndex": 0, "endColumnIndex": 10}, "mergeType": "MERGE_ALL"}},
-        {"mergeCells": {"range": {"sheetId": sheet_id, "startRowIndex": 1, "endRowIndex": 2, "startColumnIndex": 0, "endColumnIndex": 10}, "mergeType": "MERGE_ALL"}},
-        {"mergeCells": {"range": {"sheetId": sheet_id, "startRowIndex": 3, "endRowIndex": 4, "startColumnIndex": 0, "endColumnIndex": 10}, "mergeType": "MERGE_ALL"}},
-        {"repeatCell": {"range": {"sheetId": sheet_id, "startRowIndex": 0, "endRowIndex": 1, "startColumnIndex": 0, "endColumnIndex": 10}, "cell": {"userEnteredFormat": {"backgroundColor": {"red": 0.10, "green": 0.18, "blue": 0.30}, "textFormat": {"foregroundColor": {"red": 1, "green": 1, "blue": 1}, "fontSize": 18, "bold": True}, "verticalAlignment": "MIDDLE"}}, "fields": "userEnteredFormat"}},
-        {"repeatCell": {"range": {"sheetId": sheet_id, "startRowIndex": 5, "endRowIndex": 6, "startColumnIndex": 0, "endColumnIndex": 10}, "cell": {"userEnteredFormat": {"backgroundColor": {"red": 0.20, "green": 0.35, "blue": 0.55}, "textFormat": {"foregroundColor": {"red": 1, "green": 1, "blue": 1}, "bold": True}, "wrapStrategy": "WRAP"}}, "fields": "userEnteredFormat"}},
-        {"repeatCell": {"range": {"sheetId": sheet_id, "startRowIndex": 6, "endRowIndex": 14, "startColumnIndex": 0, "endColumnIndex": 10}, "cell": {"userEnteredFormat": {"wrapStrategy": "WRAP", "verticalAlignment": "TOP"}}, "fields": "userEnteredFormat.wrapStrategy,userEnteredFormat.verticalAlignment"}},
-        {"setDataValidation": {"range": {"sheetId": sheet_id, "startRowIndex": 6, "endRowIndex": 14, "startColumnIndex": 2, "endColumnIndex": 3}, "rule": {"condition": {"type": "ONE_OF_LIST", "values": [{"userEnteredValue": value} for value in STATUS_VALUES]}, "strict": True, "showCustomUi": True}}},
-        {"updateDimensionProperties": {"range": {"sheetId": sheet_id, "dimension": "COLUMNS", "startIndex": 0, "endIndex": 10}, "properties": {"pixelSize": 170}, "fields": "pixelSize"}},
-    ]
-    sheets.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests}).execute()
-    move_to_folder(drive, spreadsheet_id, folder_id)
-    return {"id": spreadsheet_id, "url": sheet_url, "sheet_id": sheet_id}
-
+def create_doc(drive, folder_id): return upload_template(drive, folder_id, "rtx-spark-campaign-plan.docx", "RTX Spark Campaign Plan", "application/vnd.google-apps.document")
+def create_slides(drive, folder_id): return upload_template(drive, folder_id, "rtx-spark-exec-review.pptx", "RTX Spark Exec Review", "application/vnd.google-apps.presentation")
+def create_sheet(drive, folder_id): return upload_template(drive, folder_id, "rtx-spark-campaign-tracker.xlsx", "RTX Spark Campaign Tracker", "application/vnd.google-apps.spreadsheet")
 
 def import_mail(gmail, account: str, sender: str, subject: str, body: str, index: int) -> dict:
     message = EmailMessage()
@@ -245,20 +154,35 @@ def create_calendar(calendar, start_day: date, deck_url: str, doc_url: str, shee
     return created
 
 
-def update_tracker_evidence(sheets, state: dict, evidence: dict[str, str]) -> None:
-    sheet = state["sheet"]
-    values = tracker_rows(state["slides"]["url"], state["doc"]["url"], sheet["url"], evidence)
-    sheets.spreadsheets().values().update(spreadsheetId=sheet["id"], range="'Campaign Lanes'!A6:J14", valueInputOption="USER_ENTERED", body={"values": values}).execute()
+def remove_dynamic_items(state: dict, svc: dict) -> None:
+    try:
+        found = svc["gmail"].users().messages().list(userId="me", q=f"{MARKER}", maxResults=500).execute().get("messages", [])
+    except Exception:
+        found = []
+    email_ids = {item.get("id") for item in state.get("emails", [])} | {item.get("id") for item in found}
+    for message_id in email_ids:
+        if not message_id: continue
+        try: svc["gmail"].users().messages().delete(userId="me", id=message_id).execute()
+        except Exception: pass
+    for item in []:
+        try: svc["gmail"].users().messages().delete(userId="me", id=item["id"]).execute()
+        except Exception: pass
+    try:
+        start = state.get("week_of") + "T00:00:00" + utc_offset()
+        end = (date.fromisoformat(state.get("week_of")) + timedelta(days=5)).isoformat() + "T00:00:00" + utc_offset()
+        found_events = svc["calendar"].events().list(calendarId="primary", timeMin=start, timeMax=end, singleEvents=True, maxResults=2500).execute().get("items", [])
+    except Exception:
+        found_events = []
+    event_ids = {item.get("id") for item in state.get("events", [])} | {item.get("id") for item in found_events if MARKER in (item.get("description") or "")}
+    for event_id in event_ids:
+        if not event_id: continue
+        try: svc["calendar"].events().delete(calendarId="primary", eventId=event_id, sendUpdates="none").execute()
+        except Exception: pass
 
 
 def cleanup(state: dict) -> None:
     svc = services()
-    for item in state.get("emails", []):
-        try: svc["gmail"].users().messages().delete(userId="me", id=item["id"]).execute()
-        except Exception: pass
-    for item in state.get("events", []):
-        try: svc["calendar"].events().delete(calendarId="primary", eventId=item["id"], sendUpdates="none").execute()
-        except Exception: pass
+    remove_dynamic_items(state, svc)
     if state.get("folder", {}).get("id"):
         try: svc["drive"].files().update(fileId=state["folder"]["id"], body={"trashed": True}).execute()
         except Exception: pass
@@ -269,11 +193,11 @@ def seed(week_of: date) -> dict:
     state = {"schema": 1, "marker": MARKER, "week_of": week_of.isoformat(), "events": [], "emails": []}
     try:
         state["folder"] = create_folder(svc["drive"])
-        state["doc"] = create_doc(svc["docs"], svc["drive"], state["folder"]["id"])
-        state["slides"] = create_slides(svc["slides"], svc["drive"], state["folder"]["id"])
-        state["sheet"] = create_sheet(svc["sheets"], svc["drive"], state["folder"]["id"], state["slides"]["url"], state["doc"]["url"])
+        state["doc"] = create_doc(svc["drive"], state["folder"]["id"])
+        state["slides"] = create_slides(svc["drive"], state["folder"]["id"])
+        state["sheet"] = create_sheet(svc["drive"], state["folder"]["id"])
         state["emails"], evidence = create_emails(svc["gmail"], state["slides"]["url"], state["sheet"]["url"], state["doc"]["url"])
-        update_tracker_evidence(svc["sheets"], state, evidence)
+        reset_sheet_baseline(svc["sheets"], state, evidence, local_now().date().isoformat())
         state["events"] = create_calendar(svc["calendar"], week_of, state["slides"]["url"], state["doc"]["url"], state["sheet"]["url"])
         state_path().parent.mkdir(parents=True, exist_ok=True)
         state_path().write_text(json.dumps(state, indent=2), encoding="utf-8")
@@ -282,6 +206,57 @@ def seed(week_of: date) -> dict:
         cleanup(state)
         raise
 
+
+def reset_in_place(state: dict, week_of: date) -> dict:
+    svc = services()
+    remove_dynamic_items(state, svc)
+    state["emails"], evidence = create_emails(svc["gmail"], state["slides"]["url"], state["sheet"]["url"], state["doc"]["url"])
+    reset_sheet_baseline(svc["sheets"], state, evidence, local_now().date().isoformat())
+    reset_deck_baseline(svc["slides"], state["slides"]["id"])
+    state["events"] = create_calendar(svc["calendar"], week_of, state["slides"]["url"], state["doc"]["url"], state["sheet"]["url"])
+    state["week_of"] = week_of.isoformat()
+    state_path().write_text(json.dumps(state, indent=2), encoding="utf-8")
+    return state
+
+
+def reset_deck_baseline(slides, presentation_id: str) -> None:
+    presentation = slides.presentations().get(presentationId=presentation_id).execute()
+    wanted = {
+        4: ("Inference performance — update required", """Performance to go here - Mike Chen to provide
+
+OWNER
+Mike Chen / Marketing"""),
+        7: ("IFA demos — alignment needed", """DECISION
+Align on the demo slate that best proves the agent-first story.
+
+KNOWN
+The event brief requires this decision.
+
+OPEN
+Current project notes do not name an approved demo list; confirm the proposed demos and owners before final review."""),
+        9: ("Marketing shoot — decision required", """BLOCKER
+The planned venue is unavailable.
+
+DECISION
+Choose a replacement shoot date.
+
+IMPACT
+Priya cannot rebook the venue or protect downstream crew holds until the date is set."""),
+    }
+    requests = []
+    for slide_number, (title, body) in wanted.items():
+        slide = presentation["slides"][slide_number - 1]
+        text_boxes = []
+        for element in slide.get("pageElements", []):
+            text = "".join(item.get("textRun", {}).get("content", "") for item in element.get("shape", {}).get("text", {}).get("textElements", [])).strip()
+            if text:
+                text_boxes.append(element["objectId"])
+        if len(text_boxes) < 2:
+            raise RuntimeError(f"Slide {slide_number} does not contain title/body text boxes")
+        for object_id, value in ((text_boxes[0], title), (text_boxes[1], body)):
+            requests.append({"deleteText": {"objectId": object_id, "textRange": {"type": "ALL"}}})
+            requests.append({"insertText": {"objectId": object_id, "text": value}})
+    slides.presentations().batchUpdate(presentationId=presentation_id, body={"requests": requests}).execute()
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Seed, reset, or remove the reference Chief of Staff workspace")
@@ -304,8 +279,9 @@ def main() -> int:
         if not path.exists(): raise SystemExit(f"No workspace state at {path}")
         previous = json.loads(path.read_text(encoding="utf-8"))
         chosen_week = date.fromisoformat(args.week_of or previous["week_of"])
-        cleanup(previous)
-        path.unlink(missing_ok=True)
+        state = reset_in_place(previous, chosen_week)
+        print(json.dumps({"ok": True, "status": "reset", "state": str(path), "week_of": state["week_of"], "folder": state["folder"], "sheet": state["sheet"], "doc": state["doc"], "slides": state["slides"], "emails": len(state["emails"]), "events": len(state["events"])}, indent=2))
+        return 0
     elif path.exists():
         raise SystemExit(f"Workspace already exists. Run reset or cleanup first: {path}")
     state = seed(chosen_week)

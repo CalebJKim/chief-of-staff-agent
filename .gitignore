@@ -5,7 +5,7 @@ google_client_secret.json
 google_oauth_pending.json
 client_secret*.json
 client-secret*.json
-chief-of-staff-demo-state.json
+chief-of-staff-workspace-state.json
 config.yaml
 
 # Runtime state
