@@ -225,9 +225,13 @@ an explicit `--week-of`, add `--date YYYY-MM-DD` to ingestion with the
 
 Start a new Hermes session and say:
 
+> Hey chief of staff, give me a quick intro? What kinds of things can you help me with?
+
+Then, in the same session, say:
+
 > Hey chief of staff, what should we work on today?
 
-Then say `Take the action items for the first thing.` and `Take the action items for the second thing.` The first follow-up resolves the displayed item from conversation history, checks live availability, and proceeds without asking for confirmation again. The optional third-item action and a constraint-override example are documented in `DEMO_SCRIPT.md`.
+The second response shows three Gmail anchors selected by the deterministic metadata policy, not a model-generated ranking. Every daily-brief request uses this same policy. Its packet still contains bounded Calendar, Drive, and Sheet evidence, which may support a selected item but cannot change the fixed selection. Continue with direct requests such as `Can you reschedule the launch review meeting, and prepare the email draft for my review?` and `Update the Customer Demo Readiness Check tracker status based on Mateo's message.` The Calendar constraint-override and optional Slides examples are documented in `DEMO_SCRIPT.md`.
 
 ## 9. Reset or remove the reference data
 

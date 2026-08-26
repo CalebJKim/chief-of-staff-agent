@@ -8,8 +8,8 @@ The dedicated demo profile uses `qwen3.6:35b-a3b-mtp-q4_K_M` through local Ollam
 
 ## Preflight
 
-Use the isolated profile so unrelated skills and tools cannot compete for the
-two demo turns:
+Use the isolated profile so unrelated skills and tools cannot compete during
+the demo flow:
 
 ```powershell
 hermes profile use chief-of-staff-demo
@@ -23,7 +23,15 @@ Desktop. Profile selection does not modify the default profile's configuration.
 
 The dedicated demo account contains a busy fictional RTX AI Assistant launch workweek, 76 unread Inbox messages, and a Drive tracker/report/deck. Only six messages contain meaningful work, supporting five distinct workstreams. The chief of staff should cut through that noise and identify three grouped outcomes by default across Mail, Calendar, and Drive.
 
-## Query 1 — Morning priorities
+## Query 1 — Introduction
+
+**Prompt**
+
+> Hey chief of staff, give me a quick intro? What kinds of things can you help me with?
+
+Keep the next prompt in this same conversation so the loaded Chief of Staff skill remains in context. The response should be a concise overview of its planning and Google Workspace capabilities.
+
+## Query 2 — Ranked work
 
 **Prompt**
 
@@ -31,27 +39,27 @@ The dedicated demo account contains a busy fictional RTX AI Assistant launch wor
 
 **Expected structure**
 
-Start with a very short summary of today's workload in no more than three sentences and without a heading. Follow it with exactly three succinct numbered items, with no scores, inbox inventory, or closing question. Each item has an evidence sentence with one action-target link and a bounded Mail link for every message whose unique facts or participant it relies on, followed by an indented `Recommended action item(s):` sub-bullet. The expected content is:
+Start with one very short summary sentence and no heading. Follow it with exactly three succinct numbered items, with no scores, ranking commentary, inbox inventory, or closing question. Python applies the generic Gmail metadata policy before the model sees the packet, and the model must preserve that selection and order without reranking, merging, replacing, or skipping entries. The packet still includes Calendar, Drive, and Sheet context, so a clearly matching action-target link can appear alongside the selected Mail link. Each item also has an indented `Recommended action item(s):` sub-bullet. With a fresh seed, the expected content is:
 
-1. **RTX AI Assistant demo issue** — Priya reports that the latest demo sometimes performs the same task twice. Next: move the existing launch review to the earliest non-conflicting one-hour slot on the next business day and draft Priya and Daniel a confirmation. Inline Mail and Calendar links.
-2. **Customer Demo Readiness Check** — Mateo completed testing of common assistant requests while the tracker remains `In progress`. Next: change only that lane to `Ready for review`. Inline Mail and Tracker links.
-3. **Partner Preview Deck** — Elena approved the exact slide-4 headline. Next: replace only the placeholder. Inline Mail and Deck links.
+1. **Priya's latest blocker** — the latest demo sometimes performs the same task twice, so today's review should be postponed.
+2. **Daniel's scheduling request** — move the existing launch review to the next business day and prepare a confirmation in Priya's thread with Daniel copied.
+3. **Mateo's readiness update** — testing is complete and the tracker should move from `In progress` to `Ready for review`.
 
-Point out that each priority groups evidence and the action target instead of listing Mail, Calendar, and Drive as separate tasks.
+Point out that the order comes from a transparent deterministic metadata policy, not an AI-generated priority ranking, even though the full Workspace context is still available to explain the items.
 
 To demonstrate the dynamic limit, use:
 
 > Hey chief of staff, what are the top 5 things we should work on today?
 
-The same format should contain five ranked items. Top 4 works identically; requests without a number continue to return three.
+The same format should contain five deterministically ranked messages. With the reference seed those are Priya, Daniel, Mateo, Aisha, and Elena. Requests without a number continue to return three. All daily-brief requests use the same deterministic ranking.
 
-## Query 2 — Mail plus Calendar action
+## Query 3 — Mail plus Calendar action
 
 **Prompt**
 
-> Take the action items for the first thing.
+> Can you reschedule the launch review meeting, and prepare the email draft for my review?
 
-Equivalent natural wording such as `Can you take care of the first item on the list for me?` resolves item one from conversation history and authorizes its displayed actions. It must not rerun Start of Day, run setup, or search the filesystem, and it must not ask for confirmation again.
+The direct request authorizes the Calendar move and unsent draft. The agent must not rerun Start of Day, run setup, search the filesystem, or ask for confirmation again.
 
 **Expected result**
 
@@ -64,19 +72,19 @@ If presenting the UI, Ctrl-click the returned links yourself. The agent should n
 
 ## Constraint override check
 
-After a reset, optionally replace Query 2 with:
+After a reset, optionally replace Query 3 with:
 
-> Take care of the first item, but use Thursday afternoon.
+> Reschedule the launch review and prepare the email draft, but use Thursday afternoon.
 
 The agent must honor the new constraint, find a free Thursday-afternoon hour, and use the selected time in the draft. It must not replay a time from the initial recommendation.
 
-You can also ask for a direct Workspace action unrelated to the displayed ranked list. The plan provides context but does not limit the agent's capabilities.
+You can also ask for a direct Workspace action unrelated to the displayed brief. The list provides context but does not limit the agent's capabilities.
 
-## Query 3 — Mail plus Sheet action
+## Query 4 — Mail plus Sheet action
 
 **Prompt**
 
-> Take the action items for the second thing.
+> Update the Customer Demo Readiness Check tracker status based on Mateo's message.
 
 **Expected result**
 
@@ -88,7 +96,7 @@ You can also ask for a direct Workspace action unrelated to the displayed ranked
 
 **Prompt**
 
-> Take the action items for the third thing.
+> Update the Partner Preview deck with Elena's approved headline.
 
 **Expected result**
 

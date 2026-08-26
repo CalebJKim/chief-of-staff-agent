@@ -80,6 +80,8 @@ class SeedWorkspaceTests(unittest.TestCase):
 
         self.assertIn("earliest non-conflicting one-hour slot on Friday", thursday[1][4])
         self.assertIn("earliest non-conflicting one-hour slot on Monday", friday[1][4])
+        self.assertIn("write Priya a confirmation email with Daniel copied", thursday[1][4])
+        self.assertNotIn("do not send", thursday[1][4].casefold())
         self.assertEqual("calendar", thursday[1][8])
         self.assertEqual("sheet", friday[1][8])
 
@@ -182,7 +184,11 @@ class SeedWorkspaceTests(unittest.TestCase):
         self.assertIn("sometimes performs the same task twice", priya_body)
         self.assertNotIn("tool-call", priya_body.casefold())
         self.assertIn("Please postpone the RTX AI Assistant launch review scheduled for", priya_body)
-        self.assertIn("Reply in Priya's blocker thread with the confirmation and copy me", daniel_body)
+        self.assertIn("Write a confirmation email in Priya's blocker thread and copy me", daniel_body)
+        delivery_directives = ("do not send", "don't send", "not send", "unsent")
+        for subject in meaningful_subjects:
+            body = bodies_by_subject[subject].casefold()
+            self.assertFalse(any(term in body for term in delivery_directives), subject)
         self.assertIn("IMPORTANT", labels_by_subject["BLOCKER: RTX AI Assistant repeats completed tasks"])
         self.assertIn("IMPORTANT", labels_by_subject["New slot for the RTX AI Assistant launch review"])
         self.assertTrue(all(

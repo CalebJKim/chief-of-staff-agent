@@ -11,15 +11,23 @@ else
 fi
 
 TOP_N=3
-if [ "${1:-}" = "--top" ]; then
-  if [ "$#" -ne 2 ]; then
-    echo '{"ok":false,"error":"Usage: start_day.sh [--top POSITIVE_INTEGER]"}' >&2
-    exit 2
-  fi
-  TOP_N="$2"
-  shift 2
-fi
-if [ "$#" -ne 0 ] || ! [[ "$TOP_N" =~ ^[1-9][0-9]*$ ]]; then
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --top)
+      if [ "$#" -lt 2 ]; then
+        echo '{"ok":false,"error":"Usage: start_day.sh [--top POSITIVE_INTEGER]"}' >&2
+        exit 2
+      fi
+      TOP_N="$2"
+      shift 2
+      ;;
+    *)
+      echo '{"ok":false,"error":"Usage: start_day.sh [--top POSITIVE_INTEGER]"}' >&2
+      exit 2
+      ;;
+  esac
+done
+if ! [[ "$TOP_N" =~ ^[1-9][0-9]*$ ]]; then
   echo '{"ok":false,"error":"Usage: start_day.sh [--top POSITIVE_INTEGER]"}' >&2
   exit 2
 fi

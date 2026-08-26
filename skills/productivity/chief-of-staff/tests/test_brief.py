@@ -33,41 +33,72 @@ class BriefTests(unittest.TestCase):
             min_focus_minutes=30,
         )
 
-    def test_packet_contains_bounded_generic_decision_evidence(self):
+    def test_packet_contains_full_workspace_context_with_fixed_ranked_mail_anchors(self):
         snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
         packet = brief.build_packet(snapshot, self.args())
 
         self.assertEqual(1, len(packet["conflicts"]))
         self.assertEqual(3, len(packet["conflicts"][0]["events"]))
+        self.assertEqual(3, len(packet["mail"]))
         self.assertEqual("msg-urgent", packet["mail"][0]["id"])
+        self.assertEqual([1, 2, 3], [item["selection_order"] for item in packet["mail"]])
+        self.assertTrue(all(item["selected_for_output"] for item in packet["mail"]))
         self.assertNotIn('"signal_score"', json.dumps(packet))
+        self.assertNotIn('"signals"', json.dumps(packet["mail"]))
         self.assertEqual("https://mail.google.com/mail/u/0/#all/thread-urgent", packet["mail"][0]["url"])
         self.assertEqual(
             {"calendar": "ok", "gmail": "ok", "drive": "ok", "sheets": "ok_empty"},
             packet["source_status"],
         )
+        self.assertGreater(len(packet["meetings"]), 0)
+        self.assertGreater(len(packet["recent_files"]), 0)
+        self.assertIn("sheet_evidence", packet)
         packet_rules = json.dumps({
             "instruction": packet["instruction"],
-            "selection_rules": packet["selection_rules"],
+            "ordering_contract": packet["ordering_contract"],
             "response_contract": packet["response_contract"],
         })
-        self.assertIn("top 3 distinct actionable outcomes", packet_rules)
+        self.assertIn("selected_for_output", packet_rules)
+        self.assertIn("do not rank it again", packet_rules)
+        self.assertIn("Do not score, rank, reorder, merge, replace, or skip selected entries", packet_rules)
+        self.assertIn("supporting context only", packet_rules)
+        self.assertIn("must never change which items are returned", packet_rules)
+        self.assertIn("a request or proposal remains pending", packet_rules)
+        self.assertIn("recommend preparing or saving a draft", packet_rules)
         self.assertIn("Recommended action item(s):", packet_rules)
-        self.assertIn("one distinct Mail link for every message", packet_rules)
-        self.assertIn("bounded to at most three Mail links", packet_rules)
-        self.assertIn("Copy sender names exactly", packet_rules)
-        self.assertIn("URL-valued cell", packet_rules)
-        self.assertIn("exactly matches live mail.from", packet_rules)
+        self.assertIn("selected entry's distinct [Mail", packet_rules)
+        self.assertIn("copying the sender name exactly", packet_rules)
+        self.assertIn("Never invent or link an unrelated resource", packet_rules)
         self.assertTrue(packet["response_contract"]["item_template"][1].startswith("   - **Evidence:**"))
-        self.assertIn("separate Evidence line", packet_rules)
-        self.assertIn("never use remembered, learned, or repository-defined", packet_rules)
-        self.assertIn("never merge row_units", packet_rules)
+        self.assertIn("Never use remembered, learned, or repository-defined", packet_rules)
         self.assertEqual(3, packet["requested_top_n"])
+        self.assertEqual(3, packet["selected_item_count"])
+        self.assertNotIn("selection_mode", packet)
+        self.assertEqual("gmail_metadata_priority_then_recency", packet["ordering"])
+        self.assertEqual("important_then_direct_then_unread_then_newest", packet["selection_basis"])
         self.assertEqual("response_contract", next(reversed(packet)))
         exec_event = next(event for event in packet["meetings"] if event["id"] == "evt-exec")
         self.assertTrue(any(item["id"] == "deck-1" for item in exec_event["related"]["files"]))
 
-    def test_sheet_schema_samples_and_validations_pass_through_without_mappings(self):
+    def test_deterministic_ranking_uses_generic_metadata_with_stable_recency_tie_breaking(self):
+        snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        messages = snapshot["messages"]
+        messages[0].update({"internal_ms": 3_000, "important": False, "unread": False, "to": "team@example.com"})
+        messages[1].update({"internal_ms": 2_000, "important": False, "unread": True, "to": "owner@example.com"})
+        messages[2].update({"internal_ms": 1_000, "important": True, "unread": False, "to": "team@example.com"})
+
+        packet = brief.build_packet(snapshot, self.args(top_n=2))
+        selected = [item for item in packet["mail"] if item["selected_for_output"]]
+
+        self.assertEqual(["msg-news", "msg-customer"], [item["id"] for item in selected])
+        self.assertEqual([1, 2], [item["selection_order"] for item in selected])
+        self.assertNotIn("priority", json.dumps(selected))
+        self.assertTrue(brief.is_directly_addressed(messages[1], "owner@example.com"))
+        self.assertFalse(brief.is_directly_addressed(messages[0], "owner@example.com"))
+        self.assertFalse(hasattr(brief, "mail_score"))
+        self.assertFalse(hasattr(brief, "event_score"))
+
+    def test_sheet_schema_samples_and_validations_remain_supporting_context(self):
         snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
         snapshot["sheets"] = [{
             "id": "sheet-1",
@@ -125,7 +156,9 @@ class BriefTests(unittest.TestCase):
         )
         self.assertNotIn("workstreams", packet)
         self.assertEqual(5, packet["requested_top_n"])
-        self.assertIn("top 5 distinct actionable outcomes", packet["instruction"])
+        self.assertEqual(3, packet["selected_item_count"])
+        self.assertEqual(3, packet["response_contract"]["item_count"])
+        self.assertIn("Render exactly the 3 deterministically ranked Gmail entries", packet["instruction"])
         self.assertFalse(hasattr(brief, "STATUS_PRIORITY"))
         self.assertFalse(hasattr(brief, "KEYWORDS"))
         self.assertFalse(hasattr(brief, "build_workstreams"))
@@ -135,7 +168,9 @@ class BriefTests(unittest.TestCase):
         snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
         encoded = brief.fit_packet(brief.build_packet(snapshot, self.args()), 5000)
         self.assertLessEqual(len(encoded), 5000)
-        self.assertIn("conflicts", json.loads(encoded))
+        fitted = json.loads(encoded)
+        self.assertEqual("gmail_metadata_priority_then_recency", fitted["ordering"])
+        self.assertEqual(3, len(fitted["mail"]))
 
     def test_normal_budget_preserves_mail_and_sheet_samples(self):
         packet = {
@@ -157,7 +192,7 @@ class BriefTests(unittest.TestCase):
 
         self.assertLessEqual(len(json.dumps(fitted, ensure_ascii=False, separators=(",", ":"))), 14000)
         self.assertGreaterEqual(len(fitted["mail"]), 6)
-        self.assertGreaterEqual(len(fitted["sheet_evidence"][0]["tabs"][0]["row_units"]), 6)
+        self.assertGreaterEqual(len(fitted["sheet_evidence"][0]["tabs"][0]["row_units"]), 3)
 
     def test_empty_success_is_not_reported_as_unavailable(self):
         snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
@@ -165,6 +200,7 @@ class BriefTests(unittest.TestCase):
         snapshot["files"] = []
         snapshot["coverage"].update({"events": 0, "files": 0, "errors": []})
         packet = brief.build_packet(snapshot, self.args())
+        self.assertEqual("ok", packet["source_status"]["gmail"])
         self.assertEqual("ok_empty", packet["source_status"]["calendar"])
         self.assertEqual("ok_empty", packet["source_status"]["drive"])
         self.assertEqual("ok_empty", packet["source_status"]["sheets"])

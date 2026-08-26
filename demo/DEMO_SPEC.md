@@ -8,7 +8,7 @@ The fictional scenario is fixed seed data. The Chief of Staff skill does not con
 
 - **6 meaningful Gmail messages**, all in Inbox and Unread:
   1. Priya reports that the latest assistant demo sometimes performs the same task twice and asks to postpone the launch review. Important.
-  2. Daniel asks for the earliest non-conflicting one-hour slot on the next business day and an unsent confirmation reply in Priya's blocker thread with Daniel copied. Important.
+  2. Daniel asks for the earliest non-conflicting one-hour slot on the next business day and a confirmation email in Priya's blocker thread with Daniel copied. Important.
   3. Mateo says the customer demo readiness check is complete and ready for review.
   4. Aisha reports that the completed creator demo feedback summary is ready for review and asks for only that lane's status to change.
   5. Elena supplies the exact approved slide-4 headline.
@@ -29,7 +29,7 @@ The fictional scenario is fixed seed data. The Chief of Staff skill does not con
   - Tab: `Campaign Lanes`
   - Columns A:J: Lane, PIC, Status, Latest update, Next action, Due, Dependency/blocker, Evidence, Artifact, Notes.
   - Eight data rows with a validated, color-coded status dropdown, a frozen/filterable header, and task-specific column widths.
-  - The seeded evidence contains five strongly supported workstreams. When interpreted from the live headers and rows alongside Gmail, Calendar, and Drive evidence, it should yield RTX AI Assistant demo issue, Customer Demo Readiness Check, and Partner Preview Deck as the default top three, followed by Partner demo checklist and Creator Demo Feedback Summary for top-four/top-five requests.
+  - The seeded evidence contains six meaningful messages. Start of Day deterministically selects the requested number using Gmail Important, sole direct recipient, unread, then newest received. With this seed the order is Priya's blocker, Daniel's scheduling request, Mateo's readiness update, Aisha's later creator-feedback update, Elena's approved headline, and Jordan's partner-checklist request. Calendar, Drive, and Sheet evidence remain in the packet as supporting context.
 - **1 Google Doc**: `RTX AI Assistant Customer Demo Readiness Check`
   - Uses a structured internal-report layout with a branded title, section hierarchy, status and action callouts, and a true bulleted scope list.
   - States that the readiness check is complete and ready for review.
@@ -49,26 +49,30 @@ Start of Day writes only the bounded Workspace snapshot used to build the brief.
 
 ## Expected demo behavior
 
-1. `Hey chief of staff, what should we work on today?`
-   - Read the current Workspace snapshot.
-   - Return a short workload summary followed by three numbered priorities by default, or the explicitly requested top N.
-   - Give every item two evidence links and a `Recommended action item(s):` sub-bullet.
+1. `Hey chief of staff, give me a quick intro? What kinds of things can you help me with?`
+   - Load the Chief of Staff skill and return a concise capability overview.
+   - Continue the demo in this same conversation so the loaded skill remains in context.
+2. `Hey chief of staff, what should we work on today?`
+   - Read bounded Gmail, Calendar, Drive, and Sheet evidence in the current Workspace snapshot.
+   - Return a short workload summary followed by three deterministically ranked Gmail anchors by default, or the explicitly requested top N.
+   - Apply the same deterministic metadata ranking to every daily-brief request.
+   - Preserve Python's fixed selection order without model scoring, reranking, merging, replacing, or skipping entries.
+   - Give every item its matching Mail link, any clearly related Calendar or Drive action-target link, and a `Recommended action item(s):` sub-bullet.
    - Do not expose scores, internal IDs, or commands.
-2. `Take care of the first item.`
-   - Resolve the first item from conversation history.
-   - Treat the request as authorization for the displayed actions without asking again.
+3. `Can you reschedule the launch review meeting, and prepare the email draft for my review?`
+   - Treat the request as authorization for both named actions without asking again.
    - Refresh the relevant email, event, and target-day availability.
    - Move the existing event to the earliest valid non-conflicting slot, preserve its duration and other details, and create the requested unsent draft.
    - Verify both writes and report the result.
-3. `Take care of the first item, but use Thursday afternoon.`
+4. `Reschedule the launch review and prepare the email draft, but use Thursday afternoon.`
    - Honor the new constraint instead of replaying the original recommendation.
    - Find a valid Thursday-afternoon slot before moving.
-4. `Take care of the second item.` or `Take care of the third item.`
-   - Derive exact values from the displayed recommendation and focused live reads.
+5. `Update the Customer Demo Readiness Check tracker status based on Mateo's message.` or `Update the Partner Preview deck with Elena's approved headline.`
+   - Derive exact values from the direct request and focused live reads.
    - Execute and verify the authorized change without a redundant confirmation prompt.
-5. Requests unrelated to the displayed ranked list still work through the same focused Workspace helpers; they do not require rerunning Start of Day.
+6. Requests unrelated to the displayed brief still work through the same focused Workspace helpers; they do not require rerunning Start of Day.
 
-The current seed is designed to produce a stable demo narrative, but the interpretation and action flow contain no hardcoded project names, recipients, dates, status meanings/order, field aliases, or replacement text. Each run uses only the bounded live packet; it does not learn or retain per-user mappings. Changing the seeded evidence changes the presented contents and subsequent actions.
+The current seed is designed to produce a stable demo narrative, but the runtime selection and action flow contain no hardcoded project names, recipients, dates, status meanings/order, field aliases, or replacement text. Each run selects message anchors only from generic Gmail metadata—Important, sole direct recipient, unread, and receive time—while retaining bounded live Gmail, Calendar, Drive, and Sheet context; it does not learn or retain per-user mappings. Changing the seeded evidence changes the presented contents and subsequent actions.
 
 ## Seed, reset, and cleanup
 

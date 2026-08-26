@@ -731,7 +731,7 @@ def tracker_rows(
     reschedule_label = reschedule_day.strftime("%A")
     return [
         ["Lane", "PIC", "Status", "Latest update", "Next action", "Due", "Dependency / blocker", "Evidence", "Artifact", "Notes"],
-        ["RTX AI Assistant demo issue", "Priya Shah", "Blocked", "The latest demo sometimes performs the same task twice.", f"Move the existing launch review to the earliest non-conflicting one-hour slot on {reschedule_label} and draft Priya and Daniel a confirmation; do not send it.", "Today", "The launch review must move until the repeated-action issue is fixed.", evidence.get("bug", "Priya's blocker email"), release_review_url or sheet_url, "Calendar and draft follow-up are the immediate coordination actions."],
+        ["RTX AI Assistant demo issue", "Priya Shah", "Blocked", "The latest demo sometimes performs the same task twice.", f"Move the existing launch review to the earliest non-conflicting one-hour slot on {reschedule_label} and write Priya a confirmation email with Daniel copied.", "Today", "The launch review must move until the repeated-action issue is fixed.", evidence.get("bug", "Priya's blocker email"), release_review_url or sheet_url, "Calendar and draft follow-up are the immediate coordination actions."],
         ["Customer Demo Readiness Check", "Mateo Chen", "In progress", "Mateo finished testing common assistant requests and handed the results off for review.", "Change only this lane's status to Ready for review.", "Today", "None; the tracker status is stale.", evidence.get("evaluation", "Mateo's completion email"), doc_url, "Keep the owner, due date, and notes unchanged."],
         ["Partner Preview Deck", "Elena Torres", "Awaiting update", "Communications approved the replacement headline for slide 4.", "Replace APPROVED HEADLINE PLACEHOLDER with “Meet the RTX AI Assistant: helping turn everyday requests into completed work.” on slide 4; leave the rest unchanged.", "Next week", "None; intentionally lower priority than today's two actions.", evidence.get("copy", "Elena's approval email"), slides_url, "Optional backup demo; not required today."],
         ["Creator Demo Feedback Summary", "Noah Williams", "In review", "Noah collected the latest creator feedback and submitted the summary for review.", "Change only this lane's status to Ready for review.", "Later this month", "None; the tracker status has not caught up with the completed summary.", evidence.get("reliability", "Creator demo feedback completion email"), sheet_url, "Lower priority; keep the owner, due date, and notes unchanged."],
@@ -973,7 +973,7 @@ def create_emails(
             "sender": "Daniel Cho <daniel.cho@nvidia.example>",
             "subject": "New slot for the RTX AI Assistant launch review",
             "body": (
-                f"Move the existing launch review to the earliest non-conflicting one-hour slot on {display_date(follow_up_day)}. Reply in Priya's blocker thread with the confirmation and copy me; do not send it.\n\n"
+                f"Move the existing launch review to the earliest non-conflicting one-hour slot on {display_date(follow_up_day)}. Write a confirmation email in Priya's blocker thread and copy me.\n\n"
                 "Keep the event's current details and move it rather than creating a duplicate.\n\n"
                 f"Event: {release_review_url}\n\n"
                 "— Daniel"

@@ -138,8 +138,12 @@ For CLI testing, run `hermes -p chief-of-staff-demo`. For Hermes Desktop, run
 profile is active. Restore the normal profile afterward with
 `hermes profile use default` and restart Desktop.
 
-Say:
+Start with:
+
+> Hey chief of staff, give me a quick intro? What kinds of things can you help me with?
+
+Then, in the same conversation, say:
 
 > Hey chief of staff, what should we work on today?
 
-Then try `Take care of the first item.` or a modified follow-up such as `Take care of the first item, but use Thursday afternoon.` You can also make a direct Workspace request unrelated to the brief. The agent uses live Gmail message IDs for reply recipients, Calendar's local timezone and working hours for rescheduling, and the Sheet's discovered schema and cell validation for updates. A direct request to complete a displayed action does not trigger a redundant confirmation question. The dedicated profile uses the repository-tested MTP model; the normal Hermes profile and unrelated tools are unchanged.
+The second response lists three Gmail anchors selected by a deterministic Python policy: Gmail Important, sole direct recipient, unread, then newest. The model does not rerank them, and every daily-brief request uses this same selection policy. The packet still includes bounded Calendar, Drive, and Sheet context so each selected item can show matching evidence and an action target without changing the fixed selection. Then try `Can you reschedule the launch review meeting, and prepare the email draft for my review?` or a constrained version such as `Reschedule the launch review and prepare the email draft, but use Thursday afternoon.` You can also make a direct Workspace request unrelated to the list. The agent uses live Gmail message IDs for reply recipients, Calendar's local timezone and working hours for rescheduling, and the Sheet's discovered schema and cell validation for updates. A direct request to complete an action does not trigger a redundant confirmation question. The dedicated profile uses the repository-tested MTP model; the normal Hermes profile and unrelated tools are unchanged.

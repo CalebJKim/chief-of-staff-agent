@@ -396,8 +396,8 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
     except ImportError as exc:
         raise RuntimeError("google-api-python-client is missing") from exc
 
-    calendar = build("calendar", "v3", credentials=credentials, cache_discovery=False)
     gmail = build("gmail", "v1", credentials=credentials, cache_discovery=False)
+    calendar = build("calendar", "v3", credentials=credentials, cache_discovery=False)
     drive = build("drive", "v3", credentials=credentials, cache_discovery=False)
     tz_name = _calendar_timezone(calendar)
     try:

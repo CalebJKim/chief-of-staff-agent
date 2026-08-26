@@ -1,6 +1,6 @@
 # Hermes Chief of Staff Agent
 
-A portable Hermes Agent configuration for a Google Workspace chief of staff. It reads bounded Gmail, Calendar, Drive, Docs, Sheets, and Slides evidence; ranks the day; resolves calendar conflicts; prepares meetings; drafts email; and proposes guarded tracker and document updates.
+A portable Hermes Agent configuration for a Google Workspace chief of staff. It reads bounded Gmail, Calendar, Drive, Docs, Sheets, and Slides evidence; deterministically selects the requested number of mail anchors; resolves calendar conflicts; prepares meetings; drafts email; and proposes guarded tracker and document updates.
 
 This README is the complete setup path for a new machine. [`QUICKSTART.md`](QUICKSTART.md) is a shorter checklist, while [`SETUP_GUIDE.md`](SETUP_GUIDE.md) provides the detailed Windows procedure, troubleshooting guidance, and maintainer workflow.
 
@@ -362,7 +362,7 @@ python "$HERMES_HOME/skills/productivity/ingest/scripts/ingest.py"
 python "$HERMES_HOME/skills/productivity/chief-of-staff/scripts/brief.py" --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000
 ```
 
-The commands should report successful service access and a bounded evidence packet without Python tracebacks. The packet includes compact Sheet schemas, representative rows, and validation previews for the agent to interpret during Start of Day; it does not contain a repository-ranked action plan.
+The commands should report successful service access and a bounded evidence packet without Python tracebacks. For Start of Day, the packet includes Gmail, Calendar, Drive, and compact Sheet evidence. Python deterministically selects the requested number of Gmail anchors using Gmail Important, sole direct recipient, unread, and received time in that fixed precedence. The other Workspace evidence can support those items but cannot change their selection or order. This is the only selection policy.
 
 Ingestion uses the same automatic weekday/weekend rule, so a weekend verification
 reads the upcoming Monday without an extra flag. If you seeded an explicitly
@@ -375,7 +375,7 @@ seeder:
 & $Python (Join-Path $env:HERMES_HOME "skills\productivity\chief-of-staff\scripts\brief.py") --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000
 ```
 
-The packet's `requested_top_n` should be `3`, `source_status` should show successful sources, and `sheets` should contain the live structural preview. The packet intentionally contains no preselected workstreams or stored action commands.
+The packet's `requested_top_n` and `selected_item_count` should be `3`, `ordering` should be `gmail_metadata_priority_then_recency`, and `source_status` should report Gmail, Calendar, and Drive. The `meetings`, `recent_files`, and `sheet_evidence` sections remain present. The model may use them as supporting context, but it does not rerank, merge, or substitute the selected messages.
 
 Gmail does not guarantee the order returned by `messages.list`. Ingestion scans
 metadata for up to 120 matching Inbox messages, sorts that bounded set by
@@ -403,18 +403,21 @@ Restart Hermes Desktop and confirm the active profile is
 `hermes profile use default` and restart Desktop. This selection changes only
 which profile Desktop opens; it does not alter the default profile's files.
 
-At the prompt, say:
+At the prompt, start with:
+
+> Hey chief of staff, give me a quick intro? What kinds of things can you help me with?
+
+Then, in the same conversation, say:
 
 > Hey chief of staff, what should we work on today?
 
-The reply begins with a summary of today's workload in no more than three sentences. It returns three priorities by default; requests such as `What are the top 5 things we should work on today?` return that many when available. The expected default top three, in order, are the RTX AI Assistant repeated-task issue, the completed Customer Demo Readiness Check, and the Partner Preview Deck. The seeded top four and five continue with Partner demo checklist and Creator Demo Feedback Summary. Each item includes inline links to its supporting mail and action target followed by a `Recommended action item(s):` sub-bullet. Continue with:
+The reply begins with one short workload sentence and returns three deterministically ranked Gmail anchors by default. Requests such as `What are the top 5 things we should work on today?` return that many when available. All daily-brief requests use the same deterministic ranking. With a fresh seed, the default ranked three are Priya's repeated-task blocker, Daniel's launch-review scheduling request, and Mateo's completed readiness check. Each entry remains separate; the model does not rerank, merge, replace, or skip them. Calendar and Drive evidence can enrich the matching item and provide its action-target link, but cannot alter which messages appear. Every item includes its Mail link and a `Recommended action item(s):` sub-bullet.
 
-- `Take the action items for the first thing.` This resolves item one from conversation history, checks current availability, moves the existing launch review to the earliest valid non-conflicting slot, and creates an unsent threaded draft to Priya with Daniel copied. The request authorizes the displayed actions; the agent does not ask for confirmation again.
-- Natural wording such as `Can you take care of the first item on the list for me?` follows the same evidence-driven flow without rerunning Start of Day. Added constraints such as `but use Thursday afternoon` override the earlier recommendation.
-- `Take the action items for the second thing.` This changes only the `Customer Demo Readiness Check` tracker status to `Ready for review`.
-- Optional backup: `Take the action items for the third thing.` This replaces only the slide-4 placeholder with Elena's approved headline.
+- `Can you reschedule the launch review meeting, and prepare the email draft for my review?` This combines the relevant focused Gmail evidence, checks current availability, moves the existing review to the earliest valid non-conflicting slot, and creates an unsent threaded draft to Priya with Daniel copied.
+- `Update the Customer Demo Readiness Check tracker status based on Mateo's message.` This changes only that live, schema-resolved status to `Ready for review` after inspecting its current validation.
+- Optional backup: `Update the Partner Preview deck with Elena's approved headline.` This replaces only the verified slide placeholder.
 
-The three-item plan is conversational context, not a capability boundary. Direct Gmail, Calendar, Drive, Docs, Sheets, and Slides requests outside the plan use the same focused helpers and current Workspace data.
+The brief is conversational context, not a capability boundary. Direct Gmail, Calendar, Drive, Docs, Sheets, and Slides requests outside the list use the same focused helpers and current Workspace data.
 
 Use [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) for the complete staged presentation flow. Gmail responses are created as drafts and are never sent by these scripts. While a seeded reference workspace is active, drafts created through the chief-of-staff flow are recorded by exact ID so cleanup can remove them without touching unrelated drafts.
 
