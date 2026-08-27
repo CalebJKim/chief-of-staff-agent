@@ -72,18 +72,20 @@ class SeedWorkspaceTests(unittest.TestCase):
             result,
         )
 
-    def test_tracker_reschedules_to_the_next_business_day(self) -> None:
-        thursday = seed_workspace.tracker_rows(
+    def test_tracker_defines_the_exec_review_deck_completion_contract(self) -> None:
+        rows = seed_workspace.tracker_rows(
             "slides", "doc", "sheet", {}, date(2026, 8, 20), "calendar"
         )
-        friday = seed_workspace.tracker_rows("slides", "doc", "sheet", {}, date(2026, 8, 21))
 
-        self.assertIn("earliest non-conflicting one-hour slot on Friday", thursday[1][4])
-        self.assertIn("earliest non-conflicting one-hour slot on Monday", friday[1][4])
-        self.assertIn("write Priya a confirmation email with Daniel copied", thursday[1][4])
-        self.assertNotIn("do not send", thursday[1][4].casefold())
-        self.assertEqual("calendar", thursday[1][8])
-        self.assertEqual("sheet", friday[1][8])
+        deck_row = rows[1]
+        self.assertEqual("Executive Review Deck", deck_row[0])
+        self.assertEqual("In progress", deck_row[2])
+        self.assertIn("read the product summary", deck_row[4].casefold())
+        self.assertIn("update the Introduction slide", deck_row[4])
+        self.assertIn("status to Done", deck_row[4])
+        self.assertEqual("slides", deck_row[8])
+        self.assertEqual("calendar", rows[-1][8])
+        self.assertIn("Done", seed_workspace.STATUS_VALUES)
 
     def test_background_mail_is_low_signal_unread_and_on_one_day(self) -> None:
         reference = datetime(2026, 8, 21, 12, 0, tzinfo=ZoneInfo("America/Los_Angeles"))
@@ -125,7 +127,7 @@ class SeedWorkspaceTests(unittest.TestCase):
             "https://example.test/deck",
             "https://example.test/sheet",
             "https://example.test/doc",
-            "https://calendar.example.test/release-review",
+            "https://calendar.example.test/executive-review",
             demo_day,
         )
 
@@ -154,14 +156,14 @@ class SeedWorkspaceTests(unittest.TestCase):
         self.assertTrue(all(message_id.startswith(f"<{seed_workspace.MARKER}-") for message_id in message_ids))
         self.assertTrue(all(message_id.endswith("@demo.example>") for message_id in message_ids))
         meaningful_subjects = {
-            "BLOCKER: RTX AI Assistant repeats completed tasks",
-            "New slot for the RTX AI Assistant launch review",
-            "READY: Customer demo readiness check",
-            "For later: Creator demo feedback summary",
-            "For next week: approved Partner Preview headline",
-            "ACTION: Partner demo checklist ready to start",
+            "Executive review prep for today",
+            "Customer pilot feedback needs a decision",
+            "Partner briefing ready for your review",
+            "Morning demo environment check passed",
+            "Creator workshop notes for later this week",
+            "Community demo recap available",
         }
-        self.assertEqual({"bug", "scheduling", "evaluation", "reliability", "copy", "checklist"}, set(evidence))
+        self.assertEqual({"executive_review", "pilot", "partner", "environment", "research", "community"}, set(evidence))
         meaningful_positions = [
             index for index, (message, _labels) in enumerate(messages)
             if message["Subject"] in meaningful_subjects
@@ -173,37 +175,59 @@ class SeedWorkspaceTests(unittest.TestCase):
         meaningful_dates = [dates[index] for index in meaningful_positions]
         background_dates = [item for index, item in enumerate(dates) if index not in meaningful_positions]
         self.assertGreater(min(meaningful_dates), max(background_dates))
+        meaningful_by_recency = [
+            messages[index][0]["Subject"]
+            for index in sorted(meaningful_positions, key=lambda position: dates[position], reverse=True)
+        ]
+        self.assertEqual(
+            [
+                "Executive review prep for today",
+                "Customer pilot feedback needs a decision",
+                "Partner briefing ready for your review",
+                "Morning demo environment check passed",
+                "Creator workshop notes for later this week",
+                "Community demo recap available",
+            ],
+            meaningful_by_recency,
+        )
         labels_by_subject = {message["Subject"]: labels for message, labels in messages}
         bodies_by_subject = {
             message["Subject"]: message.get_payload(decode=True).decode("utf-8")
             for message, _labels in messages
         }
-        priya_body = bodies_by_subject["BLOCKER: RTX AI Assistant repeats completed tasks"]
-        daniel_body = bodies_by_subject["New slot for the RTX AI Assistant launch review"]
-        self.assertNotIn("Daniel is checking the next available slot.", priya_body)
-        self.assertIn("sometimes performs the same task twice", priya_body)
-        self.assertNotIn("tool-call", priya_body.casefold())
-        self.assertIn("Please postpone the RTX AI Assistant launch review scheduled for", priya_body)
-        self.assertIn("Write a confirmation email in Priya's blocker thread and copy me", daniel_body)
+        manager_body = bodies_by_subject["Executive review prep for today"]
+        self.assertIn("moved the RTX AI Assistant review up from Friday to today", manager_body)
+        self.assertIn("read the product summary", manager_body)
+        self.assertIn("deck's Introduction slide", manager_body)
+        self.assertIn("mark the Executive Review Deck as Done", manager_body)
+        self.assertIn("Before we meet, please read", manager_body)
+        self.assertIn("Then use that material", manager_body)
+        self.assertIn("Once the slide is updated", manager_body)
+        self.assertNotIn("your manager", manager_body.casefold())
+        self.assertFalse(any(line.lstrip().startswith(("-", "*", "1.", "2.", "3.")) for line in manager_body.splitlines()))
         delivery_directives = ("do not send", "don't send", "not send", "unsent")
         for subject in meaningful_subjects:
             body = bodies_by_subject[subject].casefold()
             self.assertFalse(any(term in body for term in delivery_directives), subject)
-        self.assertIn("IMPORTANT", labels_by_subject["BLOCKER: RTX AI Assistant repeats completed tasks"])
-        self.assertIn("IMPORTANT", labels_by_subject["New slot for the RTX AI Assistant launch review"])
+        priority_subjects = {
+            "Executive review prep for today",
+            "Customer pilot feedback needs a decision",
+            "Partner briefing ready for your review",
+        }
+        self.assertTrue(all(
+            "IMPORTANT" in labels_by_subject[subject]
+            for subject in priority_subjects
+        ))
         self.assertTrue(all(
             "IMPORTANT" not in labels
             for subject, labels in labels_by_subject.items()
-            if subject not in {
-                "BLOCKER: RTX AI Assistant repeats completed tasks",
-                "New slot for the RTX AI Assistant launch review",
-            }
+            if subject not in priority_subjects
         ))
         for message, _ in messages[
-            seed_workspace.BACKGROUND_EMAIL_COUNT:seed_workspace.BACKGROUND_EMAIL_COUNT + 2
+            seed_workspace.BACKGROUND_EMAIL_COUNT:seed_workspace.BACKGROUND_EMAIL_COUNT + 1
         ]:
             text = message.get_payload(decode=True).decode("utf-8")
-            self.assertGreater(text.index("https://calendar.example.test/release-review"), 200)
+            self.assertGreater(text.index("https://calendar.example.test/executive-review"), 200)
         batches = lambda count: (count + seed_workspace.GMAIL_BATCH_SIZE - 1) // seed_workspace.GMAIL_BATCH_SIZE
         expected_batches = (
             batches(seed_workspace.BACKGROUND_EMAIL_COUNT)
@@ -251,7 +275,7 @@ class SeedWorkspaceTests(unittest.TestCase):
         self.assertEqual(2, request.execute.call_count)
         mock_sleep.assert_called_once_with(1)
 
-    def test_evaluation_doc_uses_structured_report_formatting(self) -> None:
+    def test_product_summary_doc_uses_structured_report_formatting(self) -> None:
         docs = Mock()
         drive = Mock()
         docs.documents().create.return_value.execute.return_value = {"documentId": "doc-1"}
@@ -263,11 +287,12 @@ class SeedWorkspaceTests(unittest.TestCase):
         requests = docs.documents().batchUpdate.call_args.kwargs["body"]["requests"]
         self.assertIn("insertText", requests[0])
         document_text = requests[0]["insertText"]["text"]
-        self.assertIn("RTX AI Assistant Customer Demo Readiness Check", document_text)
-        self.assertIn("READINESS REPORT  •  INTERNAL", document_text)
-        self.assertIn("Complete — ready for review.", document_text)
-        self.assertIn("Response time during common assistant requests", document_text)
-        self.assertIn("Recovery when an action cannot be completed", document_text)
+        self.assertIn("RTX AI Assistant Product Summary", document_text)
+        self.assertIn("PRODUCT BRIEF  •  EXECUTIVE REVIEW", document_text)
+        self.assertIn("Ready for today's executive review.", document_text)
+        self.assertIn("Understands a plain-language request", document_text)
+        self.assertIn("Early pilot users spent less time switching between apps", document_text)
+        self.assertIn("Decision requested: approve an expanded partner pilot", document_text)
         self.assertNotIn("tool-call", document_text.casefold())
         self.assertNotIn("latency", document_text.casefold())
         self.assertEqual(1, sum("createParagraphBullets" in request for request in requests))
@@ -293,7 +318,7 @@ class SeedWorkspaceTests(unittest.TestCase):
             fields="id,parents",
         )
 
-    def test_campaign_lanes_match_tracker_row_contract(self) -> None:
+    def test_pre_exec_review_tracker_matches_row_contract(self) -> None:
         sheets = Mock()
         drive = Mock()
         sheets.spreadsheets().create.return_value.execute.return_value = {
@@ -313,19 +338,18 @@ class SeedWorkspaceTests(unittest.TestCase):
 
         self.assertEqual("sheet-1", result["id"])
         update = sheets.spreadsheets().values().update.call_args.kwargs
-        self.assertEqual("'Campaign Lanes'!A1:J14", update["range"])
+        self.assertEqual("'Pre-Exec Review'!A1:J14", update["range"])
         self.assertEqual(14, len(update["body"]["values"]))
-        self.assertEqual("RTX AI Assistant Launch Tracker", update["body"]["values"][0][0])
-        partner_row = next(row for row in update["body"]["values"] if row and row[0] == "Partner Preview Deck")
-        self.assertIn("APPROVED HEADLINE PLACEHOLDER", partner_row[4])
-        self.assertIn("Meet the RTX AI Assistant", partner_row[4])
-        reliability_row = next(row for row in update["body"]["values"] if row and row[0] == "Creator Demo Feedback Summary")
-        checklist_row = next(row for row in update["body"]["values"] if row and row[0] == "Partner demo checklist")
-        self.assertEqual("In review", reliability_row[2])
-        self.assertIn("status to Ready for review", reliability_row[4])
-        self.assertEqual("Later this month", reliability_row[5])
-        self.assertEqual("Not started", checklist_row[2])
-        self.assertIn("status to In progress", checklist_row[4])
+        self.assertEqual("RTX AI Assistant Exec Review Prep Tracker", update["body"]["values"][0][0])
+        deck_row = next(row for row in update["body"]["values"] if row and row[0] == "Executive Review Deck")
+        self.assertEqual("In progress", deck_row[2])
+        self.assertIn("Introduction slide", deck_row[4])
+        self.assertIn("status to Done", deck_row[4])
+        self.assertEqual("Today", deck_row[5])
+        self.assertIn("only after", deck_row[9])
+        summary_row = next(row for row in update["body"]["values"] if row and row[0] == "Product Summary")
+        self.assertEqual("Done", summary_row[2])
+        self.assertEqual("https://example.test/doc", summary_row[8])
         validation_request = next(
             request["setDataValidation"]
             for request in sheets.spreadsheets().batchUpdate.call_args.kwargs["body"]["requests"]
@@ -373,7 +397,7 @@ class SeedWorkspaceTests(unittest.TestCase):
             fields="id,parents",
         )
 
-    def test_partner_readout_uses_reusable_slide_template(self) -> None:
+    def test_exec_review_deck_uses_reusable_slide_template(self) -> None:
         slides = Mock()
         drive = Mock()
         slides.presentations().create.return_value.execute.return_value = {
@@ -403,13 +427,14 @@ class SeedWorkspaceTests(unittest.TestCase):
             for request in requests
             if "insertText" in request
         }
-        self.assertEqual("RTX AI ASSISTANT  /  PARTNER PREVIEW", inserted_text["rtx_kicker_1"])
-        self.assertEqual("RTX AI Assistant\nPartner Preview", inserted_text["rtx_title_1"])
-        self.assertIn("APPROVED HEADLINE PLACEHOLDER", inserted_text["rtx_body_4"])
+        self.assertEqual("RTX AI ASSISTANT  /  EXECUTIVE REVIEW", inserted_text["rtx_kicker_1"])
+        self.assertEqual("RTX AI Assistant\nExecutive Review", inserted_text["rtx_title_1"])
+        self.assertEqual("Introduction", inserted_text["rtx_title_2"])
+        self.assertEqual("INTRODUCTION BULLETS PLACEHOLDER", inserted_text["rtx_body_2"])
         emphasized_ranges = [
             request["updateTextStyle"]["textRange"]
             for request in requests
-            if request.get("updateTextStyle", {}).get("objectId") == "rtx_body_4"
+            if request.get("updateTextStyle", {}).get("objectId") == "rtx_body_2"
             and request["updateTextStyle"]["textRange"].get("type") == "FIXED_RANGE"
         ]
         self.assertEqual(1, len(emphasized_ranges))
@@ -438,37 +463,54 @@ class SeedWorkspaceTests(unittest.TestCase):
         )
 
         calls = calendar.events().insert.call_args_list
-        self.assertEqual(12, len(created))
-        self.assertEqual(12, len(calls))
+        self.assertEqual(14, len(created))
+        self.assertEqual(14, len(calls))
         self.assertEqual(3, calendar.new_batch_http_request.call_count)
-        for call in calls[:8]:
+        for call in calls[:len(seed_workspace.EVENTS)]:
             self.assertEqual(["RRULE:FREQ=DAILY;COUNT=5"], call.kwargs["body"]["recurrence"])
-        for call, (day_offsets, *_rest) in zip(calls[8:11], seed_workspace.OVERLAP_EVENTS):
+        overlap_start = len(seed_workspace.EVENTS)
+        for call, (day_offsets, *_rest) in zip(calls[overlap_start:-1], seed_workspace.OVERLAP_EVENTS):
             self.assertEqual([seed_workspace.recurrence_for_days(day_offsets)], call.kwargs["body"]["recurrence"])
-        self.assertNotIn("recurrence", calls[11].kwargs["body"])
-        self.assertEqual("RTX AI Assistant launch review", calls[11].kwargs["body"]["summary"])
+        self.assertNotIn("recurrence", calls[-1].kwargs["body"])
+        self.assertEqual("RTX AI Assistant Executive Review", calls[-1].kwargs["body"]["summary"])
+        self.assertEqual("2026-08-21T15:00:00-07:00", calls[-1].kwargs["body"]["start"]["dateTime"])
+        self.assertIn("moved up from Friday to today", calls[-1].kwargs["body"]["description"])
 
-    def test_added_meeting_series_overlap_at_three_distinct_times(self) -> None:
+    def test_calendar_is_dense_and_preserves_a_one_hour_reschedule_window(self) -> None:
         def minutes(value: str) -> int:
             hour, minute = (int(part) for part in value.split(":"))
             return hour * 60 + minute
 
         routine = [(minutes(begin), minutes(end)) for begin, end, *_rest in seed_workspace.EVENTS]
+        self.assertEqual((8 * 60, 17 * 60 + 30), (routine[0][0], routine[-1][1]))
+        self.assertEqual([(14 * 60, 15 * 60)], [
+            (routine[index][1], routine[index + 1][0])
+            for index in range(len(routine) - 1)
+            if routine[index][1] < routine[index + 1][0]
+        ])
+
         start_times = set()
         added_by_day = [0, 0, 0, 0, 0]
-        for day_offsets, begin, end, *_rest in seed_workspace.OVERLAP_EVENTS:
+        for index, (day_offsets, begin, end, *_rest) in enumerate(seed_workspace.OVERLAP_EVENTS):
             start = minutes(begin)
             finish = minutes(end)
             start_times.add(start)
             self.assertGreater(len(day_offsets), 0)
             self.assertLess(len(day_offsets), 5)
-            self.assertTrue(any(start < routine_end and routine_start < finish for routine_start, routine_end in routine))
+            overlaps_routine = any(
+                start < routine_end and routine_start < finish
+                for routine_start, routine_end in routine
+            )
+            self.assertEqual(index < 2, overlaps_routine)
             for offset in day_offsets:
                 added_by_day[offset] += 1
 
         self.assertEqual(3, len(seed_workspace.OVERLAP_EVENTS))
         self.assertEqual(3, len(start_times))
-        self.assertEqual([1, 1, 2, 1, 1], added_by_day)
+        self.assertEqual([0, 2, 2, 1, 2], added_by_day)
+        gap_fill_days = set(seed_workspace.OVERLAP_EVENTS[-1][0])
+        self.assertEqual({1, 2, 4}, gap_fill_days)
+        self.assertTrue(all(day not in gap_fill_days for day in (0, 3)))
 
     @patch.object(seed_workspace, "services")
     def test_cleanup_permanently_deletes_tracked_mail_and_reports_counts(self, mock_services: Mock) -> None:
@@ -477,6 +519,9 @@ class SeedWorkspaceTests(unittest.TestCase):
         drive = Mock()
         gmail.new_batch_http_request.side_effect = FakeBatch
         calendar.new_batch_http_request.side_effect = FakeBatch
+        drive.new_batch_http_request.side_effect = FakeBatch
+        calendar.events().list.return_value.execute.return_value = {"items": []}
+        drive.files().list.return_value.execute.return_value = {"files": []}
         mock_services.return_value = {"gmail": gmail, "calendar": calendar, "drive": drive}
         state = {
             "drafts": [{"id": "draft-1"}],
@@ -499,6 +544,69 @@ class SeedWorkspaceTests(unittest.TestCase):
         )
         self.assertEqual(1, calendar.new_batch_http_request.call_count)
         drive.files().update.assert_called_once_with(fileId="folder-1", body={"trashed": True})
+        self.assertEqual(1, drive.new_batch_http_request.call_count)
+
+    @patch.object(seed_workspace, "services")
+    def test_cleanup_removes_exactly_marked_orphan_calendar_resources(self, mock_services: Mock) -> None:
+        gmail = Mock()
+        calendar = Mock()
+        drive = Mock()
+        gmail.new_batch_http_request.side_effect = FakeBatch
+        calendar.new_batch_http_request.side_effect = FakeBatch
+        calendar.events().list.return_value.execute.return_value = {
+            "items": [
+                {"id": "tracked-event", "description": f"[{seed_workspace.MARKER}]"},
+                {"id": "orphan-event", "description": f"Demo\n[{seed_workspace.MARKER}]"},
+                {"id": "unrelated-event", "description": "Personal appointment"},
+            ]
+        }
+        drive.files().list.return_value.execute.return_value = {"files": []}
+        mock_services.return_value = {"gmail": gmail, "calendar": calendar, "drive": drive}
+        state = {"events": [{"id": "tracked-event"}], "emails": [], "drafts": []}
+
+        result = seed_workspace.cleanup(state)
+
+        self.assertEqual(2, result["events_deleted"])
+        deleted_ids = {
+            call.kwargs["eventId"]
+            for call in calendar.events().delete.call_args_list
+        }
+        self.assertEqual({"tracked-event", "orphan-event"}, deleted_ids)
+        calendar.events().list.assert_called_once_with(
+            calendarId="primary",
+            q=seed_workspace.MARKER,
+            showDeleted=False,
+            singleEvents=False,
+            maxResults=2500,
+        )
+
+    @patch.object(seed_workspace, "services")
+    def test_cleanup_trashes_exactly_marked_orphan_drive_folders(self, mock_services: Mock) -> None:
+        gmail = Mock()
+        calendar = Mock()
+        drive = Mock()
+        gmail.new_batch_http_request.side_effect = FakeBatch
+        calendar.events().list.return_value.execute.return_value = {"items": []}
+        drive.new_batch_http_request.side_effect = FakeBatch
+        drive.files().list.return_value.execute.return_value = {
+            "files": [
+                {"id": "tracked-folder", "description": seed_workspace.MARKER},
+                {"id": "orphan-folder", "description": seed_workspace.MARKER},
+                {"id": "unrelated-folder", "description": "Personal files"},
+            ]
+        }
+        mock_services.return_value = {"gmail": gmail, "calendar": calendar, "drive": drive}
+        state = {"folder": {"id": "tracked-folder"}, "events": [], "emails": [], "drafts": []}
+
+        result = seed_workspace.cleanup(state)
+
+        self.assertEqual(2, result["folders_trashed"])
+        trashed_ids = {
+            call.kwargs["fileId"]
+            for call in drive.files().update.call_args_list
+        }
+        self.assertEqual({"tracked-folder", "orphan-folder"}, trashed_ids)
+        self.assertNotIn("unrelated-folder", trashed_ids)
 
     @patch.object(seed_workspace, "services")
     def test_cleanup_raises_when_any_resource_cannot_be_removed(self, mock_services: Mock) -> None:
@@ -506,6 +614,8 @@ class SeedWorkspaceTests(unittest.TestCase):
         calendar = Mock()
         drive = Mock()
         gmail.new_batch_http_request.side_effect = FakeBatch
+        calendar.events().list.return_value.execute.return_value = {"items": []}
+        drive.files().list.return_value.execute.return_value = {"files": []}
         mock_services.return_value = {"gmail": gmail, "calendar": calendar, "drive": drive}
         gmail.users().messages().delete.return_value.execute.side_effect = RuntimeError("denied")
 
@@ -521,6 +631,8 @@ class SeedWorkspaceTests(unittest.TestCase):
         calendar = Mock()
         drive = Mock()
         gmail.new_batch_http_request.side_effect = FakeBatch
+        calendar.events().list.return_value.execute.return_value = {"items": []}
+        drive.files().list.return_value.execute.return_value = {"files": []}
         mock_services.return_value = {"gmail": gmail, "calendar": calendar, "drive": drive}
         gmail.users().messages().delete.return_value.execute.side_effect = MissingResource("not found")
 

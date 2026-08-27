@@ -1,113 +1,61 @@
-# Chief of Staff Agent demo script
+# Chief of Staff demo script
 
-## Goal
+Use the dedicated `chief-of-staff-demo` profile in one conversation. The profile uses `qwen3.6:35b-a3b-mtp-q4_K_M`.
 
-Show a succinct, evidence-backed morning brief followed by two safe cross-Workspace actions. The third workstream remains available as an optional backup. The interactive flow should finish within six minutes after the workspace is seeded.
+## 1. Start the day
 
-The dedicated demo profile uses `qwen3.6:35b-a3b-mtp-q4_K_M` through local Ollama with medium reasoning. The normal Hermes profile remains unchanged. The demo uses the repo-installed `chief-of-staff` and `ingest` skills with terminal access. Workspace links appear inline for Ctrl-clicking; the agent never opens Chrome.
+> Hey chief of staff, what should I work on today? Give me the top three things.
 
-## Preflight
+Expected:
 
-Use the isolated profile so unrelated skills and tools cannot compete during
-the demo flow:
+1. Executive Review preparation is first. The context says the meeting moved up to today and links Maya's email plus a matching Workspace resource.
+2. Customer pilot feedback is second.
+3. Partner briefing review is third.
 
-```powershell
-hermes profile use chief-of-staff-demo
-```
+The response uses one short summary sentence followed by three named items. Each item has one or two high-level `Context:` sentences; it does not include a detailed action checklist yet.
 
-Restart Hermes Desktop and confirm `chief-of-staff-demo` is active. After the
-demo, restore the normal profile with `hermes profile use default` and restart
-Desktop. Profile selection does not modify the default profile's configuration.
+## 2. Ask for meeting preparation
 
-## Opening
+> Help me prepare for the Executive Review meeting.
 
-The dedicated demo account contains a busy fictional RTX AI Assistant launch workweek, 76 unread Inbox messages, and a Drive tracker/report/deck. Only six messages contain meaningful work, supporting five distinct workstreams. The chief of staff should cut through that noise and identify three grouped outcomes by default across Mail, Calendar, and Drive.
+Expected action items, derived from Maya's email and shown in this order:
 
-## Query 1 — Introduction
+1. Read and understand the product summary.
+2. Write the deck's Introduction slide from the summary.
+3. Mark the Executive Review Deck `Done` in the prep tracker.
 
-**Prompt**
+The agent should show inline Doc, Slides, Sheet, Mail, or Calendar links when supported. It should not execute the tasks yet.
 
-> Hey chief of staff, give me a quick intro? What kinds of things can you help me with?
+## 3. Understand the product
 
-Keep the next prompt in this same conversation so the loaded Chief of Staff skill remains in context. The response should be a concise overview of its planning and Google Workspace capabilities.
+> Summarize the product summary Maya linked into a few bullet points so I can understand it before the meeting.
 
-## Query 2 — Ranked work
+Expected: a concise bullet summary grounded in the live `RTX AI Assistant Product Summary` Doc, with its link.
 
-**Prompt**
+## 4. Update the Introduction slide
 
-> Hey chief of staff, what should we work on today?
+> Put those bullet points on the Introduction slide of the executive review deck.
 
-**Expected structure**
+Expected: the agent reads the live deck, replaces only `INTRODUCTION BULLETS PLACEHOLDER` on slide 2 with the bullet points from the prior response, verifies the write, and returns the Slides link.
 
-Start with one very short summary sentence and no heading. Follow it with exactly three succinct numbered items, with no scores, ranking commentary, inbox inventory, or closing question. Python applies the generic Gmail metadata policy before the model sees the packet, and the model must preserve that selection and order without reranking, merging, replacing, or skipping entries. The packet still includes Calendar, Drive, and Sheet context, so a clearly matching action-target link can appear alongside the selected Mail link. Each item also has an indented `Recommended action item(s):` sub-bullet. With a fresh seed, the expected content is:
+## 5. Complete the tracker item
 
-1. **Priya's latest blocker** — the latest demo sometimes performs the same task twice, so today's review should be postponed.
-2. **Daniel's scheduling request** — move the existing launch review to the next business day and prepare a confirmation in Priya's thread with Daniel copied.
-3. **Mateo's readiness update** — testing is complete and the tracker should move from `In progress` to `Ready for review`.
+> Mark the Executive Review Deck as Done in the prep tracker.
 
-Point out that the order comes from a transparent deterministic metadata policy, not an AI-generated priority ranking, even though the full Workspace context is still available to explain the items.
+Expected: the agent inspects the live Sheet, discovers the `Executive Review Deck` row and `Status` column, sees that `Done` is allowed, changes only that cell from `In progress` to `Done`, verifies it, and returns the Sheet link.
 
-To demonstrate the dynamic limit, use:
+## 6. Draft the completion reply
 
-> Hey chief of staff, what are the top 5 things we should work on today?
+> Draft a reply to Maya saying that all three preparation items are done.
 
-The same format should contain five deterministically ranked messages. With the reference seed those are Priya, Daniel, Mateo, Aisha, and Elena. Requests without a number continue to return three. All daily-brief requests use the same deterministic ranking.
-
-## Query 3 — Mail plus Calendar action
-
-**Prompt**
-
-> Can you reschedule the launch review meeting, and prepare the email draft for my review?
-
-The direct request authorizes the Calendar move and unsent draft. The agent must not rerun Start of Day, run setup, search the filesystem, or ask for confirmation again.
-
-**Expected result**
-
-- The agent refreshes the relevant event window and finds the earliest one-hour opening that does not overlap another event.
-- The existing `RTX AI Assistant launch review` moves to that runtime-selected slot; no duplicate event is created.
-- An unsent reply draft is created in Priya's original thread with Daniel copied.
-- The response is one short confirmation with inline Calendar and Draft links.
-
-If presenting the UI, Ctrl-click the returned links yourself. The agent should not launch a browser.
-
-## Constraint override check
-
-After a reset, optionally replace Query 3 with:
-
-> Reschedule the launch review and prepare the email draft, but use Thursday afternoon.
-
-The agent must honor the new constraint, find a free Thursday-afternoon hour, and use the selected time in the draft. It must not replay a time from the initial recommendation.
-
-You can also ask for a direct Workspace action unrelated to the displayed brief. The list provides context but does not limit the agent's capabilities.
-
-## Query 4 — Mail plus Sheet action
-
-**Prompt**
-
-> Update the Customer Demo Readiness Check tracker status based on Mateo's message.
-
-**Expected result**
-
-- Only the `Customer Demo Readiness Check` status changes from `In progress` to `Ready for review`.
-- Owner, latest update, next action, due date, blocker, evidence, artifact, and notes remain unchanged.
-- The response is one short verified confirmation with the inline Tracker link.
-
-## Optional backup — Mail plus Slides action
-
-**Prompt**
-
-> Update the Partner Preview deck with Elena's approved headline.
-
-**Expected result**
-
-- Only `APPROVED HEADLINE PLACEHOLDER` on slide 4 becomes `Meet the RTX AI Assistant: helping turn everyday requests into completed work.`
-- The rest of slide 4 and the other five slides remain unchanged.
-- The response is one short verified confirmation with the inline Deck link.
+Expected: one unsent reply draft in Maya's original thread. It says the product summary was reviewed, the Introduction slide was updated, and the deck status was marked `Done`. The body ends with exactly `Thanks` and no comma.
 
 ## Reset before another run
 
 ```powershell
+$Python = (Resolve-Path .\.venv\Scripts\python.exe).Path
+$env:HERMES_HOME = Join-Path $env:LOCALAPPDATA "hermes\profiles\chief-of-staff-demo"
 & $Python demo\reset_workspace.py
 ```
 
-Reset permanently deletes only the tracked seeded Gmail messages and tracked demo drafts, deletes the tracked Calendar resources, moves the generated Drive folder to Trash, and reseeds a fresh copy. Keep the local workspace state file if any cleanup step reports an error.
+Reset deletes only tracked seeded Gmail and Calendar resources, moves the old seeded Drive folder to Trash, and creates a fresh copy.

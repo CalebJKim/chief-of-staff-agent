@@ -1,6 +1,6 @@
 # Hermes Chief of Staff Agent
 
-A portable Hermes Agent configuration for a Google Workspace chief of staff. It reads bounded Gmail, Calendar, Drive, Docs, Sheets, and Slides evidence; deterministically selects the requested number of mail anchors; resolves calendar conflicts; prepares meetings; drafts email; and proposes guarded tracker and document updates.
+A portable Hermes Agent configuration for a Google Workspace chief of staff. It reads bounded Gmail, Calendar, Drive, Docs, Sheets, and Slides evidence; deterministically selects distinct work items; resolves calendar conflicts; prepares meetings; drafts email; and proposes guarded tracker and document updates.
 
 This README is the complete setup path for a new machine. [`QUICKSTART.md`](QUICKSTART.md) is a shorter checklist, while [`SETUP_GUIDE.md`](SETUP_GUIDE.md) provides the detailed Windows procedure, troubleshooting guidance, and maintainer workflow.
 
@@ -8,10 +8,10 @@ This README is the complete setup path for a new machine. [`QUICKSTART.md`](QUIC
 
 The optional seeder creates data in the Google account you authorize:
 
-- 6 meaningful Gmail messages supporting 5 distinct workstreams, all Inbox and Unread; the two release-blocker messages are Important.
+- 6 meaningful Gmail messages, all Inbox and Unread; the executive-review message is Important.
 - 70 older, unread, low-signal messages from fictional people; none are Important.
-- 12 Calendar resources producing 47 visible meeting instances across one workweek, including three lightly overlapping series.
-- An `RTX AI Assistant Demo` Drive folder containing a polished 14-row launch-tracker Sheet with color-coded statuses, a plain-language customer-demo-readiness Doc, and a 6-slide partner-preview deck built from a reusable visual template.
+- 14 Calendar resources producing 58 visible meeting instances across one workweek, including three supplemental series and a one-hour rescheduling window on selected days.
+- An `RTX AI Assistant Executive Review Demo` Drive folder containing a polished pre-review tracker with color-coded statuses, a plain-language product-summary Doc, and a 6-slide executive-review deck built from a reusable visual template.
 - A local state file under `HERMES_HOME` containing only the generated resource IDs needed for reset and cleanup.
 
 Use a dedicated test or demo Google account. Seeding and cleanup modify real Google Workspace data in the connected account, and cleanup permanently deletes the exact seeded Gmail message IDs.
@@ -70,7 +70,7 @@ Make sure Ollama is installed and running:
 ollama list
 ```
 
-The profile setup pulls `qwen3.6:35b-a3b-mtp-q4_K_M` and selects it only in the dedicated demo profile. Your normal Hermes profile and its current model remain unchanged. Use a current Hermes release rather than requiring one exact version.
+The profile setup pulls `qwen3.6:35b-a3b-mtp-q4_K_M` and selects it only in the dedicated demo profile. It also enables the repository-managed `chief-of-staff-scope-guard` plugin, which generically limits the demo helper to one verified Workspace write per user turn. The guard contains no scenario names, people, file IDs, or seeded values. Your normal Hermes profile and its current model remain unchanged. Use a current Hermes release rather than requiring one exact version.
 
 ## 3. Clone the demo branch
 
@@ -327,14 +327,13 @@ python demo/seed_workspace.py --confirm
 
 The command resolves a consistent demo day automatically: it uses the current
 day on Monday through Friday and the upcoming Monday on Saturday or Sunday. The
-release-review meeting is created on that demo day, and the seeded evidence asks
-the agent to find the earliest non-conflicting one-hour slot on the next business
-day. To seed another week, add its Monday date as `--week-of YYYY-MM-DD` before
-`--confirm`.
+executive-review meeting is created at 3:00 PM on that demo day, and Maya's
+message explains that it moved up from Friday. To seed another week, add its
+Monday date as `--week-of YYYY-MM-DD` before `--confirm`.
 
-A successful result reports `"emails": 76`, `"events": 12`, the resolved
+A successful result reports `"emails": 76`, `"events": 14`, the resolved
 `"demo_day"`, and links for the folder, Sheet, Doc, and Slides deck. The 12
-Calendar resources render as 47 meeting instances across the week. The six
+Calendar resources render as 58 meeting instances across the week. The weekday schedule is tightly packed from 8:00 AM through 5:30 PM; a 2:00-3:00 PM opening remains on Monday and Thursday for conflict-free rescheduling. The six
 meaningful messages have the newest seeded timestamps; the 70 background
 messages are older, non-actionable inbox noise with natural, unnumbered subject
 lines. The seeder writes the background set first and the six meaningful
@@ -362,7 +361,7 @@ python "$HERMES_HOME/skills/productivity/ingest/scripts/ingest.py"
 python "$HERMES_HOME/skills/productivity/chief-of-staff/scripts/brief.py" --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000
 ```
 
-The commands should report successful service access and a bounded evidence packet without Python tracebacks. For Start of Day, the packet includes Gmail, Calendar, Drive, and compact Sheet evidence. Python deterministically selects the requested number of Gmail anchors using Gmail Important, sole direct recipient, unread, and received time in that fixed precedence. The other Workspace evidence can support those items but cannot change their selection or order. This is the only selection policy.
+The commands should report successful service access and a bounded evidence packet without Python tracebacks. For Start of Day, the packet includes Gmail, Calendar, Drive, and compact Sheet evidence. Python first groups messages only when conservative live-evidence identities indicate the same task, then selects the requested number of distinct work items using Gmail Important, sole direct recipient, unread, and received time in that fixed precedence. The other Workspace evidence can support those items but cannot change their selection or order. This is the only selection policy.
 
 Ingestion uses the same automatic weekday/weekend rule, so a weekend verification
 reads the upcoming Monday without an extra flag. If you seeded an explicitly
@@ -375,7 +374,7 @@ seeder:
 & $Python (Join-Path $env:HERMES_HOME "skills\productivity\chief-of-staff\scripts\brief.py") --max-meetings 6 --max-mail 8 --max-files 4 --max-chars 14000
 ```
 
-The packet's `requested_top_n` and `selected_item_count` should be `3`, `ordering` should be `gmail_metadata_priority_then_recency`, and `source_status` should report Gmail, Calendar, and Drive. The `meetings`, `recent_files`, and `sheet_evidence` sections remain present. The model may use them as supporting context, but it does not rerank, merge, or substitute the selected messages.
+The packet's `requested_top_n` and `selected_item_count` should be `3`, `ordering` should be `gmail_metadata_priority_then_recency`, and `source_status` should report Gmail, Calendar, and Drive. The `meetings`, `recent_files`, and `sheet_evidence` sections remain present. The model may use them as supporting context, but it does not rerank, regroup, or substitute the selected work items. Mail marked `supports_selection_order` supplies additional evidence for an existing item rather than another priority.
 
 Gmail does not guarantee the order returned by `messages.list`. Ingestion scans
 metadata for up to 120 matching Inbox messages, sorts that bounded set by
@@ -405,17 +404,17 @@ which profile Desktop opens; it does not alter the default profile's files.
 
 At the prompt, start with:
 
-> Hey chief of staff, give me a quick intro? What kinds of things can you help me with?
+> Hey chief of staff, what should I work on today? Give me the top three things.
 
-Then, in the same conversation, say:
+The reply begins with one short workload sentence and returns three deterministically ranked, non-overlapping work items. The executive review is first because Maya's message is Important, followed by customer-pilot feedback and the partner briefing. Each item has a name and one or two high-level `Context:` sentences; the initial brief does not expand the meeting preparation into a detailed checklist. Requests such as `What are the top 5 things I should work on today?` return that many when available.
 
-> Hey chief of staff, what should we work on today?
+Continue in the same conversation:
 
-The reply begins with one short workload sentence and returns three deterministically ranked Gmail anchors by default. Requests such as `What are the top 5 things we should work on today?` return that many when available. All daily-brief requests use the same deterministic ranking. With a fresh seed, the default ranked three are Priya's repeated-task blocker, Daniel's launch-review scheduling request, and Mateo's completed readiness check. Each entry remains separate; the model does not rerank, merge, replace, or skip them. Calendar and Drive evidence can enrich the matching item and provide its action-target link, but cannot alter which messages appear. Every item includes its Mail link and a `Recommended action item(s):` sub-bullet.
-
-- `Can you reschedule the launch review meeting, and prepare the email draft for my review?` This combines the relevant focused Gmail evidence, checks current availability, moves the existing review to the earliest valid non-conflicting slot, and creates an unsent threaded draft to Priya with Daniel copied.
-- `Update the Customer Demo Readiness Check tracker status based on Mateo's message.` This changes only that live, schema-resolved status to `Ready for review` after inspecting its current validation.
-- Optional backup: `Update the Partner Preview deck with Elena's approved headline.` This replaces only the verified slide placeholder.
+- `Help me prepare for the Executive Review meeting.` This rereads Maya's message and shows the three requested prep steps in order.
+- `Summarize the product summary Maya linked into a few bullet points so I can understand it before the meeting.` This reads the live Doc.
+- `Put those bullet points on the Introduction slide of the executive review deck.` This replaces only the verified slide-2 placeholder.
+- `Mark the Executive Review Deck as Done in the prep tracker.` This inspects the live Sheet schema and validation, then changes only the matching status.
+- `Draft a reply to Maya saying that all three preparation items are done.` This creates one verified unsent reply in Maya's thread.
 
 The brief is conversational context, not a capability boundary. Direct Gmail, Calendar, Drive, Docs, Sheets, and Slides requests outside the list use the same focused helpers and current Workspace data.
 
@@ -425,7 +424,7 @@ Use [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) for the complete staged presentation flow
 
 Reset deletes the currently tracked reference data and immediately creates a
 fresh copy aligned to today on weekdays or the upcoming Monday on weekends. Run
-it before a demo on a different day so the release-review story follows that
+it before a demo on a different day so the executive-review story follows that
 day:
 
 ```powershell

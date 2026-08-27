@@ -17,6 +17,9 @@ STOPWORDS = {
     "about", "after", "before", "could", "from", "have", "into", "meeting", "notes",
     "that", "their", "there", "these", "this", "today", "update", "with", "your",
 }
+GOOGLE_TEMPORARY_USER_MESSAGE = (
+    "Google Workspace timed out. This is a temporary Google-side issue; please try again later."
+)
 
 
 def hermes_home() -> Path:
@@ -73,6 +76,98 @@ def deterministic_mail_priority(message: dict[str, Any], self_email: str) -> tup
         -int(message.get("internal_ms", 0) or 0),
         str(message.get("id", "")),
     )
+
+
+def sheet_row_contexts(sheet_evidence: list[dict[str, Any]]) -> list[tuple[str, set[str]]]:
+    """Return schema-agnostic row identities and their visible value tokens."""
+    contexts: list[tuple[str, set[str]]] = []
+    for sheet_index, sheet in enumerate(sheet_evidence):
+        for tab_index, tab in enumerate(sheet.get("tabs", [])):
+            for row in tab.get("row_units", []):
+                visible_values = " ".join(
+                    str(cell.get("value", ""))
+                    for cell in row.get("cells", [])
+                    if not str(cell.get("value", "")).casefold().startswith(("http://", "https://"))
+                )
+                row_tokens = tokens(visible_values)
+                if row_tokens:
+                    key = f"sheet:{sheet_index}:{tab_index}:{row.get('source_order', 0)}"
+                    contexts.append((key, row_tokens))
+    return contexts
+
+
+def event_contexts(events: list[dict[str, Any]]) -> list[tuple[str, set[str]]]:
+    """Return event identities and title tokens without interpreting event meaning."""
+    return [
+        (f"event:{event.get('id')}", event_tokens)
+        for event in events
+        if event.get("id") and (event_tokens := tokens(str(event.get("title", ""))))
+    ]
+
+
+def uniquely_matching_context(
+    message_tokens: set[str],
+    contexts: list[tuple[str, set[str]]],
+    minimum_overlap: int,
+    minimum_margin: int,
+) -> str | None:
+    """Choose a context only when one live candidate is a clear lexical winner."""
+    scored = sorted(
+        ((len(message_tokens & context_tokens), key) for key, context_tokens in contexts),
+        key=lambda item: (-item[0], item[1]),
+    )
+    if not scored or scored[0][0] < minimum_overlap:
+        return None
+    runner_up = scored[1][0] if len(scored) > 1 else 0
+    if scored[0][0] - runner_up < minimum_margin:
+        return None
+    return scored[0][1]
+
+
+def mail_task_signals(
+    message: dict[str, Any],
+    rows: list[tuple[str, set[str]]],
+    events: list[tuple[str, set[str]]],
+) -> dict[str, str | None]:
+    """Derive conservative task-identity signals only from live message/context data."""
+    message_tokens = tokens(f"{message.get('subject', '')} {message.get('snippet', '')}")
+    return {
+        "thread": str(message.get("thread_id", "")) or None,
+        "sheet_row": uniquely_matching_context(message_tokens, rows, minimum_overlap=4, minimum_margin=2),
+        "event": uniquely_matching_context(message_tokens, events, minimum_overlap=3, minimum_margin=1),
+    }
+
+
+def same_task(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    """Return true only when conservative live-evidence identities agree."""
+    left_signals = left["_task_signals"]
+    right_signals = right["_task_signals"]
+    if left_signals["thread"] and left_signals["thread"] == right_signals["thread"]:
+        return True
+
+    left_row = left_signals["sheet_row"]
+    right_row = right_signals["sheet_row"]
+    if left_row and right_row:
+        return left_row == right_row
+
+    left_event = left_signals["event"]
+    right_event = right_signals["event"]
+    return bool(left_event and left_event == right_event)
+
+
+def group_ranked_mail(ranked_mail: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:
+    """Preserve priority order while grouping messages with the same live task identity."""
+    groups: list[list[dict[str, Any]]] = []
+    for message in ranked_mail:
+        matching_group = next(
+            (group for group in groups if any(same_task(message, member) for member in group)),
+            None,
+        )
+        if matching_group is None:
+            groups.append([message])
+        else:
+            matching_group.append(message)
+    return groups
 
 
 def conflicts(events: list[dict[str, Any]], tz: ZoneInfo) -> list[dict[str, Any]]:
@@ -252,6 +347,8 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
     sheet_evidence = compact_sheet_evidence(sheet_previews)
     generated = parse_dt(snapshot.get("generated_at", ""), tz) or datetime.now(tz)
     self_email = str(snapshot.get("identity", {}).get("email", ""))
+    row_contexts = sheet_row_contexts(sheet_evidence)
+    calendar_contexts = event_contexts(events)
 
     meetings = []
     for event in events:
@@ -289,17 +386,45 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
             "important": message.get("important"),
             "links": message.get("links", []),
             "_priority": deterministic_mail_priority(message, self_email),
+            "_task_signals": mail_task_signals(message, row_contexts, calendar_contexts),
         })
     recent_mail.sort(key=lambda message: message["_priority"])
     ordering = "gmail_metadata_priority_then_recency"
-    selection_basis = "important_then_direct_then_unread_then_newest"
-    bounded_mail = recent_mail[:max(1, int(args.max_mail))]
-    selected_item_count = min(top_n, len(bounded_mail))
-    for index, item in enumerate(bounded_mail, 1):
+    selection_basis = "important_then_direct_then_unread_then_newest_distinct_live_tasks"
+    mail_groups = group_ranked_mail(recent_mail)
+    selected_groups = mail_groups[:top_n]
+    selected_item_count = len(selected_groups)
+    selected_event_ids = {
+        signal.removeprefix("event:")
+        for group in selected_groups
+        for message in group
+        if (signal := message.get("_task_signals", {}).get("event"))
+    }
+    meetings.sort(key=lambda meeting: meeting.get("id") not in selected_event_ids)
+
+    required_ids: set[str] = set()
+    for selection_order, group in enumerate(selected_groups, 1):
+        primary = group[0]
+        primary["selected_for_output"] = True
+        primary["selection_order"] = selection_order
+        required_ids.add(str(primary.get("id", "")))
+        # One bounded supporting message is enough to preserve distinct evidence
+        # without expanding the existing packet or response shape.
+        for supporting in group[1:2]:
+            supporting["selected_for_output"] = False
+            supporting["supports_selection_order"] = selection_order
+            required_ids.add(str(supporting.get("id", "")))
+
+    for item in recent_mail:
+        item.setdefault("selected_for_output", False)
+
+    max_mail = max(1, int(args.max_mail))
+    required_mail = [item for item in recent_mail if str(item.get("id", "")) in required_ids]
+    remaining_mail = [item for item in recent_mail if str(item.get("id", "")) not in required_ids]
+    bounded_mail = required_mail + remaining_mail[:max(0, max_mail - len(required_mail))]
+    for item in bounded_mail:
         item.pop("_priority", None)
-        item["selected_for_output"] = index <= selected_item_count
-        if item["selected_for_output"]:
-            item["selection_order"] = index
+        item.pop("_task_signals", None)
 
     recent_files = [
         {k: item.get(k) for k in ("id", "name", "kind", "modified", "url", "starred", "last_editor")}
@@ -314,38 +439,56 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
         "drive": "error" if "drive" in error_text else ("ok" if files else "ok_empty"),
         "sheets": "error" if "sheets" in error_text else ("ok" if sheet_previews else "ok_empty"),
     }
+    temporary_markers = (
+        "timed out",
+        "timeout",
+        "temporarily unavailable",
+        "connection reset",
+        "remote end closed",
+    )
+    if any(marker in error_text for marker in temporary_markers):
+        return {
+            "schema": 3,
+            "temporary_google_error": True,
+            "instruction": f"Return exactly this sentence: {GOOGLE_TEMPORARY_USER_MESSAGE}",
+            "user_message": GOOGLE_TEMPORARY_USER_MESSAGE,
+            "coverage": coverage,
+            "source_status": source_status,
+            "response_contract": {
+                "item_count": 0,
+                "rule": "Do not render priorities or use partial Workspace data. Return user_message exactly.",
+            },
+        }
     packet = {
-        "schema": 2,
-        "instruction": f"Render exactly the {selected_item_count} deterministically ranked Gmail entries marked selected_for_output as {selected_item_count} separate items in selection_order, using the other Workspace data only as supporting context. The selection is final; do not rank it again.",
+        "schema": 3,
+        "instruction": f"Render {selected_item_count} pre-ranked distinct items. selected_for_output marks each primary; supports_selection_order attaches mail evidence. Do not rank or regroup.",
         "ordering_contract": [
-            "The selected_for_output mail entries are already ranked by the deterministic Gmail metadata policy and have their fixed selection_order. They are the complete output item list.",
-            "Create exactly one item for each selected_for_output mail entry. Do not score, rank, reorder, merge, replace, or skip selected entries.",
-            "Calendar, Drive, Sheet, and unselected mail data are supporting context only. They may enrich a selected item when clearly related, but they must never change which items are returned or their order.",
-            "Infer meaning only from live messages, meetings, files, sheet headers, row values, and validations. Never use remembered, learned, or repository-defined field, status, or action mappings.",
-            "Preserve the message's action state: a request or proposal remains pending, while only an explicit completion statement may be described as completed.",
-            "When an item calls for email, recommend preparing or saving a draft for review, never sending it.",
+            "Python grouped mail by live identity and ranked it with generic Gmail metadata.",
+            "Render one item per selected_for_output primary in selection_order. Do not score, rank, regroup, reorder, merge, replace, or skip items.",
+            "Mail with supports_selection_order N is context for item N, not a separate item.",
+            "Other Workspace data may enrich a clearly related item but cannot change the selected items or order.",
+            "Use only live values; never use remembered or repository-defined mappings.",
+            "Name pending work without implying it is complete. Use past tense only for facts already completed.",
         ],
         "response_contract": {
             "summary": "Begin with exactly one unnumbered sentence and then item 1 when items exist; write no heading, preamble, or second summary sentence.",
             "item_count": selected_item_count,
             "item_template": [
-                "N. **Outcome**",
-                "   - **Evidence:** One complete sentence grounded in this item's selected mail entry and any clearly matching Workspace context. [RESOURCE_KIND](MATCHING_RESOURCE_URL) [Mail — SENDER](GMAIL_URL)",
-                "   - **Recommended action item(s):** Plain-language desired end state and scope, not implementation steps.",
+                "N. **WORK ITEM NAME**",
+                "   - **Context:** One or two high-level sentences explaining what needs attention and why it matters now. [RESOURCE_KIND](MATCHING_RESOURCE_URL) [Mail — SENDER](GMAIL_URL)",
             ],
-            "item_identity_rule": "Item N must be anchored to the selected_for_output mail entry with selection_order N. Supporting context may not replace, merge, or reorder selected entries.",
-            "link_rule": "Every evidence line must include the selected entry's distinct [Mail — SENDER](URL) link, copying the sender name exactly from mail.from. When the packet clearly supports a relationship, also include one matching action-target link from meetings.calendar_url, sheet_evidence.url, recent_files.url, or a URL-valued cell in that sheet row. Label Google Calendar as Calendar, spreadsheets as Sheet, documents as Doc, presentations as Slides, and other Drive resources as Drive. Never invent or link an unrelated resource.",
+            "item_identity_rule": "Item N uses the selected primary with selection_order N. Mail with supports_selection_order N belongs only to item N.",
+            "link_rule": "Include primary and assigned supporting [Mail — SENDER](URL) links with exact sender names. Add one clearly related Calendar, Sheet, Doc, Slides, or Drive target. Never invent or link an unrelated resource.",
             "self_check": [
-                "The response has one opening sentence, exactly item_count items in selection_order, and exactly three lines per item.",
-                "Each item is anchored to its matching selected mail entry and includes that entry's Mail link with an exact sender name.",
+                "The response has one opening sentence, exactly item_count items in selection_order, and exactly two lines per item.",
+                "Each item is anchored to its matching selected primary mail entry and includes the primary and all assigned supporting Mail links with exact sender names.",
                 "Any Calendar or Drive link is supported by the packet and belongs to that selected item's outcome.",
-                "No item changes a requested or proposed action into a claim that the action already happened.",
-                "Any recommended email action is draft-only and does not say to send the message.",
-                "The response ends with the final Recommended action item(s) line and contains none of the forbidden content.",
+                "Titles name pending work and do not claim that requested work is already complete.",
+                "The response ends with the final Context line and contains none of the forbidden content.",
             ],
             "forbidden": [
                 "raw IDs, helper names, flags, commands, row numbers, cell coordinates, scores, JSON, or schema commentary",
-                "extra bullets, conflict/focus sections, horizontal rules, closing questions, offers, or text after the last action line",
+                "action checklists, conflict/focus sections, horizontal rules, closing questions, offers, or text after the last Context line",
             ],
             "forbidden_tokens": ["`", "--", "calendar find", "calendar reschedule", "sheets inspect", "sheets set-cell", "slides replace-text"],
         },
@@ -399,7 +542,11 @@ def fit_packet(packet: dict[str, Any], max_chars: int) -> str:
 
     selected_item_count = max(0, int(packet.get("selected_item_count") or 0))
     minimum_sheet_rows = max(3, selected_item_count)
-    protected_mail_count = min(len(packet.get("mail", [])), selected_item_count)
+    protected_mail_count = sum(
+        1
+        for mail in packet.get("mail", [])
+        if mail.get("selected_for_output") or mail.get("supports_selection_order")
+    )
 
     # Preserve selected anchors while trimming lower-value supporting context first.
     trim_list("recent_files", 4)

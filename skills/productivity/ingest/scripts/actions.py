@@ -7,9 +7,12 @@ import base64
 import json
 import os
 import re
+import socket
 import sys
+import time as time_module
 import unicodedata
 from datetime import date, datetime, time, timedelta
+from difflib import SequenceMatcher
 from email.message import EmailMessage
 from email.utils import getaddresses
 from pathlib import Path
@@ -19,6 +22,12 @@ from zoneinfo import ZoneInfo
 
 REFERENCE_WORKSPACE_MARKER = "chief-of-staff-reference-workspace-v1"
 REFERENCE_WORKSPACE_STATE_FILE = "chief-of-staff-workspace-state.json"
+GOOGLE_HTTP_TIMEOUT_SECONDS = 30
+GOOGLE_READ_ATTEMPTS = 2
+GOOGLE_TRANSIENT_STATUSES = {408, 409, 425, 429, 500, 502, 503, 504}
+GOOGLE_TEMPORARY_USER_MESSAGE = (
+    "Google Workspace timed out. This is a temporary Google-side issue; please try again later."
+)
 
 
 class DraftValidationError(RuntimeError):
@@ -27,6 +36,10 @@ class DraftValidationError(RuntimeError):
 
 class CalendarValidationError(RuntimeError):
     """A recoverable evidence rejection that occurs before Calendar is mutated."""
+
+
+class GoogleTransientError(RuntimeError):
+    """A bounded Google request exhausted its safe retries."""
 
 
 def hermes_home() -> Path:
@@ -58,8 +71,60 @@ def credentials() -> Any:
 
 def service(name: str, version: str) -> Any:
     from googleapiclient.discovery import build
+    from google_auth_httplib2 import AuthorizedHttp
+    import httplib2
 
-    return build(name, version, credentials=credentials(), cache_discovery=False)
+    authorized_http = AuthorizedHttp(
+        credentials(),
+        http=httplib2.Http(timeout=GOOGLE_HTTP_TIMEOUT_SECONDS),
+    )
+    return build(name, version, http=authorized_http, cache_discovery=False)
+
+
+def is_transient_google_error(exc: Exception) -> bool:
+    status = getattr(getattr(exc, "resp", None), "status", None)
+    if status in GOOGLE_TRANSIENT_STATUSES:
+        return True
+    if isinstance(exc, (TimeoutError, socket.timeout, ConnectionError)):
+        return True
+    message = str(exc).casefold()
+    return any(
+        marker in message
+        for marker in (
+            "timed out",
+            "timeout",
+            "temporarily unavailable",
+            "connection reset",
+            "remote end closed",
+        )
+    )
+
+
+def execute_google_read(request: Any, operation: str) -> Any:
+    """Execute an idempotent Google read with a small, bounded retry budget."""
+    for attempt in range(GOOGLE_READ_ATTEMPTS):
+        try:
+            return request.execute()
+        except Exception as exc:
+            if not is_transient_google_error(exc):
+                raise
+            if attempt == GOOGLE_READ_ATTEMPTS - 1:
+                raise GoogleTransientError(
+                    f"{operation} failed after {GOOGLE_READ_ATTEMPTS} attempts: {exc}"
+                ) from exc
+            time_module.sleep(1)
+    raise GoogleTransientError(f"{operation} failed without returning a response")
+
+
+def temporary_google_result(exc: Exception) -> dict[str, Any]:
+    return {
+        "status": "temporarily_unavailable",
+        "ok": False,
+        "retryable": True,
+        "google_side": True,
+        "user_message": GOOGLE_TEMPORARY_USER_MESSAGE,
+        "reason": str(exc),
+    }
 
 
 def emit(value: Any) -> None:
@@ -129,7 +194,10 @@ def headers(payload: dict[str, Any]) -> dict[str, str]:
 
 def gmail_get(args: argparse.Namespace) -> None:
     api = service("gmail", "v1")
-    msg = api.users().messages().get(userId="me", id=args.message_id, format="full").execute()
+    msg = execute_google_read(
+        api.users().messages().get(userId="me", id=args.message_id, format="full"),
+        "Read Gmail message",
+    )
     hdr = headers(msg.get("payload", {}))
     emit({
         "id": msg.get("id"),
@@ -146,7 +214,10 @@ def gmail_get(args: argparse.Namespace) -> None:
 
 def gmail_thread(args: argparse.Namespace) -> None:
     api = service("gmail", "v1")
-    thread = api.users().threads().get(userId="me", id=args.thread_id, format="full").execute()
+    thread = execute_google_read(
+        api.users().threads().get(userId="me", id=args.thread_id, format="full"),
+        "Read Gmail thread",
+    )
     output = []
     for msg in thread.get("messages", [])[-args.max_messages :]:
         if "DRAFT" in msg.get("labelIds", []):
@@ -178,19 +249,25 @@ def gmail_search(args: argparse.Namespace) -> None:
     query = " ".join(part for part in query_parts if part)
     if not query:
         raise RuntimeError("Gmail search requires a query, sender, or subject")
-    result = api.users().messages().list(
-        userId="me",
-        q=query,
-        maxResults=args.max,
-    ).execute()
+    result = execute_google_read(
+        api.users().messages().list(
+            userId="me",
+            q=query,
+            maxResults=args.max,
+        ),
+        "Search Gmail",
+    )
     messages = []
     for item in result.get("messages", []):
-        message = api.users().messages().get(
-            userId="me",
-            id=item.get("id", ""),
-            format="metadata",
-            metadataHeaders=["From", "To", "Cc", "Subject", "Date", "Message-ID"],
-        ).execute()
+        message = execute_google_read(
+            api.users().messages().get(
+                userId="me",
+                id=item.get("id", ""),
+                format="metadata",
+                metadataHeaders=["From", "To", "Cc", "Subject", "Date", "Message-ID"],
+            ),
+            "Read Gmail search result",
+        )
         if "DRAFT" in message.get("labelIds", []):
             continue
         message_headers = headers(message.get("payload", {}))
@@ -225,12 +302,15 @@ def _format_recipient(name: str, address: str) -> str:
 def _reply_evidence(api: Any, message_id: str) -> dict[str, Any]:
     if not message_id.strip():
         raise RuntimeError("A reply draft requires a non-empty Gmail message ID")
-    original = api.users().messages().get(
-        userId="me",
-        id=message_id,
-        format="metadata",
-        metadataHeaders=["From", "Reply-To", "Subject", "Message-ID", "References"],
-    ).execute()
+    original = execute_google_read(
+        api.users().messages().get(
+            userId="me",
+            id=message_id,
+            format="metadata",
+            metadataHeaders=["From", "Reply-To", "Subject", "Message-ID", "References"],
+        ),
+        "Read Gmail reply evidence",
+    )
     if "DRAFT" in original.get("labelIds", []):
         raise DraftValidationError(
             f"Gmail message {message_id} is itself a draft; choose a received source message. "
@@ -253,7 +333,10 @@ def _reply_evidence(api: Any, message_id: str) -> dict[str, Any]:
 
 
 def _gmail_profile_address(api: Any) -> str:
-    profile = api.users().getProfile(userId="me").execute()
+    profile = execute_google_read(
+        api.users().getProfile(userId="me"),
+        "Read Gmail profile",
+    )
     address = str(profile.get("emailAddress", "")).strip()
     if not _valid_email_address(address):
         raise RuntimeError("Gmail profile did not return a valid signed-in account address")
@@ -288,7 +371,10 @@ def validate_calendar_date_evidence(
         )
     except DraftValidationError as exc:
         raise CalendarValidationError(str(exc)) from exc
-    message = api.users().messages().get(userId="me", id=message_id, format="full").execute()
+    message = execute_google_read(
+        api.users().messages().get(userId="me", id=message_id, format="full"),
+        "Read Gmail calendar evidence",
+    )
     message_headers = headers(message.get("payload", {}))
     evidence_text = "\n".join(
         (message_headers.get("subject", ""), decode_body(message.get("payload", {})))
@@ -335,8 +421,8 @@ def validate_user_directed_date(request_text: str, target_day: date) -> None:
         )
 
 
-def normalize_draft_body(value: str, closing: str = "") -> str:
-    """Accept shell-friendly escaped line breaks and apply an optional exact closing."""
+def normalize_cli_text(value: str) -> str:
+    """Render common shell-friendly escapes used in multi-line Workspace text."""
     normalized = value.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\r", "\n")
     for escaped, character in {
         r"\u2011": "‑",
@@ -345,8 +431,15 @@ def normalize_draft_body(value: str, closing: str = "") -> str:
         r"\u2014": "—",
         r"\u2212": "−",
         r"\u00a0": " ",
+        r"\u2022": "•",
     }.items():
         normalized = normalized.replace(escaped, character)
+    return normalized
+
+
+def normalize_draft_body(value: str, closing: str = "") -> str:
+    """Accept shell-friendly escaped line breaks and apply an optional exact closing."""
+    normalized = normalize_cli_text(value)
     lines = [line.rstrip() for line in normalized.splitlines()]
     while lines and not lines[-1]:
         lines.pop()
@@ -560,6 +653,19 @@ def looks_like_calendar_confirmation(body: str) -> bool:
     return has_date and has_time and has_timezone
 
 
+def calendar_verification_event_id(body: str, requested_event_id: str) -> str:
+    """Use Calendar verification only for a body that actually confirms a schedule."""
+    event_id = requested_event_id.strip()
+    if not looks_like_calendar_confirmation(body):
+        return ""
+    if not event_id:
+        raise DraftValidationError(
+            "This looks like a Calendar confirmation, so --verify-calendar-event is required "
+            "to check the live title, date, times, and timezone before drafting. No draft was created."
+        )
+    return event_id
+
+
 def matching_tracked_draft(
     api: Any,
     tracked_drafts: list[dict[str, Any]],
@@ -586,11 +692,14 @@ def matching_tracked_draft(
         if not draft_id:
             continue
         try:
-            draft = api.users().drafts().get(
-                userId="me",
-                id=draft_id,
-                format="full",
-            ).execute()
+            draft = execute_google_read(
+                api.users().drafts().get(
+                    userId="me",
+                    id=draft_id,
+                    format="full",
+                ),
+                "Read tracked Gmail draft",
+            )
         except Exception as exc:
             status = getattr(getattr(exc, "resp", None), "status", None)
             if status in {404, 410}:
@@ -665,6 +774,20 @@ def calendar_draft_confirmation_markdown(
     )
 
 
+def gmail_draft_confirmation_markdown(to: str, cc: str, subject: str, draft_url: str) -> str:
+    """Build a concise final response from verified Gmail draft state."""
+
+    def names(value: str) -> str:
+        recipients = [name or address for name, address in _validated_recipients(value, "Confirmation recipient")]
+        return ", ".join(recipients)
+
+    copied = f" with {names(cc)} copied" if cc else ""
+    return (
+        f"Draft to {names(to)}{copied} was saved (not sent) with subject "
+        f"**{subject}**. [Draft]({draft_url})"
+    )
+
+
 def gmail_draft(args: argparse.Namespace) -> None:
     track_demo_state = getattr(args, "track_demo_state", False)
     reference_state: dict[str, Any] | None = None
@@ -680,16 +803,17 @@ def gmail_draft(args: argparse.Namespace) -> None:
     )
     verified_calendar_event = False
     calendar_confirmation: tuple[dict[str, Any], ZoneInfo] | None = None
-    calendar_event_id = getattr(args, "verify_calendar_event", "").strip()
-    if looks_like_calendar_confirmation(expected_body) and not calendar_event_id:
-        raise DraftValidationError(
-            "This looks like a Calendar confirmation, so --verify-calendar-event is required "
-            "to check the live title, date, times, and timezone before drafting. No draft was created."
-        )
+    calendar_event_id = calendar_verification_event_id(
+        expected_body,
+        getattr(args, "verify_calendar_event", ""),
+    )
     if calendar_event_id:
         calendar_api = service("calendar", "v3")
         calendar_id = getattr(args, "calendar", "primary")
-        event = calendar_api.events().get(calendarId=calendar_id, eventId=calendar_event_id).execute()
+        event = execute_google_read(
+            calendar_api.events().get(calendarId=calendar_id, eventId=calendar_event_id),
+            "Read Calendar event for draft validation",
+        )
         zone = _calendar_zone(calendar_api, calendar_id, "", event)
         checked_facts.extend(validate_calendar_confirmation_content(expected_body, event, zone))
         verified_calendar_event = True
@@ -761,7 +885,12 @@ def gmail_draft(args: argparse.Namespace) -> None:
         existing_headers = headers(existing_message.get("payload", {}))
         existing_message_id = str(existing_message.get("id", "")).strip()
         draft_url = f"https://mail.google.com/mail/u/0/#drafts/{existing_message_id}"
-        confirmation_markdown = ""
+        confirmation_markdown = gmail_draft_confirmation_markdown(
+            existing_headers.get("to", ""),
+            existing_headers.get("cc", ""),
+            existing_headers.get("subject", ""),
+            draft_url,
+        )
         if calendar_confirmation:
             confirmation_markdown = calendar_draft_confirmation_markdown(
                 calendar_confirmation[0],
@@ -800,7 +929,10 @@ def gmail_draft(args: argparse.Namespace) -> None:
     result = api.users().drafts().create(userId="me", body=body).execute()
     draft_id = result.get("id", "")
     message_id = result.get("message", {}).get("id", "")
-    verified = api.users().drafts().get(userId="me", id=draft_id, format="full").execute()
+    verified = execute_google_read(
+        api.users().drafts().get(userId="me", id=draft_id, format="full"),
+        "Verify saved Gmail draft",
+    )
     verified_message = verified.get("message", {})
     verified_headers = headers(verified_message.get("payload", {}))
     verified_body = decode_body(verified_message.get("payload", {}))
@@ -837,7 +969,12 @@ def gmail_draft(args: argparse.Namespace) -> None:
                 ) from tracking_error
             raise RuntimeError(f"Draft tracking failed and draft {draft_id} was rolled back: {tracking_error}") from tracking_error
     draft_url = f"https://mail.google.com/mail/u/0/#drafts/{message_id}"
-    confirmation_markdown = ""
+    confirmation_markdown = gmail_draft_confirmation_markdown(
+        verified_headers.get("to", ""),
+        verified_headers.get("cc", ""),
+        verified_headers.get("subject", ""),
+        draft_url,
+    )
     if calendar_confirmation:
         confirmation_markdown = calendar_draft_confirmation_markdown(
             calendar_confirmation[0],
@@ -866,28 +1003,42 @@ def gmail_draft(args: argparse.Namespace) -> None:
 def drive_search(args: argparse.Namespace) -> None:
     safe = args.query.replace("'", "\\'")
     query = args.query if args.raw_query else f"trashed = false and fullText contains '{safe}'"
-    result = service("drive", "v3").files().list(
-        q=query,
-        orderBy="modifiedTime desc",
-        pageSize=args.max,
-        fields="files(id,name,mimeType,modifiedTime,webViewLink,owners(displayName,emailAddress),description)",
-    ).execute()
+    result = execute_google_read(
+        service("drive", "v3").files().list(
+            q=query,
+            orderBy="modifiedTime desc",
+            pageSize=args.max,
+            fields="files(id,name,mimeType,modifiedTime,webViewLink,owners(displayName,emailAddress),description)",
+        ),
+        "Search Google Drive",
+    )
     emit(result.get("files", []))
 
 
 def docs_get(args: argparse.Namespace) -> None:
-    doc = service("docs", "v1").documents().get(documentId=args.document_id).execute()
+    doc = execute_google_read(
+        service("docs", "v1").documents().get(documentId=args.document_id),
+        "Read Google Doc",
+    )
     chunks: list[str] = []
     for block in doc.get("body", {}).get("content", []):
         for element in block.get("paragraph", {}).get("elements", []):
             chunks.append(element.get("textRun", {}).get("content", ""))
-    emit({"id": args.document_id, "title": doc.get("title", ""), "text": "".join(chunks)[: args.max_chars]})
+    emit({
+        "id": args.document_id,
+        "title": doc.get("title", ""),
+        "url": f"https://docs.google.com/document/d/{args.document_id}/edit",
+        "text": "".join(chunks)[: args.max_chars],
+    })
 
 
 def docs_append(args: argparse.Namespace) -> None:
     require_confirm(args, "Docs append")
     api = service("docs", "v1")
-    doc = api.documents().get(documentId=args.document_id).execute()
+    doc = execute_google_read(
+        api.documents().get(documentId=args.document_id),
+        "Read Google Doc before append",
+    )
     end_index = max(1, doc.get("body", {}).get("content", [{}])[-1].get("endIndex", 1) - 1)
     api.documents().batchUpdate(
         documentId=args.document_id,
@@ -898,14 +1049,16 @@ def docs_append(args: argparse.Namespace) -> None:
 
 def docs_replace(args: argparse.Namespace) -> None:
     require_confirm(args, "Docs text replacement")
+    find = normalize_cli_text(args.find)
+    replacement = normalize_cli_text(args.replace)
     result = service("docs", "v1").documents().batchUpdate(
         documentId=args.document_id,
         body={
             "requests": [
                 {
                     "replaceAllText": {
-                        "containsText": {"text": args.find, "matchCase": args.match_case},
-                        "replaceText": args.replace,
+                        "containsText": {"text": find, "matchCase": args.match_case},
+                        "replaceText": replacement,
                     }
                 }
             ]
@@ -919,10 +1072,13 @@ def docs_replace(args: argparse.Namespace) -> None:
 
 
 def sheets_get(args: argparse.Namespace) -> None:
-    result = service("sheets", "v4").spreadsheets().values().get(
-        spreadsheetId=args.spreadsheet_id,
-        range=args.range,
-    ).execute()
+    result = execute_google_read(
+        service("sheets", "v4").spreadsheets().values().get(
+            spreadsheetId=args.spreadsheet_id,
+            range=args.range,
+        ),
+        "Read Google Sheet values",
+    )
     emit({"spreadsheet_id": args.spreadsheet_id, "range": result.get("range"), "values": result.get("values", [])})
 
 
@@ -1063,10 +1219,13 @@ def _validation_description(
         reference = values[0] if values else ""
         result["source_range"] = reference
         if reference:
-            resolved = api.spreadsheets().values().get(
-                spreadsheetId=spreadsheet_id,
-                range=reference.removeprefix("="),
-            ).execute().get("values", [])
+            resolved = execute_google_read(
+                api.spreadsheets().values().get(
+                    spreadsheetId=spreadsheet_id,
+                    range=reference.removeprefix("="),
+                ),
+                "Read Google Sheet validation values",
+            ).get("values", [])
             result["allowed_values"] = [
                 str(value)
                 for row in resolved
@@ -1089,15 +1248,18 @@ def _spreadsheet_grid(
 ) -> dict[str, Any]:
     if max_rows < 1 or max_columns < 1:
         raise RuntimeError("Spreadsheet inspection bounds must be positive")
-    metadata = api.spreadsheets().get(
-        spreadsheetId=spreadsheet_id,
-        includeGridData=False,
-        fields=(
-            "properties(title,locale,timeZone),"
-            "sheets(properties(sheetId,title,gridProperties(rowCount,columnCount)),"
-            "protectedRanges(description,warningOnly,range,unprotectedRanges),merges)"
+    metadata = execute_google_read(
+        api.spreadsheets().get(
+            spreadsheetId=spreadsheet_id,
+            includeGridData=False,
+            fields=(
+                "properties(title,locale,timeZone),"
+                "sheets(properties(sheetId,title,gridProperties(rowCount,columnCount)),"
+                "protectedRanges(description,warningOnly,range,unprotectedRanges),merges)"
+            ),
         ),
-    ).execute()
+        "Inspect Google Sheet metadata",
+    )
     selected = [
         item for item in metadata.get("sheets", [])
         if not sheet_title or item.get("properties", {}).get("title", "").casefold() == sheet_title.casefold()
@@ -1115,16 +1277,19 @@ def _spreadsheet_grid(
         ranges.append(
             f"{_sheet_title_a1(properties.get('title', ''))}!A1:{_column_name(column_limit - 1)}{row_limit}"
         )
-    detailed = api.spreadsheets().get(
-        spreadsheetId=spreadsheet_id,
-        ranges=ranges,
-        includeGridData=True,
-        fields=(
-            "sheets(properties(sheetId,title),data(startRow,startColumn,rowData(values("
-            "effectiveValue,formattedValue,userEnteredValue,userEnteredFormat.numberFormat,"
-            "dataValidation,note))))"
+    detailed = execute_google_read(
+        api.spreadsheets().get(
+            spreadsheetId=spreadsheet_id,
+            ranges=ranges,
+            includeGridData=True,
+            fields=(
+                "sheets(properties(sheetId,title),data(startRow,startColumn,rowData(values("
+                "effectiveValue,formattedValue,userEnteredValue,userEnteredFormat.numberFormat,"
+                "dataValidation,note))))"
+            ),
         ),
-    ).execute()
+        "Inspect Google Sheet grid",
+    )
     details_by_id = {
         int(item.get("properties", {}).get("sheetId", 0)): item
         for item in detailed.get("sheets", [])
@@ -1592,29 +1757,81 @@ def _slide_text(slide: dict[str, Any]) -> str:
     return re.sub(r"\n{3,}", "\n\n", "".join(chunks)).strip()
 
 
+def _recover_presentation_id(requested_id: str) -> str | None:
+    """Recover only a strong, unique near-match among live presentation IDs."""
+    result = execute_google_read(
+        service("drive", "v3").files().list(
+            q="trashed = false and mimeType = 'application/vnd.google-apps.presentation'",
+            orderBy="modifiedTime desc",
+            pageSize=50,
+            fields="files(id,name,mimeType,modifiedTime)",
+        ),
+        "Find a uniquely matching Google Slides presentation",
+    )
+    ranked = sorted(
+        (
+            (SequenceMatcher(None, requested_id, str(item.get("id", ""))).ratio(), str(item.get("id", "")))
+            for item in result.get("files", [])
+            if str(item.get("id", "")) and str(item.get("id", "")) != requested_id
+        ),
+        reverse=True,
+    )
+    if not ranked:
+        return None
+    best_score, best_id = ranked[0]
+    runner_up = ranked[1][0] if len(ranked) > 1 else 0.0
+    if best_score < 0.92 or best_score - runner_up < 0.05:
+        return None
+    return best_id
+
+
 def slides_get(args: argparse.Namespace) -> None:
-    deck = service("slides", "v1").presentations().get(presentationId=args.presentation_id).execute()
+    api = service("slides", "v1")
+    presentation_id = args.presentation_id
+    try:
+        deck = execute_google_read(
+            api.presentations().get(presentationId=presentation_id),
+            "Read Google Slides presentation",
+        )
+    except Exception as exc:
+        if _api_status(exc) not in {404, 410}:
+            raise
+        recovered_id = _recover_presentation_id(presentation_id)
+        if not recovered_id:
+            raise RuntimeError(
+                f"Google Slides presentation ID {presentation_id!r} does not resolve and no strong unique live match exists"
+            ) from exc
+        presentation_id = recovered_id
+        deck = execute_google_read(
+            api.presentations().get(presentationId=presentation_id),
+            "Read recovered Google Slides presentation",
+        )
     slides = [
         {"number": index, "object_id": slide.get("objectId"), "text": _slide_text(slide)[: args.max_chars_per_slide]}
         for index, slide in enumerate(deck.get("slides", []), start=1)
     ]
-    emit({"id": args.presentation_id, "title": deck.get("title", ""), "url": f"https://docs.google.com/presentation/d/{args.presentation_id}/edit", "slides": slides})
+    emit({"id": presentation_id, "title": deck.get("title", ""), "url": f"https://docs.google.com/presentation/d/{presentation_id}/edit", "slides": slides})
 
 
 def slides_replace(args: argparse.Namespace) -> None:
     require_confirm(args, "Slides text replacement")
     api = service("slides", "v1")
+    find = normalize_cli_text(args.find)
+    replacement = normalize_cli_text(args.replace)
     result = api.presentations().batchUpdate(
         presentationId=args.presentation_id,
-        body={"requests": [{"replaceAllText": {"containsText": {"text": args.find, "matchCase": args.match_case}, "replaceText": args.replace}}]},
+        body={"requests": [{"replaceAllText": {"containsText": {"text": find, "matchCase": args.match_case}, "replaceText": replacement}}]},
     ).execute()
     replies = result.get("replies", [])
     occurrences = sum(r.get("replaceAllText", {}).get("occurrencesChanged", 0) for r in replies)
     if occurrences < 1:
-        raise RuntimeError(f"Slides text was not found: {args.find!r}")
-    deck = api.presentations().get(presentationId=args.presentation_id).execute()
+        raise RuntimeError(f"Slides text was not found: {find!r}")
+    deck = execute_google_read(
+        api.presentations().get(presentationId=args.presentation_id),
+        "Verify Google Slides replacement",
+    )
     text = "\n".join(_slide_text(slide) for slide in deck.get("slides", []))
-    verified = args.replace in text and args.find not in text
+    verified = replacement in text and find not in text
     if not verified:
         raise RuntimeError("Slides replacement could not be verified")
     title = str(deck.get("title", "")).strip() or "Google Slides presentation"
@@ -1683,7 +1900,10 @@ def _calendar_window(
     }
     if query:
         request["q"] = query
-    return api.events().list(**request).execute().get("items", [])
+    return execute_google_read(
+        api.events().list(**request),
+        "Read Google Calendar events",
+    ).get("items", [])
 
 
 def _calendar_item(event: dict[str, Any]) -> dict[str, Any]:
@@ -1701,10 +1921,13 @@ def _calendar_item(event: dict[str, Any]) -> dict[str, Any]:
 
 def calendar_get(args: argparse.Namespace) -> None:
     try:
-        event = service("calendar", "v3").events().get(
-            calendarId=args.calendar,
-            eventId=args.event_id,
-        ).execute()
+        event = execute_google_read(
+            service("calendar", "v3").events().get(
+                calendarId=args.calendar,
+                eventId=args.event_id,
+            ),
+            "Read Google Calendar event",
+        )
     except Exception as exc:
         if _api_status(exc) in {404, 410}:
             raise RuntimeError(
@@ -1850,7 +2073,10 @@ def _calendar_zone(api: Any, calendar_id: str, explicit: str = "", event: dict[s
     if not zone_name and event:
         zone_name = event.get("start", {}).get("timeZone", "") or event.get("end", {}).get("timeZone", "")
     if not zone_name:
-        zone_name = api.calendars().get(calendarId=calendar_id).execute().get("timeZone", "")
+        zone_name = execute_google_read(
+            api.calendars().get(calendarId=calendar_id),
+            "Read Google Calendar timezone",
+        ).get("timeZone", "")
     if not zone_name:
         raise RuntimeError("Calendar timezone could not be determined")
     try:
@@ -1906,7 +2132,10 @@ def _resolve_calendar_event(
 ) -> tuple[dict[str, Any], bool]:
     if event_id.strip():
         try:
-            resolved = api.events().get(calendarId=calendar_id, eventId=event_id).execute()
+            resolved = execute_google_read(
+                api.events().get(calendarId=calendar_id, eventId=event_id),
+                "Resolve Google Calendar event",
+            )
             if query.strip() and not _calendar_title_matches_query(str(resolved.get("summary", "")), query):
                 raise CalendarValidationError(
                     f"Calendar event ID resolves to {resolved.get('summary', 'an untitled event')!r}, "
@@ -2046,7 +2275,10 @@ def calendar_reschedule(args: argparse.Namespace) -> None:
         },
         sendUpdates=args.send_updates,
     ).execute()
-    verified = api.events().get(calendarId=args.calendar, eventId=event_id).execute()
+    verified = execute_google_read(
+        api.events().get(calendarId=args.calendar, eventId=event_id),
+        "Verify rescheduled Google Calendar event",
+    )
     actual_start = verified.get("start", {}).get("dateTime", "")
     actual_end = verified.get("end", {}).get("dateTime", "")
     if not actual_start or not actual_end or not _same_instant(actual_start, selected["start"]) or not _same_instant(actual_end, selected["end"]):
@@ -2113,7 +2345,10 @@ def calendar_move(args: argparse.Namespace) -> None:
     """Move one existing event while preserving all other event details."""
     require_confirm(args, "Calendar event move")
     api = service("calendar", "v3")
-    current = api.events().get(calendarId=args.calendar, eventId=args.event_id).execute()
+    current = execute_google_read(
+        api.events().get(calendarId=args.calendar, eventId=args.event_id),
+        "Read Google Calendar event before move",
+    )
     requested_start = _calendar_time(args.start, "--start")
     requested_end = _calendar_time(args.end, "--end")
     if requested_end <= requested_start:
@@ -2139,7 +2374,10 @@ def calendar_move(args: argparse.Namespace) -> None:
         body={"start": start, "end": end},
         sendUpdates=args.send_updates,
     ).execute()
-    verified = api.events().get(calendarId=args.calendar, eventId=args.event_id).execute()
+    verified = execute_google_read(
+        api.events().get(calendarId=args.calendar, eventId=args.event_id),
+        "Verify moved Google Calendar event",
+    )
     actual_start = verified.get("start", {}).get("dateTime", "")
     actual_end = verified.get("end", {}).get("dateTime", "")
     if not actual_start or not actual_end or not _same_instant(actual_start, args.start) or not _same_instant(actual_end, args.end):
@@ -2412,7 +2650,13 @@ def main() -> int:
             "reason": str(exc),
         })
         return 0
+    except GoogleTransientError as exc:
+        emit(temporary_google_result(exc))
+        return 0
     except Exception as exc:
+        if is_transient_google_error(exc):
+            emit(temporary_google_result(exc))
+            return 0
         print(json.dumps({"ok": False, "error": str(exc)}), file=sys.stderr)
         return 1
 

@@ -54,7 +54,9 @@ python setup_profile.py --profile-name "$PROFILE_NAME" --hermes-root "$HERMES_RO
 
 The dedicated profile contains only `chief-of-staff` and `ingest`; `--no-skills`
 prevents later Hermes updates from repopulating unrelated bundled skills. The
-setup script also enables only `skills` and `terminal` and sets Max Agent Steps
+setup also enables the repository-managed `chief-of-staff-scope-guard` plugin,
+which stops a single user request from spilling into a second Workspace write.
+The setup script also enables only `skills` and `terminal` and sets Max Agent Steps
 to `40`. It disables skill-creation nudges and marks the installed demo skills as
 repository-managed so they are read but not edited during a run. The default
 profile remains unchanged. The script pulls and selects
@@ -99,7 +101,7 @@ Credentials remain under your local `HERMES_HOME`. Never commit them.
 
 ## 4. Optional: populate the reference workspace
 
-After OAuth is verified, create the same realistic workspace in your own account: 6 meaningful Gmail messages, 70 older low-signal messages, 12 Calendar resources (47 visible weekly instances), and an RTX AI Assistant folder containing a launch-tracker Sheet, customer-demo-readiness Doc, and partner-preview deck. Gmail ingestion scans up to 120 matching Inbox messages, sorts them by `internalDate`, and retains the newest 20. The demo date is today on weekdays and the upcoming Monday on weekends.
+After OAuth is verified, create the same realistic workspace in your own account: 6 meaningful Gmail messages, 70 older low-signal messages, 14 Calendar resources (58 visible weekly instances), and an RTX AI Assistant folder containing a pre-executive-review tracker, product-summary Doc, and executive-review deck. The weekday calendar is tightly scheduled from 8:00 AM through 5:30 PM while retaining a one-hour rescheduling window on selected days. Gmail ingestion scans up to 120 matching Inbox messages, sorts them by `internalDate`, and retains the newest 20. The demo date is today on weekdays and the upcoming Monday on weekends.
 
 ```powershell
 # Windows PowerShell
@@ -140,10 +142,6 @@ profile is active. Restore the normal profile afterward with
 
 Start with:
 
-> Hey chief of staff, give me a quick intro? What kinds of things can you help me with?
+> Hey chief of staff, what should I work on today? Give me the top three things.
 
-Then, in the same conversation, say:
-
-> Hey chief of staff, what should we work on today?
-
-The second response lists three Gmail anchors selected by a deterministic Python policy: Gmail Important, sole direct recipient, unread, then newest. The model does not rerank them, and every daily-brief request uses this same selection policy. The packet still includes bounded Calendar, Drive, and Sheet context so each selected item can show matching evidence and an action target without changing the fixed selection. Then try `Can you reschedule the launch review meeting, and prepare the email draft for my review?` or a constrained version such as `Reschedule the launch review and prepare the email draft, but use Thursday afternoon.` You can also make a direct Workspace request unrelated to the list. The agent uses live Gmail message IDs for reply recipients, Calendar's local timezone and working hours for rescheduling, and the Sheet's discovered schema and cell validation for updates. A direct request to complete an action does not trigger a redundant confirmation question. The dedicated profile uses the repository-tested MTP model; the normal Hermes profile and unrelated tools are unchanged.
+The response lists three distinct work items. Python conservatively groups messages that share the same live task identity, then deterministically orders the groups by Gmail Important, sole direct recipient, unread, and newest. The model does not rerank or regroup them. The executive review appears first, followed by customer-pilot feedback and the partner briefing. Continue with `Help me prepare for the Executive Review meeting`, then ask the agent to summarize the product Doc, put those bullets on the deck's Introduction slide, mark the deck `Done` in the tracker, and draft a completion reply to Maya. The agent uses live Gmail message IDs, file IDs, deck contents, and Sheet schema/validation rather than fixed scenario routing. The dedicated profile uses the repository-tested MTP model; the normal Hermes profile and unrelated tools are unchanged.

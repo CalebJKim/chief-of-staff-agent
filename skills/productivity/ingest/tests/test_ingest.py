@@ -151,6 +151,20 @@ class IngestTests(unittest.TestCase):
         finally:
             actions.service = original_service
 
+    def test_generic_gmail_draft_confirmation_uses_verified_fields(self):
+        markdown = actions.gmail_draft_confirmation_markdown(
+            "Maya Patel <maya@example.com>",
+            "Daniel Cho <daniel@example.com>",
+            "Re: Review prep",
+            "https://mail.google.com/mail/u/0/#drafts/message-1",
+        )
+
+        self.assertIn("Maya Patel", markdown)
+        self.assertIn("Daniel Cho", markdown)
+        self.assertIn("saved (not sent)", markdown)
+        self.assertIn("**Re: Review prep**", markdown)
+        self.assertIn("[Draft](https://mail.google.com/mail/u/0/#drafts/message-1)", markdown)
+
     def test_weekday_demo_date_uses_today_and_weekend_uses_next_monday(self):
         self.assertEqual(date(2026, 8, 20), ingest.next_demo_weekday(date(2026, 8, 20)))
         self.assertEqual(date(2026, 8, 24), ingest.next_demo_weekday(date(2026, 8, 22)))
@@ -683,6 +697,22 @@ class IngestTests(unittest.TestCase):
             "Moving the review to Tuesday at one PM."
         ))
 
+    def test_irrelevant_calendar_flag_is_ignored_for_completion_reply(self):
+        body = (
+            "All three preparation items are complete and everything is ready for 3 PM today."
+            "\n\nThanks"
+        )
+
+        self.assertEqual(
+            "",
+            actions.calendar_verification_event_id(body, "unrelated-event-id"),
+        )
+        scheduled = "The review is now Tuesday, August 25 from 1:00-2:00 PM PDT.\n\nThanks"
+        self.assertEqual(
+            "event-1",
+            actions.calendar_verification_event_id(scheduled, "event-1"),
+        )
+
     def test_draft_content_requires_all_verified_facts(self):
         body = (
             "Priya, Daniel,\n\nThe RTX Spark Agent Runtime release review is now on "
@@ -793,6 +823,52 @@ class IngestTests(unittest.TestCase):
         self.assertEqual("rejected", result["status"])
         self.assertFalse(result["created"])
         self.assertFalse(result["content_validated"])
+
+    def test_google_read_retries_one_transient_timeout_then_succeeds(self):
+        class Request:
+            attempts = 0
+
+            def execute(self):
+                self.attempts += 1
+                if self.attempts == 1:
+                    raise TimeoutError("read operation timed out")
+                return {"ok": True}
+
+        request = Request()
+        with patch.object(actions.time_module, "sleep"):
+            result = actions.execute_google_read(request, "Read test data")
+
+        self.assertEqual({"ok": True}, result)
+        self.assertEqual(2, request.attempts)
+
+    def test_cli_reports_exhausted_timeout_as_google_side_issue(self):
+        class Request:
+            def execute(self):
+                raise TimeoutError("read operation timed out")
+
+        class Messages:
+            def get(self, **_kwargs):
+                return Request()
+
+        class Users:
+            def messages(self):
+                return Messages()
+
+        class Api:
+            def users(self):
+                return Users()
+
+        argv = ["actions.py", "gmail", "get", "message-1"]
+        output = io.StringIO()
+        with patch.object(actions.sys, "argv", argv), patch.object(
+            actions, "service", return_value=Api()
+        ), patch.object(actions.time_module, "sleep"), redirect_stdout(output):
+            self.assertEqual(0, actions.main())
+
+        result = json.loads(output.getvalue())
+        self.assertEqual("temporarily_unavailable", result["status"])
+        self.assertTrue(result["google_side"])
+        self.assertEqual(actions.GOOGLE_TEMPORARY_USER_MESSAGE, result["user_message"])
 
     def test_demo_draft_is_recorded_in_reference_workspace_state(self):
         class Request:
@@ -1625,6 +1701,38 @@ class IngestTests(unittest.TestCase):
         self.assertEqual("In progress", update.expected_current)
         self.assertTrue(update.confirm)
 
+    def test_docs_get_returns_the_live_source_url(self):
+        class Request:
+            def execute(self):
+                return {
+                    "title": "Product summary",
+                    "body": {"content": [{"paragraph": {"elements": [
+                        {"textRun": {"content": "Grounded text"}},
+                    ]}}]},
+                }
+
+        class Documents:
+            def get(self, **_kwargs):
+                return Request()
+
+        class Api:
+            def documents(self):
+                return Documents()
+
+        args = argparse.Namespace(document_id="doc-1", max_chars=1000)
+        original_service = actions.service
+        actions.service = lambda *_args: Api()
+        try:
+            output = io.StringIO()
+            with redirect_stdout(output):
+                actions.docs_get(args)
+        finally:
+            actions.service = original_service
+
+        result = json.loads(output.getvalue())
+        self.assertEqual("https://docs.google.com/document/d/doc-1/edit", result["url"])
+        self.assertEqual("Grounded text", result["text"])
+
     def test_slides_replace_returns_verified_user_facing_confirmation(self):
         class Request:
             def __init__(self, value):
@@ -1670,6 +1778,67 @@ class IngestTests(unittest.TestCase):
             "Updated **Launch deck** with the requested text change. "
             "[Slides](https://docs.google.com/presentation/d/deck-1/edit)",
             result["confirmation_markdown"],
+        )
+
+    def test_slides_get_recovers_only_a_strong_unique_live_id_match(self):
+        class MissingPresentation(Exception):
+            resp = type("Response", (), {"status": 404})()
+
+        class Request:
+            def __init__(self, value=None, error=None):
+                self.value = value
+                self.error = error
+
+            def execute(self):
+                if self.error:
+                    raise self.error
+                return self.value
+
+        requested = "1examplePresentationIdentifiex"
+        recovered = "1examplePresentationIdentifier"
+
+        class Presentations:
+            def get(self, presentationId):
+                if presentationId == requested:
+                    return Request(error=MissingPresentation("not found"))
+                self.last_id = presentationId
+                return Request({"title": "Live deck", "slides": []})
+
+        presentations = Presentations()
+
+        class SlidesApi:
+            def presentations(self):
+                return presentations
+
+        class Files:
+            def list(self, **_kwargs):
+                return Request({"files": [
+                    {"id": recovered, "name": "Live deck"},
+                    {"id": "1unrelatedPresentationIdentifier", "name": "Another deck"},
+                ]})
+
+        class DriveApi:
+            def files(self):
+                return Files()
+
+        original_service = actions.service
+        actions.service = lambda name, *_args: SlidesApi() if name == "slides" else DriveApi()
+        try:
+            output = io.StringIO()
+            with redirect_stdout(output):
+                actions.slides_get(argparse.Namespace(presentation_id=requested, max_chars_per_slide=1000))
+        finally:
+            actions.service = original_service
+
+        result = json.loads(output.getvalue())
+        self.assertEqual(recovered, result["id"])
+        self.assertEqual(recovered, presentations.last_id)
+        self.assertEqual(f"https://docs.google.com/presentation/d/{recovered}/edit", result["url"])
+
+    def test_workspace_text_normalization_renders_multiline_bullets(self):
+        self.assertEqual(
+            "• Product value\n• Pilot signal",
+            actions.normalize_cli_text(r"\u2022 Product value\n\u2022 Pilot signal"),
         )
 
     def test_calendar_parser_exposes_focused_reads_and_safe_move(self):

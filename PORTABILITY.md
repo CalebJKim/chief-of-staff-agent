@@ -12,15 +12,15 @@
 
 ## What was demo-specific
 
-The RTX Spark emails, events, deck, tracker, and campaign documents were real records in one test Google account. They are not included here and are not required by the agent. The skill mentions generic examples such as an exec review because those are valid workflow triggers, not hidden answers.
+The repository can seed a fictional RTX AI Assistant executive-review story into a dedicated test account. Its names, dates, messages, tasks, and artifacts live in the seeder and demo documentation, not in runtime routing.
 
-The only structural specialization is the `Campaign Lanes` tracker schema (A:J). Tracker lane updates use that schema and named lanes. Other tracker layouts require an adapter/configuration layer.
+Tracker writes inspect the live workbook to discover the tab, header row, target row, target column, current value, validation, formula, and protection state. Runtime code does not depend on the seeded `Pre-Exec Review` tab, fixed coordinates, or its status list.
 
 ## What was not cheated
 
 The tested workflow made live Google API calls. The model discovered current messages/events/files, read selected full threads/artifacts, proposed changes, waited for approval, wrote to Google, and read back results. The scripts do deterministic retrieval, compression, conflict detection, and validation; they do not contain the expected RTX Spark answer.
 
-The demo account was deliberately seeded with coherent emails, calendar conflicts, and stale tracker/deck state. That is staged test data, equivalent to a demo dataset. It improves reproducibility but does not bypass reasoning or Google writes.
+The demo account is deliberately seeded with coherent email, calendar, Doc, tracker, and deck state. That staged dataset improves reproducibility but does not bypass focused reads, live validation, or Google writes.
 
 ## Known limitations
 

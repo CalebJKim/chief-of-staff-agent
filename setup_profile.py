@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 from typing import Callable, Sequence
 
-from install import install_agent
+from install import SCOPE_GUARD_PLUGIN, install_agent
 
 
 DEFAULT_PROFILE_NAME = "chief-of-staff-demo"
@@ -134,6 +134,17 @@ def setup_profile(
         ]
     )
     install_agent(source, target, overwrite_soul=True)
+    runner(
+        [
+            "hermes",
+            "-p",
+            profile_name,
+            "plugins",
+            "enable",
+            SCOPE_GUARD_PLUGIN,
+            "--no-allow-tool-override",
+        ]
+    )
     return target, created
 
 
@@ -164,6 +175,7 @@ def main() -> int:
     print("Skill self-creation nudges: disabled")
     print(f"Max agent steps: {args.max_turns}")
     print("Installed skills: chief-of-staff, ingest")
+    print(f"Enabled plugin: {SCOPE_GUARD_PLUGIN}")
     print("Next: complete Google OAuth (see QUICKSTART.md).")
     return 0
 

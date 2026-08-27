@@ -1,13 +1,16 @@
-Hey chief of staff, give me a quick intro? What kinds of things can you help me with?
-
-
 Hey chief of staff, what should I work on today? Give me the top three things.
 
 
-Can you reschedule the launch review meeting, and prepare the email draft for my review?
+Help me prepare for the Executive Review meeting.
 
 
-Update the launch readiness status in the tracker sheet.
+Summarize the product summary Maya linked into a few bullet points so I can understand it before the meeting.
 
 
-Can you update the headline in the slide deck accordingly?
+Put those bullet points on the Introduction slide of the executive review deck.
+
+
+Mark the Executive Review Deck as Done in the prep tracker.
+
+
+Draft a reply to Maya saying that all three preparation items are done.

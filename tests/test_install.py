@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from install import ROUTING_START, install_soul
+from install import ROUTING_START, SCOPE_GUARD_PLUGIN, install_agent, install_soul
 
 
 class InstallSoulTests(unittest.TestCase):
@@ -58,6 +58,15 @@ class InstallSoulTests(unittest.TestCase):
         self.assertIn("follows up on that plan", installed)
         self.assertIn("requests Google Workspace work", installed)
         self.assertTrue(installed.endswith("\n\nKeep this too.\n"))
+
+    def test_install_agent_copies_scope_guard_plugin(self) -> None:
+        profile = Path(self.temp_dir.name) / "profile"
+
+        install_agent(Path(__file__).resolve().parents[1], profile, overwrite_soul=True)
+
+        plugin = profile / "plugins" / SCOPE_GUARD_PLUGIN
+        self.assertTrue((plugin / "plugin.yaml").exists())
+        self.assertTrue((plugin / "__init__.py").exists())
 
 
 if __name__ == "__main__":

@@ -25,7 +25,7 @@
     },
     {
       "id": "evt-exec",
-      "title": "Exec launch decision",
+      "title": "RTX AI Assistant Executive Review",
       "start": "2026-08-12T16:00:00-07:00",
       "end": "2026-08-12T17:00:00-07:00",
       "all_day": false,
@@ -42,7 +42,7 @@
     },
     {
       "id": "evt-customer",
-      "title": "Customer launch review",
+      "title": "Customer pilot check-in",
       "start": "2026-08-12T16:00:00-07:00",
       "end": "2026-08-12T16:30:00-07:00",
       "all_day": false,
@@ -74,15 +74,15 @@
     {
       "id": "msg-urgent",
       "thread_id": "thread-urgent",
-      "from": "ceo@example.com",
+      "from": "maya@example.com",
       "to": "owner@example.com",
-      "subject": "Decision needed: launch blocker",
+      "subject": "Executive review prep for today",
       "date": "Wed, 12 Aug 2026 08:00:00 -0700",
       "internal_ms": 1786546800000,
       "unread": true,
       "important": true,
       "labels": ["INBOX", "UNREAD", "IMPORTANT"],
-      "snippet": "Please review the launch deck and decide on positioning before the exec meeting.",
+      "snippet": "The RTX AI Assistant executive review moved to today. Read the product summary, update the Introduction slide, and mark the deck Done before the meeting.",
       "links": []
     },
     {
@@ -90,13 +90,13 @@
       "thread_id": "thread-customer",
       "from": "buyer@customer.com",
       "to": "owner@example.com",
-      "subject": "Customer launch review update",
+      "subject": "Customer pilot feedback needs a decision",
       "date": "Wed, 12 Aug 2026 07:30:00 -0700",
       "internal_ms": 1786545000000,
       "unread": true,
       "important": false,
       "labels": ["INBOX", "UNREAD"],
-      "snippet": "Here is our latest launch feedback for the customer review.",
+      "snippet": "Please review the open customer-pilot decisions before today's check-in.",
       "links": []
     },
     {
@@ -117,36 +117,36 @@
   "files": [
     {
       "id": "deck-1",
-      "name": "Launch positioning deck",
+      "name": "RTX AI Assistant Executive Review",
       "kind": "slides",
       "mime_type": "application/vnd.google-apps.presentation",
       "modified": "2026-08-12T14:00:00Z",
       "url": "https://docs.google.com/presentation/d/deck-1/edit",
       "starred": true,
       "last_editor": "Owner",
-      "description": "Exec launch decision deck"
+      "description": "Executive review deck with an Introduction slide"
     },
     {
       "id": "sheet-1",
-      "name": "Product launch tracker",
+      "name": "RTX AI Assistant Exec Review Prep Tracker",
       "kind": "sheet",
       "mime_type": "application/vnd.google-apps.spreadsheet",
       "modified": "2026-08-12T13:00:00Z",
       "url": "https://docs.google.com/spreadsheets/d/sheet-1/edit",
       "starred": false,
       "last_editor": "PM",
-      "description": "Launch workstreams and blockers"
+      "description": "Pre-executive-review work items and statuses"
     },
     {
       "id": "doc-1",
-      "name": "Customer launch notes",
+      "name": "RTX AI Assistant Product Summary",
       "kind": "doc",
       "mime_type": "application/vnd.google-apps.document",
       "modified": "2026-08-12T12:00:00Z",
       "url": "https://docs.google.com/document/d/doc-1/edit",
       "starred": false,
       "last_editor": "Buyer",
-      "description": "Customer review notes"
+      "description": "Product value, pilot signals, safeguards, and decision request"
     }
   ]
 }

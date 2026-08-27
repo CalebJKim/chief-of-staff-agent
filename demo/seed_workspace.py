@@ -23,7 +23,7 @@ from googleapiclient.discovery import build  # noqa: E402
 MARKER = "chief-of-staff-reference-workspace-v1"
 STATE_FILE = "chief-of-staff-workspace-state.json"
 TZ_NAME = os.environ.get("CHIEF_OF_STAFF_WORKSPACE_TZ", "America/Los_Angeles")
-STATUS_VALUES = ["Not started", "In progress", "Ready for review", "On track", "In review", "Awaiting update", "Blocked", "Complete"]
+STATUS_VALUES = ["Not started", "In progress", "Ready for review", "On track", "In review", "Awaiting update", "Blocked", "Done"]
 STATUS_STYLES = {
     "Not started": ({"red": 0.91, "green": 0.93, "blue": 0.95}, {"red": 0.28, "green": 0.32, "blue": 0.38}),
     "In progress": ({"red": 0.82, "green": 0.90, "blue": 1.00}, {"red": 0.07, "green": 0.27, "blue": 0.52}),
@@ -32,7 +32,7 @@ STATUS_STYLES = {
     "In review": ({"red": 0.80, "green": 0.94, "blue": 0.94}, {"red": 0.02, "green": 0.35, "blue": 0.37}),
     "Awaiting update": ({"red": 1.00, "green": 0.91, "blue": 0.76}, {"red": 0.51, "green": 0.27, "blue": 0.02}),
     "Blocked": ({"red": 1.00, "green": 0.82, "blue": 0.82}, {"red": 0.58, "green": 0.06, "blue": 0.06}),
-    "Complete": ({"red": 0.75, "green": 0.91, "blue": 0.80}, {"red": 0.03, "green": 0.29, "blue": 0.12}),
+    "Done": ({"red": 0.75, "green": 0.91, "blue": 0.80}, {"red": 0.03, "green": 0.29, "blue": 0.12}),
 }
 TRACKER_COLUMN_WIDTHS = [220, 145, 145, 290, 330, 100, 250, 220, 170, 250]
 SLIDE_THEME = {
@@ -327,7 +327,7 @@ def move_to_folder(drive, file_id: str, folder_id: str) -> None:
 def create_folder(drive) -> dict:
     item = execute_request(
         drive.files().create(
-            body={"name": "RTX AI Assistant Demo", "mimeType": "application/vnd.google-apps.folder", "description": MARKER},
+            body={"name": "RTX AI Assistant Executive Review Demo", "mimeType": "application/vnd.google-apps.folder", "description": MARKER},
             fields="id,name,webViewLink",
         ),
         "Create Drive folder",
@@ -364,19 +364,19 @@ def _doc_paragraph_style(text: str, fragment: str, style: dict, fields: str) -> 
     }
 
 
-def evaluation_doc_requests(text: str) -> list[dict]:
-    """Build the reusable formatting layer for the seeded evaluation report."""
-    title = "RTX AI Assistant Customer Demo Readiness Check"
-    eyebrow = "READINESS REPORT  •  INTERNAL"
-    status = "Complete — ready for review."
-    tracker_action = (
-        "Update the Customer Demo Readiness Check lane from In progress to Ready for review. "
-        "Do not change its owner, due date, or notes."
+def product_summary_doc_requests(text: str) -> list[dict]:
+    """Build the reusable formatting layer for the seeded product brief."""
+    title = "RTX AI Assistant Product Summary"
+    eyebrow = "PRODUCT BRIEF  •  EXECUTIVE REVIEW"
+    status = "Ready for today's executive review."
+    decision = (
+        "Decision requested: approve an expanded partner pilot focused on everyday coordination work, "
+        "with the same user-control and verification safeguards."
     )
     scope = (
-        "Response time during common assistant requests\n"
-        "Recovery when an action cannot be completed\n"
-        "Consistent results across repeated demo runs\n"
+        "Understands a plain-language request and gathers the relevant Workspace context\n"
+        "Shows the intended change before carrying out consequential work\n"
+        "Completes approved Gmail, Calendar, and Drive actions and verifies the result\n"
     )
     requests = [
         {"insertText": {"location": {"index": 1}, "text": text}},
@@ -430,7 +430,15 @@ def evaluation_doc_requests(text: str) -> list[dict]:
             "spaceBelow,keepWithNext",
         ),
     ]
-    for heading in ("Status", "Summary", "What we checked", "Review notes", "Tracker action"):
+    for heading in (
+        "Status",
+        "Product at a glance",
+        "Customer value",
+        "How it works",
+        "Pilot signals",
+        "Guardrails",
+        "Decision for today",
+    ):
         requests.extend([
             _doc_paragraph_style(
                 text,
@@ -499,7 +507,7 @@ def evaluation_doc_requests(text: str) -> list[dict]:
         ),
         _doc_text_style(
             text,
-            tracker_action,
+            decision,
             {
                 "bold": True,
                 "foregroundColor": {"color": {"rgbColor": DOC_THEME["navy"]}},
@@ -509,7 +517,7 @@ def evaluation_doc_requests(text: str) -> list[dict]:
         ),
         _doc_paragraph_style(
             text,
-            tracker_action,
+            decision,
             {
                 "borderLeft": {
                     "color": {"color": {"rgbColor": DOC_THEME["navy"]}},
@@ -528,41 +536,45 @@ def evaluation_doc_requests(text: str) -> list[dict]:
 
 def create_doc(docs, drive, folder_id: str) -> dict:
     result = execute_request(
-        docs.documents().create(body={"title": "RTX AI Assistant Customer Demo Readiness Check"}),
-        "Create evaluation document",
+        docs.documents().create(body={"title": "RTX AI Assistant Product Summary"}),
+        "Create product summary",
     )
     doc_id = result["documentId"]
     text = (
-        "RTX AI Assistant Customer Demo Readiness Check\n\n"
-        "READINESS REPORT  •  INTERNAL\n\n"
+        "RTX AI Assistant Product Summary\n\n"
+        "PRODUCT BRIEF  •  EXECUTIVE REVIEW\n\n"
         "Status\n"
-        "Complete — ready for review.\n\n"
-        "Summary\n"
-        "The customer demo readiness check is complete. The repeated-action issue reported today is a separate launch blocker and does not invalidate these results.\n\n"
-        "What we checked\n"
-        "Response time during common assistant requests\n"
-        "Recovery when an action cannot be completed\n"
-        "Consistent results across repeated demo runs\n\n"
-        "Review notes\n"
-        "The results, review notes, and supporting examples are complete. Mateo Chen has handed the report to the program team for review.\n\n"
-        "Tracker action\n"
-        "Update the Customer Demo Readiness Check lane from In progress to Ready for review. Do not change its owner, due date, or notes.\n"
+        "Ready for today's executive review.\n\n"
+        "Product at a glance\n"
+        "RTX AI Assistant helps people complete everyday work across Gmail, Calendar, and Drive from one conversational request. It gathers the right context, proposes a clear next step, and keeps the user in control before anything is changed.\n\n"
+        "Customer value\n"
+        "Early pilot users spent less time switching between apps for routine coordination work. They could move from a request to a reviewed result while still seeing what the assistant planned to do.\n\n"
+        "How it works\n"
+        "Understands a plain-language request and gathers the relevant Workspace context\n"
+        "Shows the intended change before carrying out consequential work\n"
+        "Completes approved Gmail, Calendar, and Drive actions and verifies the result\n\n"
+        "Pilot signals\n"
+        "The strongest feedback was about convenience, clarity, and reduced follow-up work. Participants especially valued having related email, meeting, and file context brought together in one place.\n\n"
+        "Guardrails\n"
+        "The assistant drafts rather than sends email, verifies file and calendar changes, and uses live document structure instead of assuming fixed locations or allowed values.\n\n"
+        "Decision for today\n"
+        "Decision requested: approve an expanded partner pilot focused on everyday coordination work, with the same user-control and verification safeguards.\n"
     )
     execute_request(
-        docs.documents().batchUpdate(documentId=doc_id, body={"requests": evaluation_doc_requests(text)}),
-        "Populate and format evaluation document",
+        docs.documents().batchUpdate(documentId=doc_id, body={"requests": product_summary_doc_requests(text)}),
+        "Populate and format product summary",
     )
     move_to_folder(drive, doc_id, folder_id)
     return {"id": doc_id, "url": f"https://docs.google.com/document/d/{doc_id}/edit"}
 
 
 SLIDES = [
-    ("RTX AI Assistant\nPartner Preview", "Everyday work, completed with the user in control\nInternal working deck"),
-    ("What partners will see", "A short workflow showing how the fictional RTX AI Assistant gathers the right context, proposes a clear next step, and acts only with permission."),
-    ("Demo flow", "1  Understand the request\n2  Gather the relevant workspace context\n3  Propose a bounded action\n4  Act only after confirmation"),
-    ("Partner headline — approved copy pending", "APPROVED HEADLINE PLACEHOLDER\n\nOWNER\nElena Torres / Communications\n\nTIMING\nUpdate next week; this is not required today."),
-    ("Presenter notes", "Keep the story focused on the workflow. Do not introduce unapproved performance figures or claims."),
-    ("Backup", "Supporting material for questions after the primary demonstration."),
+    ("RTX AI Assistant\nExecutive Review", "From everyday requests to completed work — with the user in control\nExecutive discussion"),
+    ("Introduction", "INTRODUCTION BULLETS PLACEHOLDER"),
+    ("Product experience", "Ask in plain language\nBring together the relevant work context\nReview the proposed next step\nComplete and verify the approved action"),
+    ("Pilot signals", "Less time switching between apps\nClearer handoffs and follow-up\nStrongest interest in everyday coordination workflows"),
+    ("Trust and control", "Draft before send\nVerify every Workspace write\nUse live document structure and allowed values"),
+    ("Decision", "Approve an expanded partner pilot focused on everyday coordination work while preserving the current user-control safeguards."),
 ]
 
 
@@ -665,7 +677,7 @@ def slide_template_requests(index: int, title: str, body: str) -> list[dict]:
     requests.extend(_solid_slide_shape(accent_id, slide_id, "RECTANGLE", 720, 8, 0, 0, SLIDE_THEME["accent"]))
     requests.extend([
         {"createShape": _slide_element(kicker_id, slide_id, 620, 18, 46, 28)},
-        {"insertText": {"objectId": kicker_id, "text": "RTX AI ASSISTANT  /  PARTNER PREVIEW"}},
+        {"insertText": {"objectId": kicker_id, "text": "RTX AI ASSISTANT  /  EXECUTIVE REVIEW"}},
         _slide_text_style(kicker_id, 9, SLIDE_THEME["accent"], bold=True),
         {"createShape": _slide_element(title_id, slide_id, 625, 72, 46, 53)},
         {"insertText": {"objectId": title_id, "text": title}},
@@ -677,21 +689,21 @@ def slide_template_requests(index: int, title: str, body: str) -> list[dict]:
         {"insertText": {"objectId": body_id, "text": body}},
         _slide_text_style(body_id, 15, SLIDE_THEME["body"]),
     ])
-    if "APPROVED HEADLINE PLACEHOLDER" in body:
-        start = body.index("APPROVED HEADLINE PLACEHOLDER")
+    if "INTRODUCTION BULLETS PLACEHOLDER" in body:
+        start = body.index("INTRODUCTION BULLETS PLACEHOLDER")
         requests.append(
             _slide_text_style(
                 body_id,
                 19,
                 SLIDE_THEME["accent"],
                 bold=True,
-                text_range={"type": "FIXED_RANGE", "startIndex": start, "endIndex": start + len("APPROVED HEADLINE PLACEHOLDER")},
+                text_range={"type": "FIXED_RANGE", "startIndex": start, "endIndex": start + len("INTRODUCTION BULLETS PLACEHOLDER")},
             )
         )
     requests.extend(_solid_slide_shape(footer_rule_id, slide_id, "RECTANGLE", 628, 1, 46, 365, SLIDE_THEME["muted"]))
     requests.extend([
         {"createShape": _slide_element(footer_id, slide_id, 520, 16, 46, 374)},
-        {"insertText": {"objectId": footer_id, "text": "INTERNAL WORKING DECK  •  SEEDED DEMO"}},
+        {"insertText": {"objectId": footer_id, "text": "EXECUTIVE REVIEW  •  SEEDED DEMO"}},
         _slide_text_style(footer_id, 8, SLIDE_THEME["muted"], bold=True),
         {"createShape": _slide_element(page_id, slide_id, 35, 16, 638, 374)},
         {"insertText": {"objectId": page_id, "text": f"{index:02d}"}},
@@ -702,8 +714,8 @@ def slide_template_requests(index: int, title: str, body: str) -> list[dict]:
 
 def create_slides(slides, drive, folder_id: str) -> dict:
     result = execute_request(
-        slides.presentations().create(body={"title": "RTX AI Assistant Partner Preview"}),
-        "Create partner readout",
+        slides.presentations().create(body={"title": "RTX AI Assistant Executive Review"}),
+        "Create executive review deck",
     )
     presentation_id = result["presentationId"]
     requests = []
@@ -713,7 +725,7 @@ def create_slides(slides, drive, folder_id: str) -> dict:
         requests.extend(slide_template_requests(index, title, body))
     execute_request(
         slides.presentations().batchUpdate(presentationId=presentation_id, body={"requests": requests}),
-        "Populate partner readout",
+        "Populate executive review deck",
     )
     move_to_folder(drive, presentation_id, folder_id)
     return {"id": presentation_id, "url": f"https://docs.google.com/presentation/d/{presentation_id}/edit"}
@@ -725,20 +737,18 @@ def tracker_rows(
     sheet_url: str,
     evidence: dict[str, str],
     demo_day: date,
-    release_review_url: str | None = None,
+    executive_review_url: str | None = None,
 ) -> list[list[str]]:
-    reschedule_day = next_business_day(demo_day)
-    reschedule_label = reschedule_day.strftime("%A")
     return [
-        ["Lane", "PIC", "Status", "Latest update", "Next action", "Due", "Dependency / blocker", "Evidence", "Artifact", "Notes"],
-        ["RTX AI Assistant demo issue", "Priya Shah", "Blocked", "The latest demo sometimes performs the same task twice.", f"Move the existing launch review to the earliest non-conflicting one-hour slot on {reschedule_label} and write Priya a confirmation email with Daniel copied.", "Today", "The launch review must move until the repeated-action issue is fixed.", evidence.get("bug", "Priya's blocker email"), release_review_url or sheet_url, "Calendar and draft follow-up are the immediate coordination actions."],
-        ["Customer Demo Readiness Check", "Mateo Chen", "In progress", "Mateo finished testing common assistant requests and handed the results off for review.", "Change only this lane's status to Ready for review.", "Today", "None; the tracker status is stale.", evidence.get("evaluation", "Mateo's completion email"), doc_url, "Keep the owner, due date, and notes unchanged."],
-        ["Partner Preview Deck", "Elena Torres", "Awaiting update", "Communications approved the replacement headline for slide 4.", "Replace APPROVED HEADLINE PLACEHOLDER with “Meet the RTX AI Assistant: helping turn everyday requests into completed work.” on slide 4; leave the rest unchanged.", "Next week", "None; intentionally lower priority than today's two actions.", evidence.get("copy", "Elena's approval email"), slides_url, "Optional backup demo; not required today."],
-        ["Creator Demo Feedback Summary", "Noah Williams", "In review", "Noah collected the latest creator feedback and submitted the summary for review.", "Change only this lane's status to Ready for review.", "Later this month", "None; the tracker status has not caught up with the completed summary.", evidence.get("reliability", "Creator demo feedback completion email"), sheet_url, "Lower priority; keep the owner, due date, and notes unchanged."],
-        ["Getting Started Guide Refresh", "Maya Patel", "In review", "The draft is with the writing team for routine review.", "Wait for consolidated comments.", "Next week", "None", "Routine team update", doc_url, "No action needed today."],
-        ["Partner demo checklist", "Jordan Lee", "Not started", "Jordan finalized the checklist and confirmed that execution can begin.", "Change only this lane's status to In progress.", "Next week", "None; the checklist is ready to start.", evidence.get("checklist", "Partner checklist kickoff email"), slides_url, "Keep the owner, due date, and notes unchanged."],
-        ["Accessibility review", "Sofia Martin", "Complete", "The scheduled review is complete.", "No further action.", "Complete", "None", "Routine team update", sheet_url, "Closed."],
-        ["Launch notes", "Ethan Brooks", "On track", "The routine draft is progressing on schedule.", "Continue drafting after the repeated-action issue is resolved.", "This week", "None", "Routine team update", doc_url, "Lower priority than the launch blocker."],
+        ["Work item", "Owner", "Status", "Latest update", "Next step", "Due", "Dependency / blocker", "Source", "Artifact", "Notes"],
+        ["Executive Review Deck", "Alex Morgan", "In progress", "The executive review moved to today; the Introduction slide still needs its product overview.", "Read the product summary, update the Introduction slide, then set this status to Done.", "Today", "Finish before the executive review.", evidence.get("executive_review", "Maya's meeting-prep email"), slides_url, "Change this status only after the Introduction slide is updated."],
+        ["Product Summary", "Sam Rivera", "Done", "The concise product brief is ready for meeting preparation.", "Use it as the source for the Introduction slide.", "Today", "None", evidence.get("executive_review", "Maya's meeting-prep email"), doc_url, "Source material; no edit is requested."],
+        ["Pilot Metrics", "Priya Shah", "Ready for review", "The latest customer-pilot signals are compiled.", "Review the decision points before the pilot check-in.", "Today", "Two customer comments still need categorization.", evidence.get("pilot", "Priya's pilot email"), sheet_url, "Keep the metric definitions unchanged."],
+        ["Partner Briefing", "Elena Torres", "In review", "The partner narrative is ready for a short owner review.", "Confirm the plain-language framing.", "Today", "None", evidence.get("partner", "Elena's briefing email"), slides_url, "Separate from the executive-review deck update."],
+        ["Executive Demo Environment", "Jordan Lee", "On track", "The demo environment passed the morning check.", "Run the final check before the meeting.", "Today", "None", evidence.get("environment", "Jordan's environment email"), sheet_url, "Routine readiness work."],
+        ["Partner Pilot Scope", "Noah Williams", "Awaiting update", "The proposed partner list is being refined.", "Wait for regional feedback.", "Next week", "Regional feedback is pending.", "Routine team update", doc_url, "No action needed today."],
+        ["Customer Quotes", "Aisha Rahman", "Not started", "The quote review is scheduled for later this week.", "Begin after approvals arrive.", "This week", "Approval is pending.", "Routine team update", doc_url, "Lower priority."],
+        ["Meeting Logistics", "Sofia Martin", "Done", "Room, video link, and attendee list are confirmed.", "No further action.", "Done", "None", executive_review_url or sheet_url, executive_review_url or sheet_url, "Closed."],
     ]
 
 
@@ -791,16 +801,16 @@ def tracker_column_width_requests(sheet_id: int) -> list[dict]:
 
 def create_sheet(sheets, drive, folder_id: str, slides_url: str, doc_url: str, demo_day: date) -> dict:
     result = execute_request(
-        sheets.spreadsheets().create(body={"properties": {"title": "RTX AI Assistant Launch Tracker"}, "sheets": [{"properties": {"title": "Campaign Lanes", "gridProperties": {"rowCount": 100, "columnCount": 12, "frozenRowCount": 6, "hideGridlines": True}}}]}),
-        "Create delivery tracker",
+        sheets.spreadsheets().create(body={"properties": {"title": "RTX AI Assistant Exec Review Prep Tracker"}, "sheets": [{"properties": {"title": "Pre-Exec Review", "gridProperties": {"rowCount": 100, "columnCount": 12, "frozenRowCount": 6, "hideGridlines": True}}}]}),
+        "Create executive review prep tracker",
     )
     spreadsheet_id = result["spreadsheetId"]
     sheet_id = result["sheets"][0]["properties"]["sheetId"]
     sheet_url = result.get("spreadsheetUrl", f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit")
-    rows = [["RTX AI Assistant Launch Tracker"], ["Decision-ready view of launch work"], ["Awaiting updates", "1", "", "Blocked", "1", "", "Active lanes", "8", "Last refreshed", demo_day.isoformat()], ["Statuses are updated from current owner evidence; use the Artifact column to open the working file or decision source."], [], *tracker_rows(slides_url, doc_url, sheet_url, {}, demo_day)]
+    rows = [["RTX AI Assistant Exec Review Prep Tracker"], ["Decision-ready view of pre-meeting work"], ["In progress", "1", "", "Ready for review", "1", "", "Open work items", "6", "Last refreshed", demo_day.isoformat()], ["Statuses come from current owner evidence; use the Artifact column to open the working file or source."], [], *tracker_rows(slides_url, doc_url, sheet_url, {}, demo_day)]
     execute_request(
-        sheets.spreadsheets().values().update(spreadsheetId=spreadsheet_id, range="'Campaign Lanes'!A1:J14", valueInputOption="USER_ENTERED", body={"values": rows}),
-        "Populate delivery tracker",
+        sheets.spreadsheets().values().update(spreadsheetId=spreadsheet_id, range="'Pre-Exec Review'!A1:J14", valueInputOption="USER_ENTERED", body={"values": rows}),
+        "Populate executive review prep tracker",
     )
     requests = [
         {"mergeCells": {"range": {"sheetId": sheet_id, "startRowIndex": 0, "endRowIndex": 1, "startColumnIndex": 0, "endColumnIndex": 10}, "mergeType": "MERGE_ALL"}},
@@ -941,7 +951,7 @@ def create_emails(
     deck_url: str,
     sheet_url: str,
     doc_url: str,
-    release_review_url: str,
+    executive_review_url: str,
     demo_day: date,
     created: list[dict] | None = None,
     seed_run_id: str | None = None,
@@ -952,77 +962,80 @@ def create_emails(
         "Read Gmail profile",
     )["emailAddress"]
     reference_time = email_reference_time(demo_day)
-    follow_up_day = next_business_day(demo_day)
     data = [
         {
-            "key": "bug",
+            "key": "executive_review",
+            "sender": "Maya Patel <maya.patel@nvidia.example>",
+            "subject": "Executive review prep for today",
+            "body": (
+                "Hi,\n\n"
+                f"The executive team moved the RTX AI Assistant review up from Friday to today, {display_date(demo_day)}, at 3:00 PM. "
+                "Before we meet, please read the product summary so you have the latest positioning, customer value, and pilot signals in mind. "
+                "Then use that material to replace the placeholder on the deck's Introduction slide. "
+                "Once the slide is updated, mark the Executive Review Deck as Done in the prep tracker.\n\n"
+                "The links below are the current working versions:\n"
+                f"Product summary: {doc_url}\n"
+                f"Executive review deck: {deck_url}\n"
+                f"Prep tracker: {sheet_url}\n"
+                f"Meeting: {executive_review_url}\n\n"
+                "Thanks,\nMaya"
+            ),
+            "unread": True,
+            "important": True,
+        },
+        {
+            "key": "pilot",
             "sender": "Priya Shah <priya.shah@nvidia.example>",
-            "subject": "BLOCKER: RTX AI Assistant repeats completed tasks",
+            "subject": "Customer pilot feedback needs a decision",
             "body": (
-                "Launch blocker: the latest demo sometimes performs the same task twice. Please postpone today's 2 PM launch review.\n\n"
-                "Hi,\n\nI reproduced the issue in the latest fictional RTX AI Assistant demo. For example, one request created the same follow-up twice. This could confuse people during the partner demonstration, so we should not advance until the fix passes the readiness check.\n\n"
-                f"Please postpone the RTX AI Assistant launch review scheduled for {display_date(demo_day)}.\n\n"
-                f"Event: {release_review_url}\n"
-                f"Tracker: {sheet_url}\n\n— Priya"
+                "Hi,\n\nWe have enough feedback from the customer pilot to decide which everyday workflows should be included in the next round. "
+                "Please review the open decision points before this afternoon's pilot check-in so we can close the scope.\n\n"
+                f"Prep tracker: {sheet_url}\n\nThanks,\nPriya"
             ),
             "unread": True,
             "important": True,
         },
         {
-            "key": "scheduling",
-            "sender": "Daniel Cho <daniel.cho@nvidia.example>",
-            "subject": "New slot for the RTX AI Assistant launch review",
-            "body": (
-                f"Move the existing launch review to the earliest non-conflicting one-hour slot on {display_date(follow_up_day)}. Write a confirmation email in Priya's blocker thread and copy me.\n\n"
-                "Keep the event's current details and move it rather than creating a duplicate.\n\n"
-                f"Event: {release_review_url}\n\n"
-                "— Daniel"
-            ),
-            "unread": True,
-            "important": True,
-        },
-        {
-            "key": "evaluation",
-            "sender": "Mateo Chen <mateo.chen@nvidia.example>",
-            "subject": "READY: Customer demo readiness check",
-            "body": (
-                "The RTX AI Assistant customer demo readiness check is complete. I tested response time and consistency across common assistant requests, and the results are ready for review. The launch tracker still says In progress; please change that lane to Ready for review.\n\n"
-                f"Readiness report: {doc_url}\n"
-                f"Launch tracker: {sheet_url}\n\n— Mateo"
-            ),
-            "unread": True,
-            "important": False,
-        },
-        {
-            "key": "reliability",
-            "sender": "Aisha Rahman <aisha.rahman@nvidia.example>",
-            "subject": "For later: Creator demo feedback summary",
-            "body": (
-                "Noah collected the latest creator feedback and submitted the summary for review. This is a lower-priority update for later this month. When you handle it, change only the Creator Demo Feedback Summary lane to Ready for review. Keep Noah as owner and leave the due date and notes unchanged.\n\n"
-                f"Launch tracker: {sheet_url}\n\n— Aisha"
-            ),
-            "unread": True,
-            "important": False,
-        },
-        {
-            "key": "copy",
+            "key": "partner",
             "sender": "Elena Torres <elena.torres@nvidia.example>",
-            "subject": "For next week: approved Partner Preview headline",
+            "subject": "Partner briefing ready for your review",
             "body": (
-                "Communications approved this exact replacement copy for slide 4: “Meet the RTX AI Assistant: helping turn everyday requests into completed work.” Replace the text APPROVED HEADLINE PLACEHOLDER and leave the rest of the slide unchanged. This is due next week and is not needed today.\n\n"
-                f"Partner Preview: {deck_url}\n\n— Elena"
+                "Hi,\n\nThe partner briefing now uses the plain-language framing we discussed and is ready for a quick owner review. "
+                "Please confirm that the story stays focused on useful everyday work rather than implementation details.\n\n"
+                f"Executive review deck: {deck_url}\n\nThanks,\nElena"
+            ),
+            "unread": True,
+            "important": True,
+        },
+        {
+            "key": "environment",
+            "sender": "Jordan Lee <jordan.lee@nvidia.example>",
+            "subject": "Morning demo environment check passed",
+            "body": (
+                "Hi,\n\nThe morning environment check passed. Please run the short final check before the executive review so the demo account and shared files are ready when the meeting begins.\n\n"
+                f"Prep tracker: {sheet_url}\n\nThanks,\nJordan"
             ),
             "unread": True,
             "important": False,
         },
         {
-            "key": "checklist",
-            "sender": "Jordan Lee <jordan.lee@nvidia.example>",
-            "subject": "ACTION: Partner demo checklist ready to start",
+            "key": "research",
+            "sender": "Mateo Chen <mateo.chen@nvidia.example>",
+            "subject": "Creator workshop notes for later this week",
             "body": (
-                "The partner demo checklist is finalized and execution can begin. Change only the Partner demo checklist lane from Not started to In progress; keep the owner, due date, and notes unchanged.\n\n"
-                f"Launch tracker: {sheet_url}\n"
-                f"Partner Preview: {deck_url}\n\n— Jordan"
+                "Hi,\n\nI consolidated the notes from the creator workshop. They will be useful when we refine the next pilot, but there is no action needed before the executive review.\n\n"
+                f"Product summary: {doc_url}\n\nThanks,\nMateo"
+            ),
+            "unread": True,
+            "important": False,
+        },
+        {
+            "key": "community",
+            "sender": "Aisha Rahman <aisha.rahman@nvidia.example>",
+            "subject": "Community demo recap available",
+            "body": (
+                "Hi,\n\nThe community demo recap is available for background reading. Nothing in it changes today's executive-review preparation.\n\n"
+                f"Product summary: {doc_url}\n\nThanks,\nAisha"
             ),
             "unread": True,
             "important": False,
@@ -1093,21 +1106,23 @@ def create_emails(
 
 
 EVENTS = [
-    ("08:00", "08:25", "RTX AI Assistant team sync", "Routine team updates, planned work, and cross-functional dependencies."),
-    ("09:00", "09:30", "AI Assistant demo stand-up", "Routine demo progress and owner check-in."),
-    ("10:00", "10:45", "Demo preparation sync", "Routine preparation status and dependency review."),
-    ("11:00", "12:00", "Engineering focus block", "Protected time for planned technical work."),
-    ("12:00", "13:00", "Team lunch", "Optional team lunch; no preparation required."),
-    ("15:15", "15:45", "Customer demo readiness office hours", "Optional questions about the completed readiness check and results."),
-    ("16:00", "16:30", "Partner demo checklist", "Routine readiness check for next week's partner work."),
-    ("17:00", "17:20", "Getting started guide editorial pass", "Review routine documentation edits and collect notes for the next planned revision."),
+    ("08:00", "08:30", "Executive staff sync", "Leadership updates, decisions, and cross-functional dependencies."),
+    ("08:30", "09:15", "Daily planning and decisions", "Review planned work, decisions, and owner handoffs."),
+    ("09:15", "10:00", "Customer pilot check-in", "Review customer feedback and open pilot decisions."),
+    ("10:00", "11:00", "Product strategy review", "Review product direction, customer value, and open decisions."),
+    ("11:00", "12:00", "Operating review", "Review execution risks, milestones, and cross-functional follow-ups."),
+    ("12:00", "13:00", "Leadership working lunch", "Working lunch for leadership updates and decisions."),
+    ("13:00", "14:00", "Product feedback office hours", "Questions and decisions about product and pilot feedback."),
+    ("15:00", "16:00", "Customer success review", "Review customer health, escalations, and upcoming commitments."),
+    ("16:00", "17:00", "Partner briefing check-in", "Routine review of partner briefing work."),
+    ("17:00", "17:30", "Daily wrap-up", "Review completed work and capture tomorrow's follow-ups."),
 ]
 
 WEEKDAY_CODES = ("MO", "TU", "WE", "TH", "FR")
 OVERLAP_EVENTS = [
-    ((1, 3), "09:15", "10:15", "AI Assistant experience review", "Routine review of the partner demo experience; decisions and notes stay with the team."),
-    ((2, 4), "11:30", "12:30", "Customer experience test office hours", "Optional working session for routine checklist questions; no preparation is required."),
-    ((0, 2), "15:30", "16:15", "Partner demo dry run", "Rehearsal for next week's partner demo; no action is needed today."),
+    ((1, 3), "09:15", "10:15", "Product experience review", "Routine review of the customer experience."),
+    ((2, 4), "11:30", "12:30", "Customer research office hours", "Optional working session for research questions."),
+    ((1, 2, 4), "14:00", "15:00", "Executive materials review", "Review materials and decisions for upcoming executive meetings."),
 ]
 
 
@@ -1120,7 +1135,7 @@ def create_calendar(calendar, start_day: date, demo_day: date, deck_url: str, do
     created = []
     entries = []
     for index, (begin, end, title, description) in enumerate(EVENTS, 1):
-        link = f"\nReadiness report: {doc_url}" if title.startswith("Customer demo readiness office hours") else f"\nPartner Preview: {deck_url}" if title.startswith("Partner demo") else ""
+        link = f"\nProduct summary: {doc_url}" if title.startswith("Product feedback") else f"\nExecutive review deck: {deck_url}" if title.startswith("Partner briefing") else ""
         request = calendar.events().insert(
             calendarId="primary",
             body={
@@ -1147,20 +1162,22 @@ def create_calendar(calendar, start_day: date, demo_day: date, deck_url: str, do
             sendUpdates="none",
         )
         entries.append((f"calendar-overlap-{index:02d}", request))
-    release_review = calendar.events().insert(
+    executive_review = calendar.events().insert(
         calendarId="primary",
         body={
-            "summary": "RTX AI Assistant launch review",
+            "summary": "RTX AI Assistant Executive Review",
             "description": (
-                "Launch review for the fictional RTX AI Assistant. If the repeated-action issue remains open, postpone this meeting rather than creating a second event.\n"
-                f"Launch tracker: {sheet_url}\n[{MARKER}]"
+                "Executive product review moved up from Friday to today. Review the product context, updated Introduction slide, and prep status.\n"
+                f"Product summary: {doc_url}\n"
+                f"Executive review deck: {deck_url}\n"
+                f"Prep tracker: {sheet_url}\n[{MARKER}]"
             ),
-            "start": {"dateTime": iso(demo_day, "14:00"), "timeZone": TZ_NAME},
-            "end": {"dateTime": iso(demo_day, "15:00"), "timeZone": TZ_NAME},
+            "start": {"dateTime": iso(demo_day, "15:00"), "timeZone": TZ_NAME},
+            "end": {"dateTime": iso(demo_day, "16:00"), "timeZone": TZ_NAME},
         },
         sendUpdates="none",
     )
-    entries.append(("calendar-release-review", release_review))
+    entries.append(("calendar-executive-review", executive_review))
 
     def record_event(request_id: str, response: dict) -> None:
         created.append({"key": request_id, "id": response["id"], "url": response.get("htmlLink", "")})
@@ -1177,8 +1194,8 @@ def create_calendar(calendar, start_day: date, demo_day: date, deck_url: str, do
 
 def update_tracker_evidence(sheets, state: dict, evidence: dict[str, str]) -> None:
     sheet = state["sheet"]
-    release_review_url = next(
-        item["url"] for item in state["events"] if item["key"] == "calendar-release-review"
+    executive_review_url = next(
+        item["url"] for item in state["events"] if item["key"] == "calendar-executive-review"
     )
     values = tracker_rows(
         state["slides"]["url"],
@@ -1186,16 +1203,74 @@ def update_tracker_evidence(sheets, state: dict, evidence: dict[str, str]) -> No
         sheet["url"],
         evidence,
         date.fromisoformat(state["demo_day"]),
-        release_review_url,
+        executive_review_url,
     )
     execute_request(
-        sheets.spreadsheets().values().update(spreadsheetId=sheet["id"], range="'Campaign Lanes'!A6:J14", valueInputOption="USER_ENTERED", body={"values": values}),
-        "Update delivery tracker evidence",
+        sheets.spreadsheets().values().update(spreadsheetId=sheet["id"], range="'Pre-Exec Review'!A6:J14", valueInputOption="USER_ENTERED", body={"values": values}),
+        "Update executive review tracker evidence",
     )
 
 
 def resource_is_already_absent(exc: Exception) -> bool:
     return getattr(getattr(exc, "resp", None), "status", None) in {404, 410}
+
+
+def seeded_calendar_event_ids(calendar) -> set[str]:
+    """Find only Calendar resources carrying this seeder's ownership marker."""
+    event_ids: set[str] = set()
+    page_token = None
+    while True:
+        kwargs = {
+            "calendarId": "primary",
+            "q": MARKER,
+            "showDeleted": False,
+            "singleEvents": False,
+            "maxResults": 2500,
+        }
+        if page_token:
+            kwargs["pageToken"] = page_token
+        page = execute_request(
+            calendar.events().list(**kwargs),
+            "Find seeded Calendar resources",
+        )
+        for item in page.get("items", []):
+            event_id = str(item.get("id", "")).strip()
+            description = str(item.get("description", ""))
+            if event_id and f"[{MARKER}]" in description:
+                event_ids.add(event_id)
+        page_token = page.get("nextPageToken")
+        if not page_token:
+            return event_ids
+
+
+def seeded_drive_folder_ids(drive) -> set[str]:
+    """Find only Drive folders carrying this seeder's exact ownership marker."""
+    safe_marker = MARKER.replace("'", "\\'")
+    page_token = None
+    folder_ids: set[str] = set()
+    while True:
+        kwargs = {
+            "q": (
+                "trashed = false and "
+                "mimeType = 'application/vnd.google-apps.folder' and "
+                f"fullText contains '{safe_marker}'"
+            ),
+            "pageSize": 100,
+            "fields": "nextPageToken,files(id,description)",
+        }
+        if page_token:
+            kwargs["pageToken"] = page_token
+        page = execute_request(
+            drive.files().list(**kwargs),
+            "Find seeded Drive folders",
+        )
+        for item in page.get("files", []):
+            folder_id = str(item.get("id", "")).strip()
+            if folder_id and str(item.get("description", "")).strip() == MARKER:
+                folder_ids.add(folder_id)
+        page_token = page.get("nextPageToken")
+        if not page_token:
+            return folder_ids
 
 
 def cleanup(state: dict) -> dict[str, int]:
@@ -1237,12 +1312,21 @@ def cleanup(state: dict) -> dict[str, int]:
     except RuntimeError as exc:
         failures.append(str(exc))
 
+    tracked_event_ids = {
+        str(item.get("id", "")).strip()
+        for item in state.get("events", [])
+        if str(item.get("id", "")).strip()
+    }
+    try:
+        tracked_event_ids.update(seeded_calendar_event_ids(svc["calendar"]))
+    except Exception as exc:
+        failures.append(f"Calendar marker lookup: {exc}")
     event_entries = [
         (
-            f"calendar-{item['id']}",
-            svc["calendar"].events().delete(calendarId="primary", eventId=item["id"], sendUpdates="none"),
+            f"calendar-{event_id}",
+            svc["calendar"].events().delete(calendarId="primary", eventId=event_id, sendUpdates="none"),
         )
-        for item in state.get("events", [])
+        for event_id in sorted(tracked_event_ids)
     ]
 
     def record_deleted_event(_request_id: str, _response) -> None:
@@ -1259,18 +1343,35 @@ def cleanup(state: dict) -> dict[str, int]:
         )
     except RuntimeError as exc:
         failures.append(str(exc))
-    if state.get("folder", {}).get("id"):
-        try:
-            execute_request(
-                svc["drive"].files().update(fileId=state["folder"]["id"], body={"trashed": True}),
-                "Trash seeded Drive folder",
-            )
-            result["folders_trashed"] += 1
-        except Exception as exc:
-            if resource_is_already_absent(exc):
-                result["folders_trashed"] += 1
-            else:
-                failures.append(f"Drive folder {state['folder']['id']}: {exc}")
+    folder_ids = {
+        str(state.get("folder", {}).get("id", "")).strip()
+    } - {""}
+    try:
+        folder_ids.update(seeded_drive_folder_ids(svc["drive"]))
+    except Exception as exc:
+        failures.append(f"Drive marker lookup: {exc}")
+    folder_entries = [
+        (
+            f"drive-folder-{folder_id}",
+            svc["drive"].files().update(fileId=folder_id, body={"trashed": True}),
+        )
+        for folder_id in sorted(folder_ids)
+    ]
+
+    def record_trashed_folder(_request_id: str, _response) -> None:
+        result["folders_trashed"] += 1
+
+    try:
+        execute_batch_requests(
+            svc["drive"],
+            folder_entries,
+            "Drive folder cleanup",
+            on_success=record_trashed_folder,
+            accept_exception=resource_is_already_absent,
+            batch_size=API_BATCH_SIZE,
+        )
+    except RuntimeError as exc:
+        failures.append(str(exc))
     if failures:
         raise RuntimeError("Cleanup incomplete:\n" + "\n".join(failures))
     return result
@@ -1294,13 +1395,13 @@ def seed(week_of: date) -> dict:
             demo_day,
         )
         state["events"] = create_calendar(svc["calendar"], week_of, demo_day, state["slides"]["url"], state["doc"]["url"], state["sheet"]["url"])
-        release_review_url = next(item["url"] for item in state["events"] if item["key"] == "calendar-release-review")
+        executive_review_url = next(item["url"] for item in state["events"] if item["key"] == "calendar-executive-review")
         state["emails"], evidence = create_emails(
             svc["gmail"],
             state["slides"]["url"],
             state["sheet"]["url"],
             state["doc"]["url"],
-            release_review_url,
+            executive_review_url,
             demo_day,
             state["emails"],
             state["seed_run_id"],

@@ -169,10 +169,10 @@ for Gmail, Calendar, Drive, Docs, Sheets, and Slides.
 ## 7. Seed the reference workspace
 
 The seeder writes demo content to the connected Google account. It creates six
-meaningful Gmail messages, 70 older low-signal messages, 12 Calendar resources
-(47 visible weekly meeting instances), and an `RTX AI Assistant Demo`
-Drive folder with a launch-tracker Sheet, customer-demo-readiness Doc, and
-partner-preview deck. Gmail ingestion scans metadata for up to 120 matching
+meaningful Gmail messages, 70 older low-signal messages, 14 Calendar resources
+(58 visible weekly meeting instances), and an `RTX AI Assistant Executive Review Demo`
+Drive folder with a pre-review tracker, product-summary Doc, and executive-review
+deck. Gmail ingestion scans metadata for up to 120 matching
 Inbox messages, sorts by Gmail's `internalDate`, and retains the newest 20,
 which keeps all six meaningful messages in scope. Seed the automatic demo day
 with:
@@ -225,13 +225,9 @@ an explicit `--week-of`, add `--date YYYY-MM-DD` to ingestion with the
 
 Start a new Hermes session and say:
 
-> Hey chief of staff, give me a quick intro? What kinds of things can you help me with?
+> Hey chief of staff, what should I work on today? Give me the top three things.
 
-Then, in the same session, say:
-
-> Hey chief of staff, what should we work on today?
-
-The second response shows three Gmail anchors selected by the deterministic metadata policy, not a model-generated ranking. Every daily-brief request uses this same policy. Its packet still contains bounded Calendar, Drive, and Sheet evidence, which may support a selected item but cannot change the fixed selection. Continue with direct requests such as `Can you reschedule the launch review meeting, and prepare the email draft for my review?` and `Update the Customer Demo Readiness Check tracker status based on Mateo's message.` The Calendar constraint-override and optional Slides examples are documented in `DEMO_SCRIPT.md`.
+The response shows three distinct work items selected by deterministic Python grouping and metadata ranking, not a model-generated ranking. The executive review is first, followed by customer-pilot feedback and the partner briefing. Continue in the same session with `Help me prepare for the Executive Review meeting`, then ask the agent to summarize the product Doc, put those bullets on the Introduction slide, mark the deck `Done` in the tracker, and draft a completion reply to Maya. The full flow is documented in `DEMO_SCRIPT.md`.
 
 ## 9. Reset or remove the reference data
 
@@ -273,10 +269,10 @@ The original full acceptance checks passed on August 21, 2026:
 - Google OAuth token exchange and a live API call.
 - Gmail, Calendar, Drive, Docs, Sheets, and Slides service verification.
 - Creation and read-back of 76 demo messages (6 meaningful and 70
-  background), 12 calendar resources producing 47 visible weekly instances,
-  one RTX AI Assistant folder, one 14-row launch tracker, one customer-demo-readiness
-  Doc, and one 6-slide partner-preview deck.
-- Decision-packet generation with generic Sheet schema/sample/validation evidence and no repository-defined field mappings, status ranking, or action routing. The live agent interpreted it into the expected repeated-task issue, readiness check, and deck order with inline Mail and action links.
+  background), 14 calendar resources producing 58 visible weekly instances,
+  one RTX AI Assistant folder, one 14-row pre-review tracker, one product-summary
+  Doc, and one 6-slide executive-review deck.
+- Decision-packet generation with generic Sheet schema/sample/validation evidence and no repository-defined field mappings, status ranking, or action routing.
 - A real Hermes prompt using the installed skill and configured local model:
   `Hey chief of staff, what should we work on today?`
 - The final acceptance reset/reseed took 42.2 seconds. The complete four-prompt
@@ -358,7 +354,7 @@ expected top-three priorities and schedule recommendations.
     enabled; a later `--check-live` succeeded without replacing credentials.
     Verify both the client and secret status, allow for propagation, and replace
     credentials only if the error persists.
-12. The final live action audit verified one moved launch-review event with no
-    duplicate, one unsent threaded Priya draft with Daniel copied, only the
-    readiness-check status changed in Sheets, and only the slide-4 placeholder
-    changed in Slides.
+13. The executive-review story uses the same generic guarded actions: the live
+    Doc supplies the summary, only the Introduction placeholder changes in
+    Slides, only the Executive Review Deck status changes to `Done`, and the
+    completion response is saved as an unsent draft in Maya's thread.

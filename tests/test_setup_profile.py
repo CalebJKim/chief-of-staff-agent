@@ -13,6 +13,7 @@ from setup_profile import (
     DEMO_REASONING_EFFORT,
     setup_profile,
 )
+from install import SCOPE_GUARD_PLUGIN
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -77,6 +78,14 @@ class SetupProfileTests(unittest.TestCase):
             ],
             self.commands,
         )
+        self.assertIn(
+            [
+                "hermes", "-p", "chief-of-staff-demo", "plugins", "enable",
+                SCOPE_GUARD_PLUGIN, "--no-allow-tool-override",
+            ],
+            self.commands,
+        )
+        self.assertTrue((target / "plugins" / SCOPE_GUARD_PLUGIN / "plugin.yaml").exists())
         self.assertIn(
             [
                 "hermes", "-p", "chief-of-staff-demo", "config", "set",

@@ -1,123 +1,54 @@
 # Workspace seed specification
 
-The seeder creates a self-contained RTX AI Assistant launch workspace in the Google account connected through OAuth. It contains no real account IDs, credentials, or reference-workspace links.
+The seeder creates a self-contained fictional RTX AI Assistant executive-review workspace in the Google account connected through OAuth. Runtime logic remains scenario-neutral: Python ranks live Gmail metadata, and guarded helpers discover live file structure, validation, recipients, and replacement text.
 
-The fictional scenario is fixed seed data. The Chief of Staff skill does not contain scenario-specific actions: it reads the current Workspace evidence, interprets a bounded generic schema/sample/validation packet, renders the prescribed brief format, and decides follow-up operations from the user's current request. Spreadsheet writes discover the live tab, header row, target row, target column, value type, validation, formula, and protection state before updating one verified cell; runtime code does not copy the seeded status list, map business fields, or assume fixed coordinates.
+## Seeded workspace
 
-## What it creates
+- **Gmail:** six meaningful unread messages above 70 older low-signal messages. The three messages that drive the daily brief are marked Important so they stay together in Gmail's standard and Priority Inbox views.
+  - Maya's Important message says the executive review moved from Friday to 3:00 PM today. In natural prose, it asks the recipient to read the product summary, use it to update the deck's Introduction slide, and mark the Executive Review Deck `Done` afterward. It links the meeting, Doc, Slides, and Sheet and does not label Maya as the recipient's manager or present a numbered/bulleted checklist.
+  - Priya asks for a decision on customer-pilot scope.
+  - Elena asks for a plain-language review of the partner briefing.
+  - Jordan reports that the morning demo-environment check passed and asks for a final check.
+  - Mateo and Aisha provide lower-priority background items.
+- **Calendar:** ten tightly scheduled weekday series from 8:00 AM through 5:30 PM, three supplemental series, and one `RTX AI Assistant Executive Review` at 3:00–4:00 PM on the demo day. The 2:00–3:00 PM hour stays open on Monday and Thursday for conflict-free rescheduling. The event description links the Doc, Slides, and Sheet.
+- **Google Doc:** `RTX AI Assistant Product Summary`, a concise formatted brief covering product value, operation, pilot signals, safeguards, and the decision requested.
+- **Google Slides:** `RTX AI Assistant Executive Review`, a six-slide reusable dark template. Slide 2 is `Introduction` and contains the unique text `INTRODUCTION BULLETS PLACEHOLDER`.
+- **Google Sheet:** `RTX AI Assistant Exec Review Prep Tracker`, tab `Pre-Exec Review`. The `Executive Review Deck` row starts at `In progress`; its live status validation includes `Done`.
 
-- **6 meaningful Gmail messages**, all in Inbox and Unread:
-  1. Priya reports that the latest assistant demo sometimes performs the same task twice and asks to postpone the launch review. Important.
-  2. Daniel asks for the earliest non-conflicting one-hour slot on the next business day and a confirmation email in Priya's blocker thread with Daniel copied. Important.
-  3. Mateo says the customer demo readiness check is complete and ready for review.
-  4. Aisha reports that the completed creator demo feedback summary is ready for review and asks for only that lane's status to change.
-  5. Elena supplies the exact approved slide-4 headline.
-  6. Jordan confirms that the partner-demo checklist is ready to start and asks for only that lane's status to change.
-  - These six messages support five distinct actionable workstreams; Priya and Daniel jointly support the launch-review workstream.
-- **70 background Gmail messages** from unique fictional people:
-  - Each has a unique sender, natural unnumbered subject, timestamp, and harmless low-signal body.
-  - They are Inbox and Unread but not Important.
-  - They are older than all six meaningful messages.
-  - The seeder writes them before a final dedicated batch containing the six meaningful messages, keeping all six within Gmail's first 20 in the dedicated demo inbox.
-  - Ingestion scans metadata for up to 120 matching Inbox messages, sorts by `internalDate`, and retains the newest 20, so it sees all six meaningful messages plus 14 background messages.
-- **12 Calendar resources** producing 47 visible meeting instances across one workweek:
-  - Eight routine weekday series.
-  - Three two-day series that overlap existing meetings at different times.
-  - One `RTX AI Assistant launch review` on the resolved demo day.
-  - Busy blocks on the next business day force scheduling actions to use current availability rather than a predetermined time.
-- **1 Google Sheet**: `RTX AI Assistant Launch Tracker`
-  - Tab: `Campaign Lanes`
-  - Columns A:J: Lane, PIC, Status, Latest update, Next action, Due, Dependency/blocker, Evidence, Artifact, Notes.
-  - Eight data rows with a validated, color-coded status dropdown, a frozen/filterable header, and task-specific column widths.
-  - The seeded evidence contains six meaningful messages. Start of Day deterministically selects the requested number using Gmail Important, sole direct recipient, unread, then newest received. With this seed the order is Priya's blocker, Daniel's scheduling request, Mateo's readiness update, Aisha's later creator-feedback update, Elena's approved headline, and Jordan's partner-checklist request. Calendar, Drive, and Sheet evidence remain in the packet as supporting context.
-- **1 Google Doc**: `RTX AI Assistant Customer Demo Readiness Check`
-  - Uses a structured internal-report layout with a branded title, section hierarchy, status and action callouts, and a true bulleted scope list.
-  - States that the readiness check is complete and ready for review.
-- **1 Google Slides deck**: `RTX AI Assistant Partner Preview`
-  - Six slides rendered from a reusable dark visual template with consistent typography, accent bars, content cards, footers, and page numbers.
-  - Slide 4 contains `APPROVED HEADLINE PLACEHOLDER` and keeps all surrounding content intact.
+Generated IDs and tracked demo draft IDs exist only in `$HERMES_HOME/chief-of-staff-workspace-state.json`.
 
-Generated resource IDs and explicitly tracked demo draft IDs are stored only in:
+## Expected flow
 
-```text
-$HERMES_HOME/chief-of-staff-workspace-state.json
-```
+1. `Hey chief of staff, what should I work on today? Give me the top three things.`
+   - Start of Day batches bounded Gmail, Calendar, Drive, and Sheet reads.
+   - Python returns distinct work items in deterministic order. The executive review is first because Maya's message is Important; pilot scope and partner briefing follow.
+   - Each item has a name and one or two high-level `Context:` sentences. No action checklist appears in this initial brief.
+   - An explicit top N returns that many available distinct items.
+2. `Help me prepare for the Executive Review meeting.`
+   - The agent rereads Maya's message and returns, in order, the three evidence-backed tasks: understand the product summary, write the Introduction slide from it, and mark the deck `Done` in the tracker.
+3. `Summarize the product summary Maya linked into a few bullet points so I can understand it before the meeting.`
+   - The agent reads the live Doc and returns a concise bullet summary with its link.
+4. `Put those bullet points on the Introduction slide of the executive review deck.`
+   - The agent reads the live deck, replaces only the confirmed placeholder with the bullets from conversation, and verifies the write.
+5. `Mark the Executive Review Deck as Done in the prep tracker.`
+   - The agent inspects the live Sheet schema, resolves the row/header intersection, reads the cell's allowed values, changes only that status from `In progress` to `Done`, and verifies it.
+6. `Draft a reply to Maya saying that all three preparation items are done.`
+   - The agent uses Maya's received message as the thread and recipient source, creates one unsent reply draft, verifies it, and ends with `Thanks` without a comma.
 
-The reset and cleanup commands use this file to delete tracked demo drafts, permanently delete imported mail by exact message ID, delete imported Calendar resources, and move the generated Drive folder to Trash. Ordinary Gmail messages and drafts are never listed or deleted.
+## Runtime invariants
 
-Start of Day writes only the bounded Workspace snapshot used to build the brief. It does not create an executable action plan.
-
-## Expected demo behavior
-
-1. `Hey chief of staff, give me a quick intro? What kinds of things can you help me with?`
-   - Load the Chief of Staff skill and return a concise capability overview.
-   - Continue the demo in this same conversation so the loaded skill remains in context.
-2. `Hey chief of staff, what should we work on today?`
-   - Read bounded Gmail, Calendar, Drive, and Sheet evidence in the current Workspace snapshot.
-   - Return a short workload summary followed by three deterministically ranked Gmail anchors by default, or the explicitly requested top N.
-   - Apply the same deterministic metadata ranking to every daily-brief request.
-   - Preserve Python's fixed selection order without model scoring, reranking, merging, replacing, or skipping entries.
-   - Give every item its matching Mail link, any clearly related Calendar or Drive action-target link, and a `Recommended action item(s):` sub-bullet.
-   - Do not expose scores, internal IDs, or commands.
-3. `Can you reschedule the launch review meeting, and prepare the email draft for my review?`
-   - Treat the request as authorization for both named actions without asking again.
-   - Refresh the relevant email, event, and target-day availability.
-   - Move the existing event to the earliest valid non-conflicting slot, preserve its duration and other details, and create the requested unsent draft.
-   - Verify both writes and report the result.
-4. `Reschedule the launch review and prepare the email draft, but use Thursday afternoon.`
-   - Honor the new constraint instead of replaying the original recommendation.
-   - Find a valid Thursday-afternoon slot before moving.
-5. `Update the Customer Demo Readiness Check tracker status based on Mateo's message.` or `Update the Partner Preview deck with Elena's approved headline.`
-   - Derive exact values from the direct request and focused live reads.
-   - Execute and verify the authorized change without a redundant confirmation prompt.
-6. Requests unrelated to the displayed brief still work through the same focused Workspace helpers; they do not require rerunning Start of Day.
-
-The current seed is designed to produce a stable demo narrative, but the runtime selection and action flow contain no hardcoded project names, recipients, dates, status meanings/order, field aliases, or replacement text. Each run selects message anchors only from generic Gmail metadata—Important, sole direct recipient, unread, and receive time—while retaining bounded live Gmail, Calendar, Drive, and Sheet context; it does not learn or retain per-user mappings. Changing the seeded evidence changes the presented contents and subsequent actions.
+- The dedicated profile remains on `qwen3.6:35b-a3b-mtp-q4_K_M`.
+- Start of Day keeps the existing batched Gmail, Calendar, Drive, and Sheet ingestion path.
+- No project names, dates, recipients, task lists, Sheet coordinates, status meanings, or replacement text are implemented as runtime routing rules.
+- Docs, Slides, Sheets, and Gmail actions use generic focused helpers and live IDs.
+- The skill and `SOUL.md` remain lightweight; full story detail lives here and in the seeder.
 
 ## Seed, reset, and cleanup
 
-First connect a dedicated demo Google account as described in `QUICKSTART.md`, then run:
-
 ```bash
 python demo/seed_workspace.py --confirm
-```
-
-By default, the demo day is today on weekdays or the upcoming Monday on weekends. To target a particular week instead:
-
-```bash
-python demo/seed_workspace.py --week-of 2026-08-17 --confirm
-```
-
-Reset to a fresh copy:
-
-```bash
 python demo/reset_workspace.py
-```
-
-Remove the seeded workspace instead:
-
-```bash
 python demo/seed_workspace.py --cleanup --confirm
 ```
 
-Gmail deletion is permanent; the Drive folder goes to Trash. If cleanup is partial, keep the state file and retry after fixing the reported problem.
-
-## Manual fallback
-
-If an organization policy prevents one resource from being created, reproduce the names and evidence above. The most important constraints are:
-
-1. Keep the six meaningful messages newer than the background mail, with Priya and Daniel marked Important.
-2. Use one existing launch-review event on the demo day and enough next-business-day calendar activity to exercise availability-aware scheduling.
-3. Keep the Sheet tab named `Campaign Lanes` with the A:J schema and exact readiness-check lane name.
-4. Put the exact placeholder and approved replacement text in the Partner Preview evidence.
-
-The skill resolves resources from current evidence and generated IDs; it does not depend on IDs committed to the repository.
-
-## Troubleshooting
-
-- `403 insufficientPermissions`: authorize all scopes in `setup/google-workspace/setup.py`.
-- `disabled_client`: enable the OAuth client in Google Cloud or install a new Desktop client secret and authorize again. Retrying the old token does not help.
-- API not enabled: enable Gmail, Calendar, Drive, Docs, Sheets, and Slides APIs.
-- Workspace admin restriction: ask the administrator to allow the OAuth client/scopes.
-- Existing or partial state file: run reset or cleanup; do not discard the file while tracked resources remain.
-- Gmail import blocked by policy: manually create the six meaningful messages; the other resources can still be reproduced from this specification.
+Reset permanently deletes only tracked seeded mail and calendar resources, moves the tracked Drive folder to Trash, and creates a fresh workspace. Keep the state file if cleanup is incomplete.

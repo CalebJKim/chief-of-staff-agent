@@ -59,25 +59,39 @@ class BriefTests(unittest.TestCase):
             "response_contract": packet["response_contract"],
         })
         self.assertIn("selected_for_output", packet_rules)
-        self.assertIn("do not rank it again", packet_rules)
-        self.assertIn("Do not score, rank, reorder, merge, replace, or skip selected entries", packet_rules)
-        self.assertIn("supporting context only", packet_rules)
-        self.assertIn("must never change which items are returned", packet_rules)
-        self.assertIn("a request or proposal remains pending", packet_rules)
-        self.assertIn("recommend preparing or saving a draft", packet_rules)
-        self.assertIn("Recommended action item(s):", packet_rules)
-        self.assertIn("selected entry's distinct [Mail", packet_rules)
-        self.assertIn("copying the sender name exactly", packet_rules)
+        self.assertIn("Do not rank or regroup", packet_rules)
+        self.assertIn("Do not score, rank, regroup, reorder, merge, replace, or skip items", packet_rules)
+        self.assertIn("Other Workspace data may enrich", packet_rules)
+        self.assertIn("cannot change the selected items or order", packet_rules)
+        self.assertIn("past tense only for facts already completed", packet_rules)
+        self.assertIn("Name pending work without implying it is complete", packet_rules)
+        self.assertIn("One or two high-level sentences", packet_rules)
+        self.assertNotIn("Recommended action item(s):", packet_rules)
+        self.assertIn("primary and assigned supporting [Mail", packet_rules)
+        self.assertIn("exact sender names", packet_rules)
         self.assertIn("Never invent or link an unrelated resource", packet_rules)
-        self.assertTrue(packet["response_contract"]["item_template"][1].startswith("   - **Evidence:**"))
-        self.assertIn("Never use remembered, learned, or repository-defined", packet_rules)
+        self.assertTrue(packet["response_contract"]["item_template"][1].startswith("   - **Context:**"))
+        self.assertNotIn("**Evidence:**", packet_rules)
+        self.assertEqual(
+            "N. **WORK ITEM NAME**",
+            packet["response_contract"]["item_template"][0],
+        )
+        self.assertTrue(any(
+            rule.startswith("Titles name pending work")
+            for rule in packet["response_contract"]["self_check"]
+        ))
+        self.assertIn("never use remembered or repository-defined mappings", packet_rules)
         self.assertEqual(3, packet["requested_top_n"])
         self.assertEqual(3, packet["selected_item_count"])
         self.assertNotIn("selection_mode", packet)
         self.assertEqual("gmail_metadata_priority_then_recency", packet["ordering"])
-        self.assertEqual("important_then_direct_then_unread_then_newest", packet["selection_basis"])
+        self.assertEqual(
+            "important_then_direct_then_unread_then_newest_distinct_live_tasks",
+            packet["selection_basis"],
+        )
         self.assertEqual("response_contract", next(reversed(packet)))
         exec_event = next(event for event in packet["meetings"] if event["id"] == "evt-exec")
+        self.assertEqual("evt-exec", packet["meetings"][0]["id"])
         self.assertTrue(any(item["id"] == "deck-1" for item in exec_event["related"]["files"]))
 
     def test_deterministic_ranking_uses_generic_metadata_with_stable_recency_tie_breaking(self):
@@ -97,6 +111,150 @@ class BriefTests(unittest.TestCase):
         self.assertFalse(brief.is_directly_addressed(messages[0], "owner@example.com"))
         self.assertFalse(hasattr(brief, "mail_score"))
         self.assertFalse(hasattr(brief, "event_score"))
+
+    def test_related_messages_are_one_distinct_work_item_without_seed_specific_rules(self):
+        snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        snapshot["events"] = []
+        snapshot["files"] = []
+        snapshot["messages"] = [
+            {
+                "id": "mail-renewal-blocker",
+                "thread_id": "thread-renewal-blocker",
+                "from": "owner@supplier.example",
+                "to": "owner@example.com",
+                "subject": "Supplier renewal approval blocked",
+                "internal_ms": 4_000,
+                "unread": True,
+                "important": True,
+                "snippet": "Northwind contract renewal is blocked pending supplier approval and contract signing must move.",
+            },
+            {
+                "id": "mail-renewal-schedule",
+                "thread_id": "thread-renewal-schedule",
+                "from": "legal@example.com",
+                "to": "owner@example.com",
+                "subject": "New signing slot for Northwind renewal",
+                "internal_ms": 3_000,
+                "unread": True,
+                "important": True,
+                "snippet": "Move contract signing to Friday and prepare the supplier confirmation after approval.",
+            },
+            {
+                "id": "mail-hiring",
+                "thread_id": "thread-hiring",
+                "from": "people@example.com",
+                "to": "owner@example.com",
+                "subject": "Hiring plan ready for review",
+                "internal_ms": 2_000,
+                "unread": True,
+                "important": False,
+                "snippet": "The workforce hiring plan and headcount budget are complete and ready for review.",
+            },
+            {
+                "id": "mail-onboarding",
+                "thread_id": "thread-onboarding",
+                "from": "operations@example.com",
+                "to": "owner@example.com",
+                "subject": "Publish the onboarding guide",
+                "internal_ms": 1_000,
+                "unread": True,
+                "important": False,
+                "snippet": "The employee onboarding guide passed legal review and is ready to publish.",
+            },
+        ]
+        snapshot["sheets"] = [{
+            "id": "generic-workbook",
+            "name": "Operations workbook",
+            "tabs": [{
+                "title": "Open work",
+                "table": {
+                    "columns": [
+                        {"column": "A", "name": "Item"},
+                        {"column": "B", "name": "State"},
+                        {"column": "C", "name": "Next step"},
+                    ],
+                    "representative_rows": [
+                        {"values": {
+                            "A": "Northwind supplier contract renewal",
+                            "B": "Approval blocked",
+                            "C": "Move contract signing to Friday and prepare supplier confirmation",
+                        }},
+                        {"values": {
+                            "A": "Workforce hiring plan",
+                            "B": "Ready for review",
+                            "C": "Review completed headcount budget",
+                        }},
+                        {"values": {
+                            "A": "Employee onboarding guide",
+                            "B": "Approved",
+                            "C": "Publish after legal review",
+                        }},
+                    ],
+                },
+            }],
+        }]
+
+        packet = brief.build_packet(snapshot, self.args(top_n=3))
+        by_id = {item["id"]: item for item in packet["mail"]}
+        selected = [item for item in packet["mail"] if item["selected_for_output"]]
+
+        self.assertEqual(
+            ["mail-renewal-blocker", "mail-hiring", "mail-onboarding"],
+            [item["id"] for item in selected],
+        )
+        self.assertEqual([1, 2, 3], [item["selection_order"] for item in selected])
+        self.assertEqual(1, by_id["mail-renewal-schedule"]["supports_selection_order"])
+        self.assertNotIn("_task_signals", json.dumps(packet))
+        self.assertEqual(3, packet["selected_item_count"])
+
+    def test_shared_project_language_does_not_merge_different_live_rows(self):
+        snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        snapshot["events"] = []
+        snapshot["files"] = []
+        snapshot["messages"] = [
+            {
+                "id": "mail-atlas-finance",
+                "thread_id": "thread-atlas-finance",
+                "from": "finance@example.com",
+                "to": "owner@example.com",
+                "subject": "Atlas rollout finance review",
+                "internal_ms": 2_000,
+                "unread": True,
+                "important": True,
+                "snippet": "Approve the Atlas rollout budget and finance forecast.",
+            },
+            {
+                "id": "mail-atlas-research",
+                "thread_id": "thread-atlas-research",
+                "from": "research@example.com",
+                "to": "owner@example.com",
+                "subject": "Atlas rollout research review",
+                "internal_ms": 1_000,
+                "unread": True,
+                "important": True,
+                "snippet": "Review the Atlas rollout customer survey and research findings.",
+            },
+        ]
+        snapshot["sheets"] = [{
+            "id": "atlas-workbook",
+            "name": "Atlas workbook",
+            "tabs": [{
+                "title": "Work",
+                "table": {
+                    "columns": [{"column": "A", "name": "Item"}, {"column": "B", "name": "Next"}],
+                    "representative_rows": [
+                        {"values": {"A": "Atlas rollout finance budget", "B": "Approve finance forecast"}},
+                        {"values": {"A": "Atlas rollout customer research", "B": "Review survey findings"}},
+                    ],
+                },
+            }],
+        }]
+
+        packet = brief.build_packet(snapshot, self.args(top_n=2))
+        selected = [item for item in packet["mail"] if item["selected_for_output"]]
+
+        self.assertEqual(["mail-atlas-finance", "mail-atlas-research"], [item["id"] for item in selected])
+        self.assertFalse(any(item.get("supports_selection_order") for item in packet["mail"]))
 
     def test_sheet_schema_samples_and_validations_remain_supporting_context(self):
         snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
@@ -158,7 +316,7 @@ class BriefTests(unittest.TestCase):
         self.assertEqual(5, packet["requested_top_n"])
         self.assertEqual(3, packet["selected_item_count"])
         self.assertEqual(3, packet["response_contract"]["item_count"])
-        self.assertIn("Render exactly the 3 deterministically ranked Gmail entries", packet["instruction"])
+        self.assertIn("Render 3 pre-ranked distinct items", packet["instruction"])
         self.assertFalse(hasattr(brief, "STATUS_PRIORITY"))
         self.assertFalse(hasattr(brief, "KEYWORDS"))
         self.assertFalse(hasattr(brief, "build_workstreams"))
@@ -204,6 +362,18 @@ class BriefTests(unittest.TestCase):
         self.assertEqual("ok_empty", packet["source_status"]["calendar"])
         self.assertEqual("ok_empty", packet["source_status"]["drive"])
         self.assertEqual("ok_empty", packet["source_status"]["sheets"])
+
+    def test_timeout_returns_only_a_google_side_retry_message_contract(self):
+        snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        snapshot["coverage"]["errors"] = ["sheets: read operation timed out"]
+
+        packet = brief.build_packet(snapshot, self.args())
+
+        self.assertTrue(packet["temporary_google_error"])
+        self.assertEqual(0, packet["response_contract"]["item_count"])
+        self.assertEqual(brief.GOOGLE_TEMPORARY_USER_MESSAGE, packet["user_message"])
+        self.assertIn("Return exactly this sentence", packet["instruction"])
+        self.assertNotIn("mail", packet)
 
 
 if __name__ == "__main__":

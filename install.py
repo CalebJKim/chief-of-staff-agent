@@ -7,6 +7,7 @@ from pathlib import Path
 
 
 ROUTING_START = 'When the user addresses you as "chief of staff"'
+SCOPE_GUARD_PLUGIN = "chief-of-staff-scope-guard"
 
 
 def default_home() -> Path:
@@ -57,6 +58,15 @@ def install_agent(source: Path, target: Path, overwrite_soul: bool) -> tuple[Pat
             destination,
             ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
         )
+    plugin_target = target / "plugins" / SCOPE_GUARD_PLUGIN
+    plugin_target.parent.mkdir(parents=True, exist_ok=True)
+    if plugin_target.exists():
+        shutil.rmtree(plugin_target)
+    shutil.copytree(
+        source / "plugins" / SCOPE_GUARD_PLUGIN,
+        plugin_target,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+    )
     obsolete_launcher = target / "cos.sh"
     if obsolete_launcher.exists():
         obsolete_launcher.unlink()
@@ -76,6 +86,7 @@ def main() -> int:
     skills_target, soul_status = install_agent(source, args.hermes_home, args.overwrite_soul)
     print(f"Installed skills into {skills_target}")
     print(f"SOUL.md: {soul_status}")
+    print(f"Installed plugin: {SCOPE_GUARD_PLUGIN} (enable it with setup_profile.py).")
     print("Next: enable the skills + terminal toolsets and complete Google OAuth (see QUICKSTART.md).")
     return 0
 

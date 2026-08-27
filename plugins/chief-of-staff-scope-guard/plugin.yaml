@@ -1,0 +1,9 @@
+name: chief-of-staff-scope-guard
+version: "1.0.0"
+description: "Limits repository-managed Chief of Staff helpers to one verified Workspace mutation per user turn."
+provides_hooks:
+  - pre_llm_call
+  - pre_tool_call
+  - post_tool_call
+  - transform_tool_result
+  - transform_llm_output
