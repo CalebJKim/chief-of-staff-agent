@@ -81,7 +81,7 @@ class SetupProfileTests(unittest.TestCase):
         self.assertIn(
             [
                 "hermes", "-p", "chief-of-staff-demo", "plugins", "enable",
-                SCOPE_GUARD_PLUGIN, "--no-allow-tool-override",
+                SCOPE_GUARD_PLUGIN, "--allow-tool-override",
             ],
             self.commands,
         )

@@ -67,6 +67,10 @@ class InstallSoulTests(unittest.TestCase):
         plugin = profile / "plugins" / SCOPE_GUARD_PLUGIN
         self.assertTrue((plugin / "plugin.yaml").exists())
         self.assertTrue((plugin / "__init__.py").exists())
+        self.assertIn(
+            "tools.override",
+            (plugin / "plugin.yaml").read_text(encoding="utf-8"),
+        )
 
 
 if __name__ == "__main__":

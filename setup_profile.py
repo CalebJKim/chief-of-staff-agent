@@ -142,7 +142,7 @@ def setup_profile(
             "plugins",
             "enable",
             SCOPE_GUARD_PLUGIN,
-            "--no-allow-tool-override",
+            "--allow-tool-override",
         ]
     )
     return target, created

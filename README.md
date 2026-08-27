@@ -70,7 +70,7 @@ Make sure Ollama is installed and running:
 ollama list
 ```
 
-The profile setup pulls `qwen3.6:35b-a3b-mtp-q4_K_M` and selects it only in the dedicated demo profile. It also enables the repository-managed `chief-of-staff-scope-guard` plugin, which generically limits the demo helper to one verified Workspace write per user turn. The guard contains no scenario names, people, file IDs, or seeded values. Your normal Hermes profile and its current model remain unchanged. Use a current Hermes release rather than requiring one exact version.
+The profile setup pulls `qwen3.6:35b-a3b-mtp-q4_K_M` and selects it only in the dedicated demo profile. It also enables the repository-managed `chief-of-staff-scope-guard` plugin and grants the standard Hermes `tools.override` capability required for its pre-tool safety blocks. The guard permits a Workspace write only when the current user message explicitly requests one, limits the turn to one verified write, and contains no scenario names, people, file IDs, or seeded values. Your normal Hermes profile and its current model remain unchanged. Use a current Hermes release rather than requiring one exact version.
 
 ## 3. Clone the demo branch
 

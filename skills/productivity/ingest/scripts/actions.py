@@ -437,7 +437,7 @@ def normalize_cli_text(value: str) -> str:
     return normalized
 
 
-def normalize_draft_body(value: str, closing: str = "") -> str:
+def normalize_draft_body(value: str, closing: str = "", exact_final: bool = False) -> str:
     """Accept shell-friendly escaped line breaks and apply an optional exact closing."""
     normalized = normalize_cli_text(value)
     lines = [line.rstrip() for line in normalized.splitlines()]
@@ -451,6 +451,8 @@ def normalize_draft_body(value: str, closing: str = "") -> str:
             candidate = lines[index].strip().casefold().rstrip(",.!:")
             if candidate in common_closings:
                 lines[index] = exact_closing
+                if exact_final:
+                    lines = lines[: index + 1]
                 if index > 0 and lines[index - 1]:
                     lines.insert(index, "")
                 replaced = True
@@ -473,7 +475,7 @@ def normalize_draft_body(value: str, closing: str = "") -> str:
             if lines:
                 lines.append("")
             lines.append(exact_closing)
-    return "\n".join(lines)
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(lines))
 
 
 def _draft_comparison_text(value: str) -> str:
@@ -793,7 +795,11 @@ def gmail_draft(args: argparse.Namespace) -> None:
     reference_state: dict[str, Any] | None = None
     if track_demo_state:
         _state_path, reference_state = load_reference_workspace_state()
-    expected_body = normalize_draft_body(args.body, getattr(args, "closing", ""))
+    expected_body = normalize_draft_body(
+        args.body,
+        getattr(args, "closing", ""),
+        exact_final=bool(args.reply_to_message),
+    )
     minimum_words = getattr(args, "minimum_body_words", 4 if args.reply_to_message else 1)
     checked_facts = validate_draft_content(
         expected_body,

@@ -28,6 +28,18 @@ class ScopeGuardTests(unittest.TestCase):
     def setUp(self) -> None:
         scope_guard._reset_state_for_tests()
 
+    def authorize_write(
+        self,
+        message: str = "Update the requested Workspace item.",
+        *,
+        turn: str = "turn-1",
+    ) -> None:
+        scope_guard.pre_llm_call(
+            session_id="session-1",
+            turn_id=turn,
+            user_message=message,
+        )
+
     def call(
         self,
         operation: str,
@@ -70,7 +82,55 @@ class ScopeGuardTests(unittest.TestCase):
         self.assertFalse(scope_guard._managed_mutation("terminal", {"command": "echo slides replace-text"}))
         self.assertFalse(scope_guard._managed_mutation("browser", terminal_args(mutations[0])))
 
+    def test_write_authorization_comes_only_from_an_explicit_current_request(self) -> None:
+        explicit = (
+            "Update the overview slide.",
+            "Can you mark the tracker as done?",
+            "For the review, put those bullets on the Introduction slide.",
+            "I want you to draft a reply to the sender.",
+            "Let's reschedule the meeting.",
+            "Help me prepare by updating the presentation.",
+        )
+        read_only = (
+            "Help me prepare for the review.",
+            "What should I work on today?",
+            "Summarize the linked document.",
+            "Show me what needs to be updated.",
+            "Can you tell me what to change in the tracker?",
+            "I want to know how to update the presentation.",
+        )
+        for message in explicit:
+            with self.subTest(message=message):
+                self.assertTrue(scope_guard._explicit_write_request(message))
+        for message in read_only:
+            with self.subTest(message=message):
+                self.assertFalse(scope_guard._explicit_write_request(message))
+
+    def test_blocks_a_mutation_without_explicit_current_authorization(self) -> None:
+        scope_guard.pre_llm_call(
+            session_id="session-1",
+            turn_id="turn-1",
+            user_message="Help me prepare for the review.",
+        )
+
+        blocked = scope_guard.pre_tool_call(
+            **self.call("slides replace-text --file-id abc --confirm")
+        )
+
+        self.assertEqual("block", blocked["action"])
+        self.assertIn("read-only preparation", blocked["message"])
+
+    def test_blocks_a_mutation_without_a_user_boundary(self) -> None:
+        call = self.call("slides replace-text --file-id abc --confirm")
+        call.pop("session_id")
+
+        blocked = scope_guard.pre_tool_call(**call)
+
+        self.assertEqual("block", blocked["action"])
+        self.assertIn("no current user authorization boundary", blocked["message"])
+
     def test_blocks_a_second_mutation_in_the_same_turn(self) -> None:
+        self.authorize_write()
         first = self.call("slides replace-text --file-id abc --confirm")
         second = self.call("sheets set-cell --file-id def --confirm", call="call-2")
 
@@ -81,6 +141,7 @@ class ScopeGuardTests(unittest.TestCase):
         self.assertIn("already ran", blocked["message"])
 
     def test_allows_a_mutation_in_the_next_turn(self) -> None:
+        self.authorize_write()
         self.assertIsNone(scope_guard.pre_tool_call(**self.call("slides replace-text --confirm")))
         scope_guard.pre_llm_call(
             session_id="session-1",
@@ -94,6 +155,7 @@ class ScopeGuardTests(unittest.TestCase):
         )
 
     def test_failed_first_mutation_releases_the_turn(self) -> None:
+        self.authorize_write()
         failed = self.call("slides replace-text --confirm", status="error")
         self.assertIsNone(scope_guard.pre_tool_call(**failed))
         scope_guard.post_tool_call(**failed)
@@ -133,6 +195,7 @@ class ScopeGuardTests(unittest.TestCase):
         self.assertIsNone(scope_guard.transform_tool_result(**failed_read))
 
     def test_structured_prewrite_rejection_allows_one_corrected_attempt(self) -> None:
+        self.authorize_write("Draft a reply to the sender.")
         rejected = self.call(
             "gmail reply-draft message-1 --confirm",
             result=(
@@ -153,6 +216,7 @@ class ScopeGuardTests(unittest.TestCase):
         self.assertIsNone(scope_guard.pre_tool_call(**corrected))
 
     def test_second_structured_rejection_stops_additional_attempts(self) -> None:
+        self.authorize_write("Draft a reply to the sender.")
         first = self.call(
             "gmail reply-draft message-1 --confirm",
             result='{"status":"rejected","created":false,"reason":"first rejection"}',
@@ -177,6 +241,7 @@ class ScopeGuardTests(unittest.TestCase):
         self.assertEqual("block", blocked["action"])
 
     def test_temporary_google_failure_stops_and_returns_user_message(self) -> None:
+        self.authorize_write("Update the tracker status.")
         temporary = self.call(
             "sheets set-cell sheet-1 --confirm",
             result=(
@@ -268,6 +333,7 @@ class ScopeGuardTests(unittest.TestCase):
         ))
 
     def test_successful_result_tells_model_to_stop(self) -> None:
+        self.authorize_write()
         first = self.call("slides replace-text --confirm")
         self.assertIsNone(scope_guard.pre_tool_call(**first))
 
@@ -282,6 +348,7 @@ class ScopeGuardTests(unittest.TestCase):
         )
 
     def test_new_turn_clears_a_stale_confirmation(self) -> None:
+        self.authorize_write()
         first = self.call("slides replace-text --confirm")
         self.assertIsNone(scope_guard.pre_tool_call(**first))
         scope_guard.transform_tool_result(**first)
@@ -310,7 +377,7 @@ class ScopeGuardTests(unittest.TestCase):
             [name for name, _callback in registered],
         )
 
-    def test_preparation_turn_allows_one_read_and_blocks_more_tools(self) -> None:
+    def test_preparation_turn_allows_one_read_and_neutralizes_more_reads(self) -> None:
         context = scope_guard.pre_llm_call(
             session_id="session-1",
             turn_id="turn-1",
@@ -321,16 +388,36 @@ class ScopeGuardTests(unittest.TestCase):
         self.assertIsNone(scope_guard.pre_tool_call(**first))
         transformed = scope_guard.transform_tool_result(**first)
         self.assertIn("Return only the tasks", transformed)
+        self.assertIn("final answer with zero tool calls", transformed)
         self.assertIn("Do not open linked files", transformed)
 
         second_read = self.call("docs get file-1", call="call-2")
-        blocked_read = scope_guard.pre_tool_call(**second_read)
-        self.assertEqual("block", blocked_read["action"])
+        neutralized_read = scope_guard.pre_tool_call(**second_read)
+        self.assertEqual("modify", neutralized_read["action"])
+        self.assertIn("PREPARATION_COMPLETE", neutralized_read["args"]["command"])
+        self.assertEqual(5, neutralized_read["args"]["timeout"])
 
         write = self.call("slides replace-text --confirm", call="call-3")
         blocked_write = scope_guard.pre_tool_call(**write)
         self.assertEqual("block", blocked_write["action"])
         self.assertIn("read-only preparation", blocked_write["message"])
+
+    def test_preparation_sanitizes_trailing_flags_from_the_focused_thread_read(self) -> None:
+        scope_guard.pre_llm_call(
+            session_id="session-1",
+            user_message="Help me prepare for the review.",
+        )
+        call = self.call(
+            "gmail thread live-message-id --unsupported-read-flag value"
+        )
+
+        modified = scope_guard.pre_tool_call(**call)
+
+        self.assertEqual("modify", modified["action"])
+        self.assertTrue(modified["args"]["command"].endswith(
+            "gmail thread live-message-id"
+        ))
+        self.assertNotIn("unsupported-read-flag", modified["args"]["command"])
 
     def test_preparation_final_keeps_only_numbered_tasks(self) -> None:
         scope_guard.pre_llm_call(
@@ -397,6 +484,43 @@ class ScopeGuardTests(unittest.TestCase):
         self.assertIn("https://docs.google.com/presentation/d/deck-1/edit", transformed)
         self.assertIn("https://docs.google.com/spreadsheets/d/sheet-1/edit", transformed)
 
+    def test_preparation_rebuild_restores_a_link_from_discarded_model_text(self) -> None:
+        transformed = scope_guard._numbered_tasks_only(
+            (
+                "1. Read the source [Source](https://docs.google.com/document/d/doc-1/edit)\n"
+                "2. Begin the next task"
+            ),
+            [
+                ("Source", "https://docs.google.com/document/d/doc-1/edit"),
+                ("Presentation", "https://docs.google.com/presentation/d/deck-1/edit"),
+                ("Tracker", "https://docs.google.com/spreadsheets/d/sheet-1/edit"),
+            ],
+            [
+                "Read the source",
+                "Update the presentation",
+                "Mark the tracker complete",
+            ],
+        )
+
+        self.assertIn("https://docs.google.com/document/d/doc-1/edit", transformed)
+        self.assertIn("https://docs.google.com/presentation/d/deck-1/edit", transformed)
+        self.assertIn("https://docs.google.com/spreadsheets/d/sheet-1/edit", transformed)
+
+    def test_requested_bullet_summary_splits_collapsed_inline_numbering(self) -> None:
+        transformed = scope_guard._bullet_summary_only(
+            (
+                "Here's the summary: 1) **First:** One point."
+                "2) **Second:** Another point."
+                "3) **Third:** Final point. "
+                "Source: https://docs.google.com/document/d/doc-1/edit"
+            ),
+        )
+
+        self.assertEqual(3, len(re.findall(r"(?m)^- ", transformed)))
+        self.assertIn("- **First:** One point.", transformed)
+        self.assertIn("- **Third:** Final point.", transformed)
+        self.assertIn("https://docs.google.com/document/d/doc-1/edit", transformed)
+
     def test_preparation_uses_explicit_live_request_clauses_when_model_merges_tasks(self) -> None:
         scope_guard.pre_llm_call(
             session_id="session-prep",
@@ -443,6 +567,30 @@ class ScopeGuardTests(unittest.TestCase):
         self.assertIn("https://docs.google.com/presentation/d/deck-2/edit", transformed)
         self.assertIn("https://docs.google.com/spreadsheets/d/sheet-2/edit", transformed)
 
+    def test_preparation_uses_live_request_clauses_when_model_returns_no_list(self) -> None:
+        transformed = scope_guard._numbered_tasks_only(
+            "The materials are ready. Is there anything else you need?",
+            [
+                ("Research brief", "https://docs.google.com/document/d/doc-3/edit"),
+                ("Overview slide", "https://docs.google.com/presentation/d/deck-3/edit"),
+                ("Readiness tracker", "https://docs.google.com/spreadsheets/d/sheet-3/edit"),
+            ],
+            [
+                "Read the research brief",
+                "Update the overview slide",
+                "Mark the readiness tracker complete",
+            ],
+        )
+
+        self.assertEqual(3, len(re.findall(r"(?m)^\d+\. ", transformed)))
+        self.assertIn("1. Read the research brief", transformed)
+        self.assertIn("2. Update the overview slide", transformed)
+        self.assertIn("3. Mark the readiness tracker complete", transformed)
+        self.assertNotIn("anything else", transformed)
+        self.assertIn("https://docs.google.com/document/d/doc-3/edit", transformed)
+        self.assertIn("https://docs.google.com/presentation/d/deck-3/edit", transformed)
+        self.assertIn("https://docs.google.com/spreadsheets/d/sheet-3/edit", transformed)
+
     def test_daily_brief_final_keeps_only_the_contract_shape(self) -> None:
         scope_guard.pre_llm_call(
             session_id="session-brief",
@@ -471,6 +619,41 @@ class ScopeGuardTests(unittest.TestCase):
             "   - **Context:** It is ready for review. [Mail](https://example.test/3)",
             transformed,
         )
+
+    def test_daily_brief_caps_extra_model_items_at_requested_top_n(self) -> None:
+        scope_guard.pre_llm_call(
+            session_id="session-brief",
+            user_message="What should I work on today? Give me the top three things.",
+        )
+        transformed = scope_guard.transform_llm_output(
+            session_id="session-brief",
+            response_text=(
+                "Here are your priorities for today:\n\n"
+                "1. **First item** — First context.\n\n"
+                "2. **Second item** — Second context.\n\n"
+                "3. **Third item** — Third context.\n\n"
+                "4. **Extra item** — Extra context."
+            ),
+        )
+
+        self.assertEqual(3, len(re.findall(r"(?m)^\d+\. ", transformed)))
+        self.assertEqual(3, transformed.count("**Context:**"))
+        self.assertNotIn("Extra item", transformed)
+
+        scope_guard.pre_llm_call(
+            session_id="session-brief-four",
+            user_message="What are my top 4 priorities today?",
+        )
+        transformed_four = scope_guard.transform_llm_output(
+            session_id="session-brief-four",
+            response_text=(
+                "1. **First item** — First context.\n\n"
+                "2. **Second item** — Second context.\n\n"
+                "3. **Third item** — Third context.\n\n"
+                "4. **Fourth item** — Fourth context."
+            ),
+        )
+        self.assertIn("4. **Fourth item**", transformed_four)
 
     def test_daily_brief_uses_only_packet_backed_mail_labels_and_urls(self) -> None:
         scope_guard.pre_llm_call(
@@ -642,6 +825,70 @@ class ScopeGuardTests(unittest.TestCase):
         self.assertEqual(3, len(re.findall(r"(?m)^\d+\. \*\*", transformed)))
         self.assertIn("1. **Prepare the review**", transformed)
         self.assertIn("3. **Check the briefing**", transformed)
+
+    def test_daily_brief_numbers_plain_headings_followed_by_context(self) -> None:
+        scope_guard.pre_llm_call(
+            session_id="session-brief",
+            user_message="What should I work on today?",
+        )
+        transformed = scope_guard.transform_llm_output(
+            session_id="session-brief",
+            response_text=(
+                "Prepare the review\n"
+                "- **Context:** The deck needs an update.\n\n"
+                "Review pilot feedback\n"
+                "- **Context:** A decision is pending.\n\n"
+                "Check the briefing\n"
+                "- **Context:** The owner review is pending."
+            ),
+        )
+
+        self.assertEqual(3, len(re.findall(r"(?m)^\d+\. \*\*", transformed)))
+        self.assertIn("1. **Prepare the review**", transformed)
+        self.assertIn("3. **Check the briefing**", transformed)
+
+    def test_daily_brief_numbers_standalone_headings_followed_by_plain_bullets(self) -> None:
+        transformed = scope_guard._daily_brief_only(
+            (
+                "Here are your priorities for today:\n\n"
+                "EXECUTIVE REVIEW PREP\n"
+                "- Update the review materials. [Mail](https://mail.google.com/mail/u/0/#all/one)\n\n"
+                "CUSTOMER PILOT DECISION\n"
+                "- Review the open decision points. [Mail](https://mail.google.com/mail/u/0/#all/two)\n\n"
+                "PARTNER BRIEFING REVIEW\n"
+                "- Confirm the practical framing. [Mail](https://mail.google.com/mail/u/0/#all/three)"
+            ),
+            max_items=3,
+        )
+
+        self.assertEqual(3, len(re.findall(r"(?m)^\d+\. ", transformed)))
+        self.assertEqual(3, transformed.count("**Context:**"))
+        self.assertIn("1. **EXECUTIVE REVIEW PREP**", transformed)
+        self.assertIn("2. **CUSTOMER PILOT DECISION**", transformed)
+        self.assertIn("3. **PARTNER BRIEFING REVIEW**", transformed)
+        self.assertNotIn("**Context:** - ", transformed)
+
+    def test_daily_brief_numbers_bold_inline_items_with_punctuation(self) -> None:
+        scope_guard.pre_llm_call(
+            session_id="session-brief",
+            user_message="What should I work on today? Give me the top three things.",
+        )
+        transformed = scope_guard.transform_llm_output(
+            session_id="session-brief",
+            response_text=(
+                "**Prepare the review.** Read the current brief before the meeting. "
+                "[Mail — Sender One](https://mail.google.com/mail/u/0/#all/one)\n\n"
+                "**Review customer feedback.** Decide which requests move forward. "
+                "[Mail — Sender Two](https://mail.google.com/mail/u/0/#all/two)\n\n"
+                "**Check the partner briefing.** Confirm the story is ready. "
+                "[Mail — Sender Three](https://mail.google.com/mail/u/0/#all/three)"
+            ),
+        )
+
+        self.assertEqual(3, len(re.findall(r"(?m)^\d+\. ", transformed)))
+        self.assertEqual(3, transformed.count("**Context:**"))
+        self.assertIn("1. **Prepare the review.**", transformed)
+        self.assertIn("3. **Check the partner briefing.**", transformed)
 
     def test_daily_brief_normalizes_bold_number_headings_and_plain_context(self) -> None:
         scope_guard.pre_llm_call(

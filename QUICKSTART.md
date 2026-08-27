@@ -55,7 +55,9 @@ python setup_profile.py --profile-name "$PROFILE_NAME" --hermes-root "$HERMES_RO
 The dedicated profile contains only `chief-of-staff` and `ingest`; `--no-skills`
 prevents later Hermes updates from repopulating unrelated bundled skills. The
 setup also enables the repository-managed `chief-of-staff-scope-guard` plugin,
-which stops a single user request from spilling into a second Workspace write.
+grants its standard Hermes `tools.override` capability, and uses it to block
+Workspace writes unless the current user message explicitly requests one. It
+also stops a single user request from spilling into a second Workspace write.
 The setup script also enables only `skills` and `terminal` and sets Max Agent Steps
 to `40`. It disables skill-creation nudges and marks the installed demo skills as
 repository-managed so they are read but not edited during a run. The default

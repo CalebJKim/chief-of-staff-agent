@@ -96,7 +96,7 @@ calendar event offsets.
 & $Python -m unittest discover -s skills/productivity/chief-of-staff/tests -v
 ```
 
-Expected result: 76 tests pass across the three suites.
+Expected result: 130 tests pass across the three suites.
 
 ## 5. Create or refresh the isolated Hermes profile
 
@@ -111,7 +111,8 @@ hermes -p $ProfileName config get skills.creation_nudge_interval
 The setup script creates the dedicated profile if needed, pulls and selects
 `qwen3.6:35b-a3b-mtp-q4_K_M` through local Ollama with medium reasoning, installs
 only `ingest` and `chief-of-staff`, enables the `skills` and `terminal` toolsets,
-and sets Max Agent Steps to `40`. It can be rerun after repository updates
+grants the scope guard's standard Hermes `tools.override` capability so its
+pre-tool safety blocks are enforced, and sets Max Agent Steps to `40`. It can be rerun after repository updates
 without recreating the profile. The normal Hermes profile and unrelated settings
 remain unchanged. The script also disables skill-creation nudges and installs
 repository-managed-skill instructions; the agent can load the skills but must

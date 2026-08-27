@@ -40,16 +40,32 @@ _BULLET_SUMMARY_PATTERN = re.compile(
     r"(?=.*\b(?:summar(?:ize|y)|condense|recap)\b)(?=.*\b(?:bullet|bullets)\b)",
     re.IGNORECASE | re.DOTALL,
 )
-_EXPLICIT_WRITE_PATTERN = re.compile(
-    r"\b(?:append\w*|chang\w*|creat\w*|draft\w*|mark\w*|mov\w*|put|replac\w*|"
-    r"reschedul\w*|send\w*|updat\w*|writ\w*)\b",
-    re.IGNORECASE,
+_WRITE_VERB = (
+    r"(?:append\w*|chang\w*|creat\w*|draft\w*|edit\w*|email\w*|mark\w*|"
+    r"mov\w*|put|replac\w*|repl(?:y|ies|ied|ying)|reschedul\w*|schedul\w*|"
+    r"send\w*|set|updat\w*|writ\w*)"
+)
+_EXPLICIT_WRITE_PATTERNS = tuple(
+    re.compile(pattern, re.IGNORECASE)
+    for pattern in (
+        rf"^\s*(?:(?:hey\s+)?chief\s+of\s+staff[,:]?\s*)?(?:(?:please|kindly)\s+)?{_WRITE_VERB}\b",
+        rf"\b(?:can|could|would|will)\s+you\s+(?:please\s+)?{_WRITE_VERB}\b",
+        rf"\b(?:can|could)\s+we\s+(?:please\s+)?{_WRITE_VERB}\b",
+        rf"\bi\s+(?:want|need|would\s+like|'d\s+like)\s+you\s+to\s+{_WRITE_VERB}\b",
+        rf"\b(?:let['’]?s|go\s+ahead(?:\s+and)?)\s+(?:please\s+)?{_WRITE_VERB}\b",
+        rf"\b(?:yes|yeah|yep|sure)[,:\s]+(?:please\s+)?{_WRITE_VERB}\b",
+        rf"(?:[,;]|\bthen\b|\band\b)\s+(?:please\s+)?{_WRITE_VERB}\b",
+        rf"\bhelp\s+me\b[^.!?\r\n]{{0,80}}\bby\s+{_WRITE_VERB}\b",
+    )
+)
+_PREPARATION_COMPLETE_COMMAND = (
+    'echo "PREPARATION_COMPLETE: Return the final numbered task list now with no more tool calls."'
 )
 
 _lock = threading.Lock()
 _claims: "OrderedDict[str, str]" = OrderedDict()
 _preparation_turns: "OrderedDict[str, str | None]" = OrderedDict()
-_daily_brief_turns: "OrderedDict[str, bool]" = OrderedDict()
+_daily_brief_turns: "OrderedDict[str, int]" = OrderedDict()
 _bullet_summary_turns: "OrderedDict[str, bool]" = OrderedDict()
 _explicit_write_turns: "OrderedDict[str, bool]" = OrderedDict()
 _pending_confirmations: "OrderedDict[str, str]" = OrderedDict()
@@ -101,13 +117,43 @@ def _managed_start_day(tool_name: Any, args: Any) -> bool:
     return "chief-of-staff/scripts/start_day.sh" in normalized
 
 
+def _focused_thread_read_args(args: Any) -> dict[str, Any] | None:
+    """Strip unsupported trailing arguments from a focused Gmail thread read."""
+
+    if not isinstance(args, dict):
+        return None
+    command = _command(args)
+    match = re.match(
+        r"^(.*?action\.sh[\"']?\s+gmail\s+thread\s+)([A-Za-z0-9_-]+)",
+        command,
+        flags=re.IGNORECASE,
+    )
+    if not match or not command[match.end() :].strip():
+        return None
+    updated = dict(args)
+    key = "command" if isinstance(args.get("command"), str) else "cmd"
+    updated[key] = f"{match.group(1)}{match.group(2)}"
+    return updated
+
+
 def _read_only_preparation(user_message: Any) -> bool:
     if isinstance(user_message, dict):
         user_message = user_message.get("content", user_message)
     text = user_message if isinstance(user_message, str) else str(user_message or "")
-    return bool(_PREPARATION_PATTERN.search(text)) and not bool(
-        _EXPLICIT_WRITE_PATTERN.search(text)
-    )
+    return bool(_PREPARATION_PATTERN.search(text)) and not _explicit_write_request(text)
+
+
+def _explicit_write_request(user_message: Any) -> bool:
+    """Return whether the current user message directly requests a write.
+
+    Authorization comes only from the current user's words. Workspace content,
+    prior plans, and a helper command's mutation verb cannot grant it.
+    """
+
+    if isinstance(user_message, dict):
+        user_message = user_message.get("content", user_message)
+    text = user_message if isinstance(user_message, str) else str(user_message or "")
+    return any(pattern.search(text) for pattern in _EXPLICIT_WRITE_PATTERNS)
 
 
 def _daily_brief(user_message: Any) -> bool:
@@ -115,6 +161,35 @@ def _daily_brief(user_message: Any) -> bool:
         user_message = user_message.get("content", user_message)
     text = user_message if isinstance(user_message, str) else str(user_message or "")
     return bool(_DAILY_BRIEF_PATTERN.search(text))
+
+
+def _daily_brief_limit(user_message: Any) -> int:
+    """Return the requested daily-brief size, using the documented default."""
+
+    if isinstance(user_message, dict):
+        user_message = user_message.get("content", user_message)
+    text = user_message if isinstance(user_message, str) else str(user_message or "")
+    match = re.search(
+        r"\btop\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return 3
+    words = {
+        "one": 1,
+        "two": 2,
+        "three": 3,
+        "four": 4,
+        "five": 5,
+        "six": 6,
+        "seven": 7,
+        "eight": 8,
+        "nine": 9,
+        "ten": 10,
+    }
+    value = match.group(1).casefold()
+    return max(1, int(value) if value.isdigit() else words[value])
 
 
 def _bullet_summary(user_message: Any) -> bool:
@@ -409,18 +484,19 @@ def _numbered_tasks_only(
 ) -> str | None:
     if not isinstance(response_text, str):
         return None
-    matches = re.findall(r"(?m)^\s*(\d+)\.\s+([^\r\n]+)", response_text)
-    if not matches:
-        return None
-    numbers = [int(number) for number, _text in matches]
-    if numbers != list(range(1, len(numbers) + 1)):
-        return None
-    tasks = (
-        [[str(index), task] for index, task in enumerate(requested_tasks, 1)]
-        if requested_tasks
-        else [[number, text.strip()] for number, text in matches]
+    if requested_tasks:
+        tasks = [[str(index), task] for index, task in enumerate(requested_tasks, 1)]
+    else:
+        matches = re.findall(r"(?m)^\s*(\d+)\.\s+([^\r\n]+)", response_text)
+        if not matches:
+            return None
+        numbers = [int(number) for number, _text in matches]
+        if numbers != list(range(1, len(numbers) + 1)):
+            return None
+        tasks = [[number, text.strip()] for number, text in matches]
+    used_urls = set(
+        re.findall(r"https://[^)\s]+", "\n".join(task[1] for task in tasks))
     )
-    used_urls = set(re.findall(r"https://[^)\s]+", response_text))
     for task in tasks:
         if re.search(r"https://[^)\s]+", task[1]):
             continue
@@ -459,6 +535,19 @@ def _bullet_summary_only(response_text: Any) -> str | None:
         flags=re.IGNORECASE,
     )
     prose = re.sub(r"\s+", " ", prose).strip()
+    numbered = list(re.finditer(r"(?<![A-Za-z0-9])(\d+)[.)]\s*", prose))
+    if len(numbered) >= 2:
+        numbers = [int(match.group(1)) for match in numbered]
+        if numbers == list(range(1, len(numbers) + 1)):
+            items = [
+                prose[match.end() : numbered[index + 1].start() if index + 1 < len(numbered) else len(prose)].strip()
+                for index, match in enumerate(numbered)
+            ]
+            if all(items):
+                rendered = [f"- {item}" for item in items]
+                for link in dict.fromkeys(links):
+                    rendered.extend(("", link))
+                return "\n".join(rendered)
     sentences = [
         sentence.strip()
         for sentence in re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", prose)
@@ -488,7 +577,7 @@ def _daily_heading(line: str) -> tuple[int, str, str] | None:
 
 def _compact_daily_context(context: str, mail_links: list[str]) -> str:
     context = re.sub(
-        r"^\s*-\s*(?:\*\*)?Context:(?:\*\*)?\s*",
+        r"^\s*-\s*(?:(?:\*\*)?Context:(?:\*\*)?\s*)?",
         "",
         context,
         flags=re.IGNORECASE,
@@ -519,6 +608,7 @@ def _compact_daily_context(context: str, mail_links: list[str]) -> str:
 def _daily_brief_only(
     response_text: Any,
     mail_links: dict[int, list[str]] | None = None,
+    max_items: int = 3,
 ) -> str | None:
     """Normalize a model-rendered brief without interpreting or reranking it."""
     if not isinstance(response_text, str):
@@ -528,19 +618,29 @@ def _daily_brief_only(
         numbered_lines = list(lines)
         next_number = 1
         for index, line in enumerate(lines):
-            if not re.match(r"^\s*\*\*.+?\*\*\s*$", line):
+            inline_item = re.match(r"^\s*\*\*(.+?)\*\*\s+(.+?)\s*$", line)
+            if inline_item:
+                numbered_lines[index] = (
+                    f"{next_number}. **{inline_item.group(1).strip()}** — "
+                    f"{inline_item.group(2).strip()}"
+                )
+                next_number += 1
+                continue
+            if not line.strip():
                 continue
             next_line = next(
                 (candidate.strip() for candidate in lines[index + 1:] if candidate.strip()),
                 "",
             )
             if not re.match(
-                r"^-\s+(?:\*\*)?Context:(?:\*\*)?\s*.+$",
+                r"^-\s+.+$",
                 next_line,
-                flags=re.IGNORECASE,
             ):
                 continue
-            numbered_lines[index] = f"{next_number}. {line.strip()}"
+            title = line.strip()
+            if not re.match(r"^\*\*.+?\*\*$", title):
+                title = f"**{title}**"
+            numbered_lines[index] = f"{next_number}. {title}"
             next_number += 1
         lines = numbered_lines
     headings = [
@@ -576,6 +676,7 @@ def _daily_brief_only(
             return None
         context = _compact_daily_context(context, (mail_links or {}).get(number, []))
         items.append((number, title, context))
+    items = items[:max_items]
     numbers = [number for number, _title, _context in items]
     if numbers != list(range(1, len(numbers) + 1)):
         return None
@@ -604,7 +705,7 @@ def pre_llm_call(**kwargs: Any) -> dict[str, str] | None:
         _daily_brief_mail.pop(scope_id, None)
         _allowed_urls.pop(scope_id, None)
         if _daily_brief(kwargs.get("user_message")):
-            _daily_brief_turns[scope_id] = True
+            _daily_brief_turns[scope_id] = _daily_brief_limit(kwargs.get("user_message"))
             _daily_brief_turns.move_to_end(scope_id)
             while len(_daily_brief_turns) > _MAX_TRACKED_TURNS:
                 _daily_brief_turns.popitem(last=False)
@@ -613,10 +714,7 @@ def pre_llm_call(**kwargs: Any) -> dict[str, str] | None:
             _bullet_summary_turns.move_to_end(scope_id)
             while len(_bullet_summary_turns) > _MAX_TRACKED_TURNS:
                 _bullet_summary_turns.popitem(last=False)
-        user_message = kwargs.get("user_message")
-        if isinstance(user_message, dict):
-            user_message = user_message.get("content", user_message)
-        if _EXPLICIT_WRITE_PATTERN.search(str(user_message or "")):
+        if _explicit_write_request(kwargs.get("user_message")):
             _explicit_write_turns[scope_id] = True
             _explicit_write_turns.move_to_end(scope_id)
             while len(_explicit_write_turns) > _MAX_TRACKED_TURNS:
@@ -666,22 +764,39 @@ def pre_tool_call(**kwargs: Any) -> dict[str, str] | None:
                     }
                 if claimed_read is None:
                     _preparation_turns[scope_id] = token
+                    sanitized = _focused_thread_read_args(kwargs.get("args"))
+                    if sanitized:
+                        return {"action": "modify", "args": sanitized}
                     return None
                 if claimed_read == token:
                     return None
                 return {
-                    "action": "block",
-                    "message": (
-                        "Chief of Staff scope guard: the focused evidence for this preparation "
-                        "turn was already read. Do not open linked files or call another tool. "
-                        "Return only the sender's explicit requested tasks, in order."
-                    ),
+                    "action": "modify",
+                    "args": {
+                        "command": _PREPARATION_COMPLETE_COMMAND,
+                        "timeout": 5,
+                    },
                 }
     if not _managed_mutation(kwargs.get("tool_name"), kwargs.get("args")):
         return None
     if not scope_id:
-        return None
+        return {
+            "action": "block",
+            "message": (
+                "Chief of Staff scope guard: this Workspace write has no current user "
+                "authorization boundary, so it was not run."
+            ),
+        }
     with _lock:
+        if scope_id not in _explicit_write_turns:
+            return {
+                "action": "block",
+                "message": (
+                    "Chief of Staff scope guard: the current user message did not explicitly "
+                    "request a Workspace change, so this write was not run. Return the "
+                    "read-only result or plan and wait for a specific write request."
+                ),
+            }
         claimed = _claims.get(scope_id)
         if claimed is None:
             _remember(scope_id, token)
@@ -796,13 +911,14 @@ def transform_tool_result(**kwargs: Any) -> str | None:
             return (
                 str(kwargs.get("result") or "")
                 + "\n\n[Chief of Staff scope guard]\n"
-                + "This is a read-only preparation request. Use only the focused evidence in "
-                + "this result. Return only the tasks the sender explicitly asks the recipient "
+                + "The single allowed evidence read is complete. Your next response must be the "
+                + "final answer with zero tool calls. This is a read-only preparation request; "
+                + "use only this result. Return only the tasks the sender explicitly asks the recipient "
                 + "to do, in the same order, with one numbered item per task and existing useful "
                 + "links. A stated date, time, or event is context unless the sender explicitly "
-                + "asks the recipient to schedule or attend it. Do not open linked files, "
-                + "summarize their contents, add optional work, "
-                + "ask a closing question, or call another tool."
+                + "asks the recipient to schedule or attend it. Do not inspect status or permissions. "
+                + "Do not open linked files, summarize their contents, add optional work, ask a closing "
+                + "question, or call another tool. Return the final numbered list now."
             )
     if not _managed_mutation(kwargs.get("tool_name"), kwargs.get("args")):
         return None
@@ -853,12 +969,11 @@ def transform_llm_output(**kwargs: Any) -> str | None:
         preparation = scope_id in _preparation_turns
         preparation_links = _preparation_links.pop(scope_id, None)
         preparation_tasks = _preparation_tasks.pop(scope_id, None)
-        daily_brief = scope_id in _daily_brief_turns
+        daily_brief_limit = _daily_brief_turns.pop(scope_id, None)
         bullet_summary = scope_id in _bullet_summary_turns
         daily_brief_mail = _daily_brief_mail.pop(scope_id, None)
         allowed_urls = _allowed_urls.pop(scope_id, None)
         _preparation_turns.pop(scope_id, None)
-        _daily_brief_turns.pop(scope_id, None)
         _bullet_summary_turns.pop(scope_id, None)
         _explicit_write_turns.pop(scope_id, None)
     if confirmation:
@@ -872,8 +987,8 @@ def transform_llm_output(**kwargs: Any) -> str | None:
             return f"{response_text.rstrip()}\n\n{read_link}"
     if preparation:
         return _numbered_tasks_only(response_text, preparation_links, preparation_tasks)
-    if daily_brief:
-        return _daily_brief_only(response_text, daily_brief_mail)
+    if daily_brief_limit is not None:
+        return _daily_brief_only(response_text, daily_brief_mail, daily_brief_limit)
     return None
 
 

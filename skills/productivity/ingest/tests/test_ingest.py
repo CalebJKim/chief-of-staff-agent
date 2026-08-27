@@ -536,6 +536,21 @@ class IngestTests(unittest.TestCase):
             "The review has moved.\n\nThanks",
             actions.normalize_draft_body("The review has moved.\nThanks", "Thanks"),
         )
+        self.assertEqual(
+            "Hi Priya,\n\nThe review has moved.\n\nThanks",
+            actions.normalize_draft_body(
+                "Hi Priya,\n\n\nThe review has moved.\n\n\nThanks",
+                "Thanks",
+            ),
+        )
+        self.assertEqual(
+            "Hi Priya,\n\nThe review has moved.\n\nThanks",
+            actions.normalize_draft_body(
+                "Hi Priya,\n\nThe review has moved.\n\nThanks\nDan",
+                "Thanks",
+                exact_final=True,
+            ),
+        )
 
     def test_reply_draft_rejects_draft_or_self_authored_source_before_writing(self):
         class Request:
