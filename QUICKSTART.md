@@ -23,6 +23,9 @@ python install.py --hermes-home "$HERMES_HOME"
 hermes tools enable skills terminal --platform cli
 ```
 
+The installer keeps only `chief-of-staff` and `ingest` enabled in the target
+profile's skill catalog. Other installed skills remain installed but disabled.
+
 If Hermes already has a customized `SOUL.md`, the installer preserves it. Copy the chief-of-staff routing paragraph from this repository into the existing Soul manually, or rerun with `--overwrite-soul` if replacement is intended.
 
 ## 3. Connect your own Google account
@@ -71,9 +74,10 @@ Say:
 
 The agent will use the Gmail, Calendar, and Drive data from the account you connected.
 
-## Optional: dedicated lightweight profile
+## Dedicated lightweight profile
 
-Keep only the `skills` and `terminal` toolsets enabled, and disable unrelated skills with:
+The installer disables unrelated skills automatically. Keep only the `skills`
+and `terminal` toolsets enabled; use these commands to review the configuration:
 
 ```bash
 hermes tools

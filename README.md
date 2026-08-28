@@ -38,10 +38,10 @@ hermes tools list --platform cli
 ```
 
 The installer uses `HERMES_HOME` when set and otherwise detects the normal
-Hermes profile. It preserves an existing `SOUL.md` and adds only the
-chief-of-staff routing instructions. Configure the user name in the Soul if
-desired. Disable unrelated tools and skills with `hermes tools` and
-`hermes skills config`; do not disable `skills` or `terminal`.
+Hermes profile. It preserves an existing `SOUL.md`, adds only the chief-of-staff
+routing instructions, and keeps only `chief-of-staff` and `ingest` enabled in
+the target profile's skill catalog. Configure the user name in the Soul if
+desired. Keep the `skills` and `terminal` toolsets enabled.
 
 ## Connect Google Workspace
 

@@ -6,9 +6,9 @@ platform_toolsets:
     - skills
     - terminal
 
-# Optional: keep the visible skill catalog minimal for a dedicated profile.
-# Configure this interactively with `hermes skills config`; do not copy a
-# machine-specific disabled list into another profile.
+# install.py populates skills.disabled from the target machine's installed
+# catalog, keeping only chief-of-staff and ingest enabled. Do not copy that
+# generated machine-specific list into this portable example.
 skills:
   creation_nudge_interval: 15
 
