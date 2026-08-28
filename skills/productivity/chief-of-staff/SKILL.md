@@ -29,7 +29,7 @@ elif [ -n "${LOCALAPPDATA:-}" ]; then
 else
   COS_HOME="$HOME/.hermes"
 fi
-PYTHON="$(command -v python3 || command -v python)"
+if [ -f "$COS_HOME/hermes-agent/venv/Scripts/python.exe" ]; then PYTHON="$COS_HOME/hermes-agent/venv/Scripts/python.exe"; elif [ -x "$COS_HOME/hermes-agent/venv/bin/python" ]; then PYTHON="$COS_HOME/hermes-agent/venv/bin/python"; else PYTHON="$(command -v python3 || command -v python)"; fi
 ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
 "$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py" && "$PYTHON" "$COS_HOME/skills/productivity/chief-of-staff/scripts/brief.py" --max-meetings 10 --max-mail 8 --max-files 8 --max-chars 9000
 ```
@@ -51,6 +51,8 @@ Use only the compact JSON printed by `brief.py`.
 ## Initial Reply
 
 Under 220 words. No preamble, inbox inventory, generic advice, or fourth priority.
+Show relevant links inline in the response. Never open or launch a link, browser, or Chrome window unless the user explicitly asks you to.
+Never show raw draft, message, thread, file, event, document, spreadsheet, or presentation IDs in user-facing replies. Use human-readable names and link labels; IDs are for internal tool calls only.
 
 **Top 3 today**
 [Name] —
@@ -71,8 +73,9 @@ Use the focused action helper; do not rerun broad ingest unless data is stale.
 
 ```bash
 if [ -n "${HERMES_HOME:-}" ]; then COS_HOME="$HERMES_HOME"; elif [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="$LOCALAPPDATA/hermes"; else COS_HOME="$HOME/.hermes"; fi
-PYTHON="$(command -v python3 || command -v python)"
+if [ -f "$COS_HOME/hermes-agent/venv/Scripts/python.exe" ]; then PYTHON="$COS_HOME/hermes-agent/venv/Scripts/python.exe"; elif [ -x "$COS_HOME/hermes-agent/venv/bin/python" ]; then PYTHON="$COS_HOME/hermes-agent/venv/bin/python"; else PYTHON="$(command -v python3 || command -v python)"; fi
 ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
+"$PYTHON" "$ACTION" gmail search 'name or project terms' --max 5
 "$PYTHON" "$ACTION" gmail thread THREAD_ID
 "$PYTHON" "$ACTION" gmail draft --reply-to-message MESSAGE_ID --body BODY
 "$PYTHON" "$ACTION" drive search 'project or deck terms'
@@ -81,20 +84,22 @@ ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
 "$PYTHON" "$ACTION" slides get PRESENTATION_ID
 ```
 
-- “What slides?” → derive search terms from the chosen meeting/project, search Drive, inspect only plausible candidates, then give the direct deck URL and exact proposed changes. Do not assume the newest deck is correct.
-- “Draft follow-ups” → read the relevant thread first; create Gmail drafts, never send, and return draft IDs.
-- “Update the tracker/doc/deck” → show the exact proposed edit first. After approval, make one `sheets update-lanes` call containing all lane updates, then read back once. This helper preserves Lane/PIC, rejects duplicate lanes, and validates Status. Status must be exactly `On track`, `In review`, `Awaiting update`, `Blocked`, or `Complete`. Never claim a deck/doc was edited unless that artifact was actually written. In the completion report, list each updated lane once and do not ask to update a lane you just updated.
+- “What slides?” → derive search terms from the chosen meeting/project, search Drive, inspect only plausible candidates, then give a human-readable inline link to the deck and the exact proposed changes. Do not assume the newest deck is correct.
+- “Draft follow-ups” → use an existing verified thread or recipient when available. Otherwise run one bounded `gmail search`, then read the relevant thread before drafting. If no verified recipient is found, say so instead of guessing or retrying. Create Gmail drafts, never send, and confirm that each draft was saved without displaying its ID. End every draft body with a final standalone line exactly `Thanks`—no comma, name, placeholder, or text after it.
+- “Update the tracker/doc/deck” → show the exact proposed edit first. After approval, make one `sheets update-lanes` call containing all lane updates, passing its JSON through standard input with `--updates-file -` so normal punctuation cannot break shell quoting; then read back once. This helper preserves Lane/PIC, rejects duplicate lanes, and validates Status. Status must be exactly `On track`, `In review`, `Awaiting update`, `Blocked`, or `Complete`. Never claim a deck/doc was edited unless that artifact was actually written. In the completion report, list each updated lane once and do not ask to update a lane you just updated.
 - For unsupported operations, load the full Google Workspace skill only then.
 
 ## Guarded Writes
 
 ```bash
 if [ -n "${HERMES_HOME:-}" ]; then COS_HOME="$HERMES_HOME"; elif [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="$LOCALAPPDATA/hermes"; else COS_HOME="$HOME/.hermes"; fi
-PYTHON="$(command -v python3 || command -v python)"
+if [ -f "$COS_HOME/hermes-agent/venv/Scripts/python.exe" ]; then PYTHON="$COS_HOME/hermes-agent/venv/Scripts/python.exe"; elif [ -x "$COS_HOME/hermes-agent/venv/bin/python" ]; then PYTHON="$COS_HOME/hermes-agent/venv/bin/python"; else PYTHON="$(command -v python3 || command -v python)"; fi
 ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
 "$PYTHON" "$ACTION" docs append DOCUMENT_ID --text TEXT --confirm
 "$PYTHON" "$ACTION" docs replace-text DOCUMENT_ID --find OLD --replace NEW --confirm
-"$PYTHON" "$ACTION" sheets update-lanes SPREADSHEET_ID --updates '[{"lane":"Exec Review deck","status":"In review","latest":"...","next":"...","due":"...","blocker":"...","evidence":"..."}]' --confirm
+"$PYTHON" "$ACTION" sheets update-lanes SPREADSHEET_ID --updates-file - --confirm <<'JSON'
+[{"lane":"LANE_NAME","status":"In review","latest":"Normal text, including apostrophes.","next":"...","due":"...","blocker":"...","evidence":"..."}]
+JSON
 "$PYTHON" "$ACTION" slides replace-text PRESENTATION_ID --find OLD --replace NEW --confirm
 ```
 

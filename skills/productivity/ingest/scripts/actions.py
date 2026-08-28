@@ -9,6 +9,7 @@ import os
 import re
 import sys
 from email.message import EmailMessage
+from email.utils import getaddresses
 from pathlib import Path
 from typing import Any
 
@@ -117,6 +118,39 @@ def gmail_thread(args: argparse.Namespace) -> None:
     emit({"thread_id": args.thread_id, "messages": output})
 
 
+def gmail_search(args: argparse.Namespace) -> None:
+    """Return a small metadata-only set of Gmail matches for targeted follow-up."""
+    api = service("gmail", "v1")
+    limit = min(max(args.max, 1), 10)
+    refs = api.users().messages().list(userId="me", q=args.query, maxResults=limit).execute().get("messages", [])
+    matches = []
+    for ref in refs[:limit]:
+        msg = api.users().messages().get(
+            userId="me",
+            id=ref["id"],
+            format="metadata",
+            metadataHeaders=["From", "To", "Cc", "Reply-To", "Subject", "Date"],
+        ).execute()
+        hdr = headers(msg.get("payload", {}))
+        matches.append({
+            "id": msg.get("id"),
+            "thread_id": msg.get("threadId"),
+            "from": hdr.get("from", ""),
+            "to": hdr.get("to", ""),
+            "cc": hdr.get("cc", ""),
+            "reply_to": hdr.get("reply-to", ""),
+            "subject": hdr.get("subject", ""),
+            "date": hdr.get("date", ""),
+        })
+    emit({"query": args.query, "matches": matches})
+
+
+def validate_recipient_header(value: str, field: str) -> None:
+    addresses = [address.strip() for _name, address in getaddresses([value])]
+    if not addresses or any("@" not in address or not all(address.rsplit("@", 1)) for address in addresses):
+        raise RuntimeError(f"{field} must include a complete email address; search Gmail or reply to a verified message instead")
+
+
 def gmail_draft(args: argparse.Namespace) -> None:
     api = service("gmail", "v1")
     message = EmailMessage()
@@ -143,6 +177,9 @@ def gmail_draft(args: argparse.Namespace) -> None:
         thread_id = original.get("threadId", thread_id)
     if not to or not subject:
         raise RuntimeError("A draft needs recipients and a subject")
+    validate_recipient_header(to, "To")
+    if args.cc:
+        validate_recipient_header(args.cc, "Cc")
     message["To"] = to
     if args.cc:
         message["Cc"] = args.cc
@@ -236,10 +273,21 @@ def sheets_update(args: argparse.Namespace) -> None:
 TRACKER_STATUSES = {"On track", "In review", "Awaiting update", "Blocked", "Complete"}
 
 
+def _load_tracker_updates(args: argparse.Namespace) -> Any:
+    """Load tracker updates without requiring JSON to be shell-escaped."""
+    if args.updates is not None:
+        payload = args.updates
+    elif args.updates_file == "-":
+        payload = sys.stdin.read()
+    else:
+        payload = Path(args.updates_file).read_text(encoding="utf-8")
+    return json.loads(payload)
+
+
 def sheets_update_lanes(args: argparse.Namespace) -> None:
     """Update tracker lanes by name with validated, named fields."""
     require_confirm(args, "tracker lane update")
-    updates = json.loads(args.updates)
+    updates = _load_tracker_updates(args)
     if not isinstance(updates, list) or not updates:
         raise RuntimeError("--updates must be a non-empty JSON array")
     lanes = [str(item.get("lane", "")).strip() for item in updates if isinstance(item, dict)]
@@ -341,6 +389,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--max-messages", type=int, default=12)
     p.add_argument("--max-chars", type=int, default=8000)
     p.set_defaults(func=gmail_thread)
+    p = gmail.add_parser("search")
+    p.add_argument("query")
+    p.add_argument("--max", type=int, default=5)
+    p.set_defaults(func=gmail_search)
     p = gmail.add_parser("draft")
     p.add_argument("--to", default="")
     p.add_argument("--cc", default="")
@@ -389,7 +441,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = sheets.add_parser("update-lanes")
     p.add_argument("spreadsheet_id")
     p.add_argument("--sheet", default="Campaign Lanes")
-    p.add_argument("--updates", required=True, help="JSON array of named lane updates")
+    updates_input = p.add_mutually_exclusive_group(required=True)
+    updates_input.add_argument("--updates", help="JSON array of named lane updates")
+    updates_input.add_argument("--updates-file", help="JSON file path, or - to read JSON from standard input")
     p.add_argument("--confirm", action="store_true")
     p.set_defaults(func=sheets_update_lanes)
 

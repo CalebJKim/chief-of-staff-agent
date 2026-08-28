@@ -21,6 +21,14 @@ def replace_tokens(text: str, replacements: dict[str, str]) -> str:
 def reset_sheet_baseline(sheets, state: dict, evidence: dict[str, str], refreshed: str) -> None:
     replacements = {"DECK_URL": state["slides"]["url"], "DOC_URL": state["doc"]["url"], "SHEET_URL": state["sheet"]["url"], "EMAIL_PRIYA": evidence["priya"], "EMAIL_AISHA": evidence["aisha"]}
     rows = [[replace_tokens(cell, replacements) for cell in row] for row in PRE_EMAIL_ROWS]
-    sheets.spreadsheets().values().update(spreadsheetId=state["sheet"]["id"], range="'Campaign Lanes'!A7:J14", valueInputOption="USER_ENTERED", body={"values": rows}).execute()
     summary = [["Awaiting updates", "4", "", "Blocked", "2", "", "Active lanes", "8", "Last refreshed", refreshed]]
-    sheets.spreadsheets().values().update(spreadsheetId=state["sheet"]["id"], range="'Campaign Lanes'!A3:J3", valueInputOption="USER_ENTERED", body={"values": summary}).execute()
+    sheets.spreadsheets().values().batchUpdate(
+        spreadsheetId=state["sheet"]["id"],
+        body={
+            "valueInputOption": "USER_ENTERED",
+            "data": [
+                {"range": "'Campaign Lanes'!A7:J14", "values": rows},
+                {"range": "'Campaign Lanes'!A3:J3", "values": summary},
+            ],
+        },
+    ).execute()

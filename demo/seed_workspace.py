@@ -12,6 +12,7 @@ from datetime import date, datetime, timedelta
 from email.message import EmailMessage
 from email.utils import format_datetime
 from pathlib import Path
+from typing import Any
 from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,8 +27,10 @@ TZ_NAME = os.environ.get("CHIEF_OF_STAFF_WORKSPACE_TZ", "America/Los_Angeles")
 STATUS_VALUES = ["On track", "In review", "Awaiting update", "Blocked", "Complete"]
 MEANINGFUL_EMAIL_COUNT = 6
 BACKGROUND_EMAIL_COUNT = 70
+CONTACT_EMAIL_COUNT = 2
 EMAIL_REFERENCE_HOUR = 13
 EMAIL_SPACING_MINUTES = 2
+BATCH_SIZE = 50
 
 BACKGROUND_IDENTITIES = [
     ("Amara", "Okafor"), ("Aarav", "Shah"), ("Sofia", "Alvarez"), ("Liam", "Carter"),
@@ -107,6 +110,32 @@ def services():
     }
 
 
+def execute_batched(api: Any, requests: list[Any], *, ignore_errors: bool = False) -> list[Any]:
+    """Execute independent Google API requests in small HTTP batches."""
+    results: list[Any] = [None] * len(requests)
+    failures: list[tuple[int, Exception]] = []
+
+    for offset in range(0, len(requests), BATCH_SIZE):
+        batch = api.new_batch_http_request()
+
+        def callback(request_id: str, response: Any, exception: Exception | None) -> None:
+            index = int(request_id)
+            if exception is not None:
+                if not ignore_errors:
+                    failures.append((index, exception))
+            else:
+                results[index] = response
+
+        for index in range(offset, min(offset + BATCH_SIZE, len(requests))):
+            batch.add(requests[index], callback=callback, request_id=str(index))
+        batch.execute()
+
+    if failures:
+        index, error = failures[0]
+        raise RuntimeError(f"Google batch request {index + 1} failed: {error}")
+    return results
+
+
 def move_to_folder(drive, file_id: str, folder_id: str) -> None:
     parents = drive.files().get(fileId=file_id, fields="parents").execute().get("parents", [])
     drive.files().update(
@@ -163,7 +192,7 @@ def background_email_specs() -> list[tuple[str, str, str]]:
     return specs
 
 
-def import_mail(
+def mail_import_request(
     gmail,
     account: str,
     sender: str,
@@ -174,7 +203,7 @@ def import_mail(
     seed_run_id: str,
     *,
     important: bool,
-) -> dict:
+) -> Any:
     message = EmailMessage()
     message["From"] = sender
     message["To"] = account
@@ -186,8 +215,7 @@ def import_mail(
     labels = ["INBOX", "UNREAD"]
     if important:
         labels.append("IMPORTANT")
-    result = gmail.users().messages().import_(userId="me", body={"raw": raw, "labelIds": labels}, internalDateSource="dateHeader", neverMarkSpam=True, processForCalendar=False).execute()
-    return {"id": result["id"], "thread_id": result.get("threadId", result["id"]), "url": f"https://mail.google.com/mail/u/0/#all/{result.get('threadId', result['id'])}"}
+    return gmail.users().messages().import_(userId="me", body={"raw": raw, "labelIds": labels}, internalDateSource="dateHeader", neverMarkSpam=True, processForCalendar=False)
 
 
 def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str) -> tuple[list[dict], dict[str, str]]:
@@ -201,11 +229,15 @@ def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str) -> tuple[l
         ("Elena Park <elena.park@nvidia.example>", "Agent Security PRD needs to reach Engineering today", f"Please finish and send the Agent Security PRD to Engineering today. Protect a focused hour for the final pass. You can skip the optional launch storyboard session; notes will be posted afterward.\n\nCampaign plan: {doc_url}"),
     ]
     background = background_email_specs()
-    data = [(*item, True) for item in meaningful] + [(*item, False) for item in background]
+    contacts = [
+        ("Grant Walker <grant.walker@nvidia.example>", "Retail demo coordination contact", "Hi,\n\nYou can reach me at this address for IFA retail demo coordination.\n\nThanks\nGrant"),
+        ("Rafael Costa <rafael.costa@nvidia.example>", "Social rollout coordination contact", "Hi,\n\nYou can reach me at this address for RTX Spark social rollout coordination.\n\nThanks\nRafael"),
+    ]
+    data = [(*item, True) for item in meaningful] + [(*item, False) for item in background + contacts]
     times = seeded_email_times(len(data))
     seed_run_id = uuid.uuid4().hex
-    created = [
-        import_mail(
+    requests = [
+        mail_import_request(
             gmail,
             account,
             sender,
@@ -217,6 +249,11 @@ def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str) -> tuple[l
             important=important,
         )
         for index, (sender, subject, body, important) in enumerate(data, 1)
+    ]
+    results = execute_batched(gmail, requests)
+    created = [
+        {"id": result["id"], "thread_id": result.get("threadId", result["id"]), "url": f"https://mail.google.com/mail/u/0/#all/{result.get('threadId', result['id'])}"}
+        for result in results
     ]
     evidence = {"elena": created[0]["url"], "mike": created[1]["url"], "aisha": created[2]["url"], "daniel": created[3]["url"], "priya": created[4]["url"], "prd": created[5]["url"]}
     return created, evidence
@@ -243,14 +280,16 @@ EVENTS = [
 
 
 def create_calendar(calendar, start_day: date, deck_url: str, doc_url: str, sheet_url: str) -> list[dict]:
-    created = []
+    requests = []
     for offset in range(5):
         day = start_day + timedelta(days=offset)
         for begin, end, title, description in EVENTS:
             link = f"\nDeck: {deck_url}" if title.startswith("RTX Spark Exec Review") else f"\nNotes: {doc_url}" if title.startswith("Launch storyboard") else f"\nTracker: {sheet_url}" if "DRI" in title else ""
-            result = calendar.events().insert(calendarId="primary", body={"summary": title, "description": f"{description}{link}\n[{MARKER}]", "start": {"dateTime": iso(day, begin), "timeZone": TZ_NAME}, "end": {"dateTime": iso(day, end), "timeZone": TZ_NAME}}, sendUpdates="none").execute()
-            created.append({"id": result["id"], "url": result.get("htmlLink", "")})
-    return created
+            requests.append(calendar.events().insert(calendarId="primary", body={"summary": title, "description": f"{description}{link}\n[{MARKER}]", "start": {"dateTime": iso(day, begin), "timeZone": TZ_NAME}, "end": {"dateTime": iso(day, end), "timeZone": TZ_NAME}}, sendUpdates="none"))
+    return [
+        {"id": result["id"], "url": result.get("htmlLink", "")}
+        for result in execute_batched(calendar, requests)
+    ]
 
 
 def seeded_gmail_message_ids(gmail) -> set[str]:
@@ -272,7 +311,26 @@ def seeded_gmail_message_ids(gmail) -> set[str]:
             return message_ids
 
 
-def remove_dynamic_items(state: dict, svc: dict) -> None:
+def clear_all_drafts(gmail) -> int:
+    draft_ids = []
+    page_token = None
+    while True:
+        kwargs = {"userId": "me", "maxResults": 500}
+        if page_token:
+            kwargs["pageToken"] = page_token
+        page = gmail.users().drafts().list(**kwargs).execute()
+        draft_ids.extend(item["id"] for item in page.get("drafts", []) if item.get("id"))
+        page_token = page.get("nextPageToken")
+        if not page_token:
+            break
+    requests = [gmail.users().drafts().delete(userId="me", id=draft_id) for draft_id in draft_ids]
+    execute_batched(gmail, requests)
+    return len(draft_ids)
+
+
+def remove_dynamic_items(state: dict, svc: dict, *, clear_drafts: bool = False) -> None:
+    if clear_drafts:
+        clear_all_drafts(svc["gmail"])
     email_ids = {item.get("id") for item in state.get("emails", []) if item.get("id")}
     email_ids.update(seeded_gmail_message_ids(svc["gmail"]))
     if email_ids:
@@ -287,10 +345,12 @@ def remove_dynamic_items(state: dict, svc: dict) -> None:
     except Exception:
         found_events = []
     event_ids = {item.get("id") for item in state.get("events", [])} | {item.get("id") for item in found_events if MARKER in (item.get("description") or "")}
-    for event_id in event_ids:
-        if not event_id: continue
-        try: svc["calendar"].events().delete(calendarId="primary", eventId=event_id, sendUpdates="none").execute()
-        except Exception: pass
+    delete_requests = [
+        svc["calendar"].events().delete(calendarId="primary", eventId=event_id, sendUpdates="none")
+        for event_id in event_ids
+        if event_id
+    ]
+    execute_batched(svc["calendar"], delete_requests, ignore_errors=True)
 
 
 def cleanup(state: dict) -> None:
@@ -322,7 +382,7 @@ def seed(week_of: date) -> dict:
 
 def reset_in_place(state: dict, week_of: date) -> dict:
     svc = services()
-    remove_dynamic_items(state, svc)
+    remove_dynamic_items(state, svc, clear_drafts=True)
     state["emails"], evidence = create_emails(svc["gmail"], state["slides"]["url"], state["sheet"]["url"], state["doc"]["url"])
     reset_sheet_baseline(svc["sheets"], state, evidence, local_now().date().isoformat())
     reset_deck_baseline(svc["slides"], state["slides"]["id"])
