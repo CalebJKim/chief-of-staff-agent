@@ -152,6 +152,7 @@ def validate_recipient_header(value: str, field: str) -> None:
 
 
 def gmail_draft(args: argparse.Namespace) -> None:
+    require_confirm(args, "Gmail draft creation")
     api = service("gmail", "v1")
     message = EmailMessage()
     to = args.to
@@ -400,6 +401,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--body", required=True)
     p.add_argument("--thread-id", default="")
     p.add_argument("--reply-to-message", default="", help="Build a correctly threaded reply draft")
+    p.add_argument("--confirm", action="store_true")
     p.set_defaults(func=gmail_draft)
 
     drive = groups.add_parser("drive").add_subparsers(dest="action", required=True)

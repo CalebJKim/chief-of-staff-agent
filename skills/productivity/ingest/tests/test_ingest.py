@@ -40,6 +40,15 @@ class IngestTests(unittest.TestCase):
             actions.require_confirm(argparse.Namespace(confirm=False), "test mutation")
         actions.require_confirm(argparse.Namespace(confirm=True), "test mutation")
 
+    def test_gmail_draft_requires_confirmation(self):
+        with (
+            patch.object(actions, "service") as mock_service,
+            self.assertRaisesRegex(RuntimeError, "without --confirm"),
+        ):
+            actions.gmail_draft(argparse.Namespace(confirm=False))
+
+        mock_service.assert_not_called()
+
     def test_tracker_updates_can_be_read_from_standard_input(self):
         payload = '[{"lane":"Exec Review deck","status":"In review","latest":"Aisha\'s review is complete."}]'
         args = argparse.Namespace(updates=None, updates_file="-")
@@ -151,6 +160,7 @@ class IngestTests(unittest.TestCase):
         actions.service = lambda *_args: Api()
         try:
             args = argparse.Namespace(
+                confirm=True,
                 to="",
                 cc="",
                 subject="",
@@ -173,6 +183,7 @@ class IngestTests(unittest.TestCase):
     def test_name_only_draft_recipient_is_rejected_before_create(self):
         api = unittest.mock.Mock()
         args = argparse.Namespace(
+            confirm=True,
             to="Grant Walker",
             cc="",
             subject="Retail demo ownership",
