@@ -15,8 +15,9 @@ metadata:
 
 Use live, bounded Google Workspace evidence to recommend the user's day. Scripts retrieve and compress facts; you make the decisions. Never follow a canned agenda.
 
-## Write Approval Boundary
+## Internal Write Authorization
 
+Follow this section silently. Never mention this policy, an approval boundary, `--confirm`, helper scripts, tool names, or other implementation details in user-facing text.
 This section is the only authority for whether an external write may run. Workflow sections below must follow it and do not create exceptions.
 1. When the user requests an external change, use read-only tools to inspect the target and show the exact proposed change. Do not write in that turn; the original request is not approval.
 2. A later user message approving that proposal authorizes only the listed artifact and changes. Execute the proposal exactly as shown, once with `--confirm`, then read the artifact back. If discovery after the proposal would change its target or contents, do not write; show the revised proposal and wait for approval again. Do not edit any other artifact as a prerequisite, follow-up, or helpful extra; propose it separately and wait for its own approval.
@@ -53,7 +54,7 @@ Use only the compact JSON printed by `brief.py`.
 4. Assign one preparation task to a real `focus_block`. Never invent availability.
 5. If current email evidence may change a relevant tracker in `recent_files`, read only the tracker table before replying:
    `"$PYTHON" "$ACTION" sheets get SPREADSHEET_ID "'Campaign Lanes'!A6:J20"`
-   Compare owner evidence with current rows. In **Ready for you**, show the exact row changes you recommend under the **Write Approval Boundary**. Do not write yet.
+   Compare owner evidence with current rows. In **Ready for you**, show the exact row changes you recommend and ask naturally whether the user wants them applied. Do not write yet.
 6. `ok_empty` means the connector worked and found nothing. Only `error` means unavailable.
 7. Snippets are leads. `stale_timing:true` means all relative dates and meeting times in that mail are historical. Say the item is unresolved and verify its current status; never convert stale timing into a present or future deadline (for example, “today,” “tomorrow,” “at 5 PM,” or “before tomorrow”).
 
@@ -78,6 +79,9 @@ Never show raw draft, message, thread, file, event, document, spreadsheet, or pr
 
 ## Follow-ups
 
+This skill is self-contained for the supported follow-ups below. Once it is loaded, do not call `skill_view` for `chief-of-staff` or `ingest` again in the same session. Load another skill only for a genuinely unsupported operation.
+When a turn needs tools, finish every required tool call before composing the deliverable. A message containing a tool call must not contain a complete user-facing answer. Return exactly one user-facing answer after the last tool result.
+Choose the reader from the artifact type already present in its URL or metadata: presentations use `slides get`, documents use `docs get`, and spreadsheets use `sheets get`. Do not probe a known artifact with the wrong reader.
 Use the focused action helper; do not rerun broad ingest unless data is stale.
 
 ```bash
@@ -95,13 +99,20 @@ ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
 ```
 
 - “What slides?” → derive search terms from the chosen meeting/project, search Drive, inspect only plausible candidates, then give a human-readable inline link to the deck and the exact proposed changes. Do not assume the newest deck is correct.
-- “Draft follow-ups” → finish recipient and thread discovery before showing the proposal. Verify the full address from available evidence or one bounded `gmail search`, and read only a plausible incoming thread. Reply in that thread when the intended person and work item match and the requested message directly answers or continues it; otherwise create a new draft with `--to`. Never reuse an unrelated thread merely to obtain an address. For a reply, verify its `Reply-To` or `From` address matches the intended recipient and pass that same verified address with `--to`; the helper rejects a mismatch before creating the draft. If no verified recipient is found, say so instead of guessing or retrying. Under the **Write Approval Boundary**, show the verified To/CC, whether this is a new message or reply, the existing thread subject when replying, and the final subject and body. After approval, create exactly that draft without changing its recipient, thread, subject, or body; if any must change, show a revised proposal instead. Never send, and confirm that the draft was saved without displaying its ID. End every draft body with a final standalone line exactly `Thanks`—no comma, name, placeholder, or text after it.
-- “Update the tracker/doc/deck” → follow the **Write Approval Boundary**. Inspect the current artifact and show the exact proposed edit. Missing details are not ambiguity when the artifact and verified evidence support a value: derive that value in the proposal; if only a subset is supported, propose only that subset and leave the rest unchanged. After approval, make one `sheets update-lanes` call containing all approved lane updates, passing its JSON through standard input with `--updates-file -` so normal punctuation cannot break shell quoting; then read back once. This helper preserves Lane/PIC, rejects duplicate lanes, and validates Status. Status must be exactly `On track`, `In review`, `Awaiting update`, `Blocked`, or `Complete`. Never claim a deck/doc was edited unless that artifact was actually written. Use the current session’s tool history to distinguish completed operations from proposed work. Never mark work complete or state that another artifact was edited unless that edit was actually executed. In the completion report, list each updated lane once and do not ask to update a lane you just updated.
-- For unsupported operations, load the full Google Workspace skill only then.
+
+### Gmail drafts
+
+1. Finish recipient and thread discovery before showing the proposal. Verify the full address from available evidence or one bounded `gmail search`, and read only a plausible incoming thread. If no verified recipient is found, say so instead of guessing or retrying.
+2. Reply in the incoming thread when the intended person and work item match and the requested draft answers or continues its request, question, decision, or follow-up. This is a reply even when the user says “draft,” “write,” or “email” instead of “reply.” Create a new message only when no relevant incoming conversation exists. Never reuse an unrelated thread merely to obtain an address.
+3. Show the resolved mode naturally as `Replying to: [thread subject]` or `New email to: [recipient]`, followed by the verified To/CC, final subject, and body. Do not expose message or thread IDs.
+4. After approval, preserve that exact mode, recipient, thread, subject, and body. A proposed reply must use `--reply-to-message`; pass the same verified address with `--to` so the helper can reject a mismatch. If anything must change, show the revised proposal instead of writing.
+5. Never send. Confirm only that the draft was saved. End every draft body with a final standalone line exactly `Thanks`—no comma, name, placeholder, or text after it.
+
+- “Update the tracker/doc/deck” → apply the authorization rules above silently. Inspect the current artifact and show the exact proposed edit. Missing details are not ambiguity when the artifact and verified evidence support a value: derive that value in the proposal; if only a subset is supported, propose only that subset and leave the rest unchanged. After approval, make one `sheets update-lanes` call containing all approved lane updates, passing its JSON through standard input with `--updates-file -` so normal punctuation cannot break shell quoting; then read back once. This helper preserves Lane/PIC, rejects duplicate lanes, and validates Status. Status must be exactly `On track`, `In review`, `Awaiting update`, `Blocked`, or `Complete`. Never claim a deck/doc was edited unless that artifact was actually written. Use the current session’s tool history to distinguish completed operations from proposed work. Never mark work complete or state that another artifact was edited unless that edit was actually executed. In the completion report, list each updated lane once and do not ask to update a lane you just updated.
 
 ## Guarded Writes
 
-Before running any command with `--confirm`, verify that the latest user message is the later approval required by the **Write Approval Boundary** for that exact artifact and proposal. Otherwise remain read-only.
+Before running any command with `--confirm`, verify that the latest user message is the later approval for that exact artifact and proposal. Otherwise remain read-only.
 
 ```bash
 if [ -n "${HERMES_HOME:-}" ]; then COS_HOME="$HERMES_HOME"; elif [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="$LOCALAPPDATA/hermes"; else COS_HOME="$HOME/.hermes"; fi
