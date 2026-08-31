@@ -32,25 +32,23 @@ PYTHON="$(command -v python3 || command -v python)"
 ## Install into a dedicated Hermes profile
 
 ```bash
-hermes profile create chief-of-staff --clone-all --clone-from default
-export HERMES_HOME="$LOCALAPPDATA/hermes/profiles/chief-of-staff"  # Windows Git Bash
 "$PYTHON" install.py
-hermes profile use chief-of-staff
 hermes tools enable skills terminal --platform cli
 hermes tools list --platform cli
 ```
 
-Create the profile once; skip `profile create` when refreshing an existing
-installation. On Linux/macOS, use
-`HERMES_HOME="$HOME/.hermes/profiles/chief-of-staff"`. The installer preserves
-the profile's working model and provider configuration, preserves an existing
-`SOUL.md`, adds only the chief-of-staff routing instructions, and keeps only
-`chief-of-staff` and `ingest` enabled in that profile's skill catalog. Configure
-the user name in the Soul if desired. Keep the `skills` and `terminal` toolsets
-enabled. Google credentials, seed state, and sessions remain isolated from the
-default profile. Save the same `HERMES_HOME` value in the dedicated profile's
-`.env` so Hermes Desktop terminal actions continue to resolve profile-scoped
-skills, credentials, and workspace state after the setup shell closes.
+The installer creates `chief-of-staff` from `default` when it is missing,
+refreshes it when it already exists, saves its `HERMES_HOME`, and selects it as
+the active Hermes Desktop profile. Refreshing preserves the profile's working
+model/provider configuration, Google credentials, seed state, sessions, and an
+existing `SOUL.md`; only the two demo skills and their routing/configuration are
+refreshed. The profile keeps only `chief-of-staff` and `ingest` enabled in its
+skill catalog. Configure the user name in the Soul if desired, and keep the
+`skills` and `terminal` toolsets enabled.
+
+`--hermes-home PATH` is reserved for an explicit isolated installation such as
+the packaged Windows demo. It installs into that path without creating or
+selecting a named Hermes Desktop profile.
 
 ## Connect Google Workspace
 
