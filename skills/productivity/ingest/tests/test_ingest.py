@@ -161,7 +161,7 @@ class IngestTests(unittest.TestCase):
         try:
             args = argparse.Namespace(
                 confirm=True,
-                to="",
+                to="Person <person@example.com>",
                 cc="",
                 subject="",
                 body="Thanks — I will update it.",
@@ -179,6 +179,47 @@ class IngestTests(unittest.TestCase):
         self.assertEqual(parsed["To"], "Person <person@example.com>")
         self.assertEqual(parsed["Subject"], "Re: Project update")
         self.assertEqual(parsed["In-Reply-To"], "<original@example.com>")
+
+    def test_reply_draft_requires_verified_expected_recipient(self):
+        with (
+            patch.object(actions, "service") as mock_service,
+            self.assertRaisesRegex(RuntimeError, "require --to"),
+        ):
+            actions.gmail_draft(argparse.Namespace(
+                confirm=True,
+                to="",
+                cc="",
+                subject="",
+                body="Can you share an update?\n\nThanks",
+                thread_id="",
+                reply_to_message="message-0",
+            ))
+
+        mock_service.assert_not_called()
+
+    def test_reply_draft_rejects_mismatched_recipient_before_create(self):
+        api = unittest.mock.Mock()
+        api.users().messages().get.return_value.execute.return_value = {
+            "threadId": "thread-1",
+            "payload": {"headers": [
+                {"name": "From", "value": "Person <person@example.com>"},
+                {"name": "Subject", "value": "Project update"},
+            ]},
+        }
+        args = argparse.Namespace(
+            confirm=True,
+            to="Different Person <different@example.com>",
+            cc="",
+            subject="",
+            body="Can you share an update?\n\nThanks",
+            thread_id="",
+            reply_to_message="message-0",
+        )
+
+        with patch.object(actions, "service", return_value=api), self.assertRaisesRegex(RuntimeError, "does not match"):
+            actions.gmail_draft(args)
+
+        api.users().drafts().create.assert_not_called()
 
     def test_name_only_draft_recipient_is_rejected_before_create(self):
         api = unittest.mock.Mock()

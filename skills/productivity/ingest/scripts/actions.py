@@ -145,14 +145,17 @@ def gmail_search(args: argparse.Namespace) -> None:
     emit({"query": args.query, "matches": matches})
 
 
-def validate_recipient_header(value: str, field: str) -> None:
+def validate_recipient_header(value: str, field: str) -> list[str]:
     addresses = [address.strip() for _name, address in getaddresses([value])]
     if not addresses or any("@" not in address or not all(address.rsplit("@", 1)) for address in addresses):
         raise RuntimeError(f"{field} must include a complete email address; search Gmail or reply to a verified message instead")
+    return addresses
 
 
 def gmail_draft(args: argparse.Namespace) -> None:
     require_confirm(args, "Gmail draft creation")
+    if args.reply_to_message and not args.to:
+        raise RuntimeError("Reply drafts require --to with the verified expected recipient")
     api = service("gmail", "v1")
     message = EmailMessage()
     to = args.to
@@ -166,7 +169,11 @@ def gmail_draft(args: argparse.Namespace) -> None:
             metadataHeaders=["From", "Reply-To", "Subject", "Message-ID", "References"],
         ).execute()
         original_headers = headers(original.get("payload", {}))
-        to = to or original_headers.get("reply-to") or original_headers.get("from", "")
+        reply_recipient = original_headers.get("reply-to") or original_headers.get("from", "")
+        expected_addresses = {address.casefold() for address in validate_recipient_header(to, "To")}
+        reply_addresses = {address.casefold() for address in validate_recipient_header(reply_recipient, "Reply recipient")}
+        if expected_addresses != reply_addresses:
+            raise RuntimeError("Reply message recipient does not match the verified expected recipient")
         original_subject = original_headers.get("subject", "")
         subject = subject or (original_subject if original_subject.casefold().startswith("re:") else f"Re: {original_subject}")
         message_id = original_headers.get("message-id", "")
