@@ -13,18 +13,26 @@ python -m pip install -r requirements.txt
 ## 2. Install the agent
 
 ```bash
+# Create this profile once. Skip this command when refreshing it later.
+hermes profile create chief-of-staff --clone-all --clone-from default
+
 # Windows Git Bash
-export HERMES_HOME="$LOCALAPPDATA/hermes"
+export HERMES_HOME="$LOCALAPPDATA/hermes/profiles/chief-of-staff"
 
 # Linux/macOS
-# export HERMES_HOME="$HOME/.hermes"
+# export HERMES_HOME="$HOME/.hermes/profiles/chief-of-staff"
 
 python install.py --hermes-home "$HERMES_HOME"
+hermes profile use chief-of-staff
 hermes tools enable skills terminal --platform cli
 ```
 
 The installer keeps only `chief-of-staff` and `ingest` enabled in the target
 profile's skill catalog. Other installed skills remain installed but disabled.
+The cloned model/provider configuration, Google credentials, seed state, and
+future sessions are isolated under the dedicated profile instead of `default`.
+Save the same `HERMES_HOME` value in the dedicated profile's `.env` so Hermes
+Desktop terminal actions keep using the profile after the setup shell closes.
 
 If Hermes already has a customized `SOUL.md`, the installer preserves it. Copy the chief-of-staff routing paragraph from this repository into the existing Soul manually, or rerun with `--overwrite-soul` if replacement is intended.
 

@@ -40,7 +40,7 @@ elif [ -n "${LOCALAPPDATA:-}" ]; then
 else
   COS_HOME="$HOME/.hermes"
 fi
-if [ -f "$COS_HOME/hermes-agent/venv/Scripts/python.exe" ]; then PYTHON="$COS_HOME/hermes-agent/venv/Scripts/python.exe"; elif [ -x "$COS_HOME/hermes-agent/venv/bin/python" ]; then PYTHON="$COS_HOME/hermes-agent/venv/bin/python"; else PYTHON="$(command -v python3 || command -v python)"; fi
+if [ -n "${LOCALAPPDATA:-}" ] && [ -f "$LOCALAPPDATA/hermes/hermes-agent/venv/Scripts/python.exe" ]; then PYTHON="$LOCALAPPDATA/hermes/hermes-agent/venv/Scripts/python.exe"; elif [ -x "$HOME/.hermes/hermes-agent/venv/bin/python" ]; then PYTHON="$HOME/.hermes/hermes-agent/venv/bin/python"; else PYTHON="$(command -v python3 || command -v python)"; fi
 "$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py"
 ```
 
@@ -50,7 +50,7 @@ The snapshot is written to `$COS_HOME/chief-of-staff/snapshot.json`. The command
 
 ```bash
 if [ -n "${HERMES_HOME:-}" ]; then COS_HOME="$HERMES_HOME"; elif [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="$LOCALAPPDATA/hermes"; else COS_HOME="$HOME/.hermes"; fi
-if [ -f "$COS_HOME/hermes-agent/venv/Scripts/python.exe" ]; then PYTHON="$COS_HOME/hermes-agent/venv/Scripts/python.exe"; elif [ -x "$COS_HOME/hermes-agent/venv/bin/python" ]; then PYTHON="$COS_HOME/hermes-agent/venv/bin/python"; else PYTHON="$(command -v python3 || command -v python)"; fi
+if [ -n "${LOCALAPPDATA:-}" ] && [ -f "$LOCALAPPDATA/hermes/hermes-agent/venv/Scripts/python.exe" ]; then PYTHON="$LOCALAPPDATA/hermes/hermes-agent/venv/Scripts/python.exe"; elif [ -x "$HOME/.hermes/hermes-agent/venv/bin/python" ]; then PYTHON="$HOME/.hermes/hermes-agent/venv/bin/python"; else PYTHON="$(command -v python3 || command -v python)"; fi
 
 # Today plus tomorrow; active inbox and recent Drive files
 "$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py"

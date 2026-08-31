@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chief of Staff Demo</title>
+<style>
+body{font-family:Segoe UI,Arial,sans-serif;max-width:840px;margin:48px auto;padding:0 24px;color:#18212b;line-height:1.55}h1{font-size:36px;margin-bottom:8px}h2{margin-top:32px}.card{background:#f3f6f9;border:1px solid #d7dee7;border-radius:12px;padding:20px 24px}.ok{color:#126b3a}code{background:#edf0f4;padding:2px 6px;border-radius:4px}li{margin:8px 0}.warning{border-left:4px solid #b36b00;padding-left:16px}</style>
+</head>
+<body>
+<h1>Chief of Staff Demo</h1>
+<p class="ok">Portable Windows ARM64 package for the NVIDIA RTX Spark N1X.</p>
+<div class="card">
+<h2>Install</h2>
+<ol>
+<li>Double-click <strong>Install Chief of Staff Demo</strong>.</li>
+<li>Enter the credential-package passphrase when prompted. Input is masked.</li>
+<li>Wait while the model, llama.cpp, Hermes, Google credentials, and reference workspace are prepared.</li>
+<li>Use the desktop shortcut <strong>Start Chief of Staff Demo</strong>.</li>
+</ol>
+</div>
+<h2>Requirements</h2>
+<ul>
+<li>Windows 11 ARM64 on an NVIDIA RTX Spark N1X</li>
+<li>64 GB unified memory with the 16 GB GPU / 48 GB CPU carveout</li>
+<li>At least 30 GiB free on the internal SSD</li>
+<li>Internet access for Google Workspace and the pinned Hermes bootstrap</li>
+</ul>
+<h2>Normal operation</h2>
+<p>After installation, the USB is not required. Start, reset, diagnostics, and repair shortcuts are provided. The local model listens only on <code>127.0.0.1:8080</code>.</p>
+<h2>When finished</h2>
+<p>Run <strong>Finalize and Remove Demo</strong> from this folder. It can remove the seeded Google workspace, revokes the copied OAuth token, removes the local installation, and then deletes this single USB folder.</p>
+<p class="warning"><strong>Important:</strong> Keep this drive and its credential-package passphrase under your control. The encrypted package contains a Google refresh token for the demo account.</p>
+</body>
+</html>

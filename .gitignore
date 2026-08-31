@@ -28,3 +28,6 @@ venv/
 Thumbs.db
 .vscode/
 .idea/
+
+# Generated portable deployment bundle (contains multi-GB runtime/model payloads)
+/out/

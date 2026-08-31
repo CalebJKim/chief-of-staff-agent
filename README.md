@@ -29,19 +29,28 @@ PYTHON="$(command -v python3 || command -v python)"
 "$PYTHON" -m pip install -r requirements.txt
 ```
 
-## Install into a Hermes profile
+## Install into a dedicated Hermes profile
 
 ```bash
+hermes profile create chief-of-staff --clone-all --clone-from default
+export HERMES_HOME="$LOCALAPPDATA/hermes/profiles/chief-of-staff"  # Windows Git Bash
 "$PYTHON" install.py
+hermes profile use chief-of-staff
 hermes tools enable skills terminal --platform cli
 hermes tools list --platform cli
 ```
 
-The installer uses `HERMES_HOME` when set and otherwise detects the normal
-Hermes profile. It preserves an existing `SOUL.md`, adds only the chief-of-staff
-routing instructions, and keeps only `chief-of-staff` and `ingest` enabled in
-the target profile's skill catalog. Configure the user name in the Soul if
-desired. Keep the `skills` and `terminal` toolsets enabled.
+Create the profile once; skip `profile create` when refreshing an existing
+installation. On Linux/macOS, use
+`HERMES_HOME="$HOME/.hermes/profiles/chief-of-staff"`. The installer preserves
+the profile's working model and provider configuration, preserves an existing
+`SOUL.md`, adds only the chief-of-staff routing instructions, and keeps only
+`chief-of-staff` and `ingest` enabled in that profile's skill catalog. Configure
+the user name in the Soul if desired. Keep the `skills` and `terminal` toolsets
+enabled. Google credentials, seed state, and sessions remain isolated from the
+default profile. Save the same `HERMES_HOME` value in the dedicated profile's
+`.env` so Hermes Desktop terminal actions continue to resolve profile-scoped
+skills, credentials, and workspace state after the setup shell closes.
 
 ## Connect Google Workspace
 
