@@ -14,4 +14,6 @@ skills:
 
 agent:
   # The workflow normally needs only terminal + skills.
+  disabled_toolsets:
+    - desktop_ui
   max_turns: 40

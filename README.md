@@ -41,7 +41,8 @@ The installer uses `HERMES_HOME` when set and otherwise detects the normal
 Hermes profile. It preserves an existing `SOUL.md`, adds only the chief-of-staff
 routing instructions, and keeps only `chief-of-staff` and `ingest` enabled in
 the target profile's skill catalog. Configure the user name in the Soul if
-desired. Keep the `skills` and `terminal` toolsets enabled.
+desired. Keep the `skills` and `terminal` toolsets enabled. The installer also
+disables `desktop_ui` so the agent does not open links in Hermes Desktop.
 
 ## Connect Google Workspace
 

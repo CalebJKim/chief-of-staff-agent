@@ -85,6 +85,23 @@ def configure_enabled_skills(config_path: Path, installed: set[str]) -> set[str]
     return set(disabled)
 
 
+def disable_desktop_ui(config_path: Path) -> None:
+    """Ensure the demo profile cannot use Hermes Desktop preview tools."""
+    text = config_path.read_text(encoding="utf-8") if config_path.exists() else ""
+    if "    - desktop_ui\n" in text:
+        return
+    if "  disabled_toolsets: []" in text:
+        text = text.replace("  disabled_toolsets: []", "  disabled_toolsets:\n    - desktop_ui", 1)
+    elif "  disabled_toolsets:\n" in text:
+        text = text.replace("  disabled_toolsets:\n", "  disabled_toolsets:\n    - desktop_ui\n", 1)
+    elif "agent:\n" in text:
+        text = text.replace("agent:\n", "agent:\n  disabled_toolsets:\n    - desktop_ui\n", 1)
+    else:
+        text = f"{text.rstrip()}\n\nagent:\n  disabled_toolsets:\n    - desktop_ui\n"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(text.rstrip() + "\n", encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Install the Chief of Staff skills into a Hermes profile")
     parser.add_argument("--hermes-home", type=Path, default=default_home())
@@ -101,10 +118,13 @@ def main() -> int:
         shutil.copytree(source / "skills" / "productivity" / name, destination, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     soul = target / "SOUL.md"
     soul_status = install_soul(source / "SOUL.md", soul, args.overwrite_soul)
-    disabled = configure_enabled_skills(target / "config.yaml", installed_skill_names(target))
+    config_path = target / "config.yaml"
+    disabled = configure_enabled_skills(config_path, installed_skill_names(target))
+    disable_desktop_ui(config_path)
     print(f"Installed skills into {skills_target}")
     print(f"SOUL.md: {soul_status}")
     print(f"Skills: enabled {', '.join(sorted(ENABLED_SKILLS))}; disabled {len(disabled)} others")
+    print("Toolsets: desktop_ui disabled")
     print("Next: enable the skills + terminal toolsets and complete Google OAuth (see QUICKSTART.md).")
     return 0
 

@@ -25,6 +25,7 @@ hermes tools enable skills terminal --platform cli
 
 The installer keeps only `chief-of-staff` and `ingest` enabled in the target
 profile's skill catalog. Other installed skills remain installed but disabled.
+It also disables `desktop_ui` to prevent automatic link previews.
 
 If Hermes already has a customized `SOUL.md`, the installer preserves it. Copy the chief-of-staff routing paragraph from this repository into the existing Soul manually, or rerun with `--overwrite-soul` if replacement is intended.
 
