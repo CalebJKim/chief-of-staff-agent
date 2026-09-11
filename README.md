@@ -34,19 +34,45 @@ PYTHON="$(command -v python3 || command -v python)"
 
 ```bash
 "$PYTHON" install.py
-hermes tools enable skills terminal --platform cli
-hermes tools list --platform cli
+hermes -p chief-of-staff tools list --platform cli
 ```
 
-The installer uses `HERMES_HOME` when set and otherwise detects the normal
-Hermes profile. It preserves an existing `SOUL.md`, adds only the chief-of-staff
-routing instructions, and keeps only `chief-of-staff` and `ingest` enabled in
-the target profile's skill catalog. Configure the user name in the Soul if
-desired. Keep the `skills` and `terminal` toolsets enabled. The installer also
+The installer creates `profiles/chief-of-staff` under the normal Hermes root
+(or the root selected by `HERMES_HOME`). On first creation it copies the default
+profile's model/settings, `.env`, `SOUL.md`, installed skills, user memories,
+local authentication, and demo workspace-state file. The default profile remains
+unchanged; session history and caches are not copied. An existing shared Hermes
+Python runtime is linked into the new profile, not duplicated.
+
+Rerunning the installer refreshes the two demo skills but preserves the profile's
+existing credentials, workspace state, model settings, and customized Soul. It
+adds chief-of-staff routing if missing and enables only `chief-of-staff` and
+`ingest`. Other installed skills stay installed but disabled. An explicit
+`--hermes-home PATH` still installs directly into that exact target.
+The installer also
 disables `desktop_ui` and sets `HERMES_TUI_TOOLSETS=skills,terminal` in the
 profile's `.env` so Desktop auto-discovery cannot add preview tools back.
 Restart Hermes Desktop after installation. Links remain available inline;
 the agent uses the saved API connection instead of opening embedded web previews.
+
+Select **chief-of-staff** in Hermes Desktop and start a new chat. Before running
+OAuth or seed/reset scripts from a separate terminal, select the same profile:
+
+```powershell
+# Windows PowerShell
+$env:HERMES_HOME = Join-Path $env:LOCALAPPDATA 'hermes\profiles\chief-of-staff'
+```
+
+```bash
+# Windows Git Bash
+export HERMES_HOME="$LOCALAPPDATA/hermes/profiles/chief-of-staff"
+# Linux/macOS
+# export HERMES_HOME="$HOME/.hermes/profiles/chief-of-staff"
+```
+
+Copied credentials still point at the same Google account and existing demo data.
+Use the new profile for future resets; do not run two profiles against that shared
+workspace at the same time. No Google data is reset or changed by installation.
 
 ## Connect Google Workspace
 
@@ -78,7 +104,8 @@ The existing Workspace connection remains usable before this extra consent.
 
 ## Use
 
-Start a new Hermes session and say:
+Start a new Hermes Desktop chat in **chief-of-staff** (or run
+`hermes -p chief-of-staff chat`) and say:
 
 > Good morning chief of staff, what should we work on today?
 

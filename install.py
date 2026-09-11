@@ -4,11 +4,18 @@ import argparse
 import os
 import re
 import shutil
+import subprocess
 from pathlib import Path
 
 
 ROUTING_START = 'When the user addresses you as "chief of staff"'
 ENABLED_SKILLS = {"chief-of-staff", "ingest"}
+PROFILE_NAME = "chief-of-staff"
+PROFILE_FILES = (
+    "config.yaml", ".env", "SOUL.md", "auth.json", ".no-bundled-skills",
+    "google_client_secret.json", "google_token.json",
+    "chief-of-staff-workspace-state.json", "memories/MEMORY.md", "memories/USER.md",
+)
 
 
 def default_home() -> Path:
@@ -17,6 +24,43 @@ def default_home() -> Path:
     if os.name == "nt" and os.environ.get("LOCALAPPDATA"):
         return Path(os.environ["LOCALAPPDATA"]) / "hermes"
     return Path.home() / ".hermes"
+
+
+def profile_base(home: Path) -> Path:
+    home = home.expanduser().resolve()
+    return home.parent.parent if home.parent.name == "profiles" else home
+
+
+def prepare_profile(base: Path, target: Path) -> None:
+    """Clone demo settings once; never replace an existing profile's local state."""
+    if not target.exists():
+        target.mkdir(parents=True)
+        for name in PROFILE_FILES:
+            source_file = base / name
+            if source_file.is_file():
+                destination = target / name
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source_file, destination)
+                if name in {".env", "auth.json", "google_client_secret.json", "google_token.json"}:
+                    destination.chmod(0o600)
+        if (base / "skills").is_dir():
+            shutil.copytree(base / "skills", target / "skills", symlinks=True,
+                            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+
+    # Keep the existing skill's Python lookup valid without copying the runtime.
+    runtime = base / "hermes-agent" / "venv"
+    link = target / "hermes-agent" / "venv"
+    if runtime.is_dir() and not link.exists() and not link.is_symlink():
+        link.parent.mkdir(parents=True, exist_ok=True)
+        if os.name == "nt":
+            env = dict(os.environ, COS_PROFILE_VENV=str(link), COS_SHARED_VENV=str(runtime))
+            subprocess.run([
+                "powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
+                "$ErrorActionPreference = 'Stop'; New-Item -ItemType Junction "
+                "-Path $env:COS_PROFILE_VENV -Target $env:COS_SHARED_VENV | Out-Null",
+            ], env=env, check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+        else:
+            link.symlink_to(runtime, target_is_directory=True)
 
 
 def install_soul(source: Path, target: Path, overwrite: bool) -> str:
@@ -116,11 +160,13 @@ def configure_desktop_tools(env_path: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Install the Chief of Staff skills into a Hermes profile")
-    parser.add_argument("--hermes-home", type=Path, default=default_home())
+    parser.add_argument("--hermes-home", type=Path, help="Explicit target override (default: profiles/chief-of-staff under the Hermes root)")
     parser.add_argument("--overwrite-soul", action="store_true", help="Replace an existing SOUL.md (otherwise preserve it)")
     args = parser.parse_args()
     source = Path(__file__).resolve().parent
-    target = args.hermes_home.expanduser().resolve()
+    base = profile_base(default_home())
+    target = (args.hermes_home or base / "profiles" / PROFILE_NAME).expanduser().resolve()
+    prepare_profile(base, target)
     skills_target = target / "skills" / "productivity"
     skills_target.mkdir(parents=True, exist_ok=True)
     for name in ("ingest", "chief-of-staff"):
@@ -139,7 +185,11 @@ def main() -> int:
     print(f"Skills: enabled {', '.join(sorted(ENABLED_SKILLS))}; disabled {len(disabled)} others")
     print("Toolsets: desktop_ui disabled")
     print("Desktop: skills + terminal only; restart Hermes Desktop to apply")
-    print("Next: enable the skills + terminal toolsets and complete Google OAuth (see QUICKSTART.md).")
+    print(f"Profile location: {target}")
+    if target.parent.name == "profiles":
+        print(f"Select {target.name} in Hermes Desktop and start a new chat.")
+    print("For OAuth and seed/reset commands, set HERMES_HOME to the profile location above.")
+    print("Next: verify the copied Google connection, or complete OAuth if not yet connected (see QUICKSTART.md).")
     return 0
 
 
