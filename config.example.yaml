@@ -1,5 +1,7 @@
 # Merge these keys into the target profile's config.yaml.
 # Keep the user's model/provider configuration and other platform settings.
+# install.py also sets HERMES_TUI_TOOLSETS=skills,terminal in the profile .env
+# because Desktop auto-discovery can otherwise add preview tools back.
 
 platform_toolsets:
   cli:

@@ -39,27 +39,33 @@ tools and instructions for how I like to do things. Let's get started.
 
 **Intended response**
 
-> Hi Abhi!
+> **What you need to know today**
 >
-> Here's what you need to know right now:
+> - Leadership moved the RTX Spark Exec Review from Thursday to 5:00 p.m.
+>   today. It is a decision meeting, not a working session.
+> - Mike's inference package is approved, and Legal cleared the qualified
+>   wording for leadership review.
+> - The replacement marketing-shoot venue hold expires at 4:30 p.m.
 >
-> - The Exec Review meeting moved from Thursday to today at 10:00 a.m.
-> - We received the updated performance numbers for the new inference feature.
-> - The new DeepSeek Flash model came out. It is 200B and great for two DGX
->   Sparks.
-> - There is an email update on the status of OpenShell that you should read.
->   [Link]
+> **What you need to get done today**
 >
-> Here are the three things you need to get done today:
+> - **Prepare for leadership's launch decisions** — agree on the keynote story
+>   and proposed demos before today's review, using the team's latest feedback.
+> - **Finish the security requirements** — complete the final review and hand
+>   the PRD to Engineering so implementation can move forward.
+> - **Choose the marketing-shoot venue** — select an available option before
+>   the hold expires to protect the crew booking and campaign schedule.
 >
-> 1. Finish and send the Agent Security PRD to Engineering. You can skip your
->    1:00–2:00 p.m. meeting to do it, then catch up from the meeting notes.
-> 2. Your VP wants to review the Hermes partner-meeting slides. I can set up a
->    review from 4:30–5:00 p.m. today if you want.
-> 3. Update the marketing documents with the new inference performance numbers.
+> **What I can take care of for you**
 >
-> There are also several emails we need to answer. I can start preparing draft
-> responses if you want.
+> - Consolidate the team's requested changes into proposed presentation edits
+>   for your review.
+> - Prepare coordination drafts once you've chosen the venue.
+
+The live brief includes descriptive links to its supporting emails and files.
+Keep each list free of overlapping outcomes or a parent task repeated as a subtask.
+The optional seeded Google Tasks list provides a checklist the presenter can
+check off in Google Tasks; Hermes chat bullets do not sync completion state.
 
 As you can see, I have set up my chief of staff to be succinct and help me cut
 through the noise. But how do we know the answers are correct?
@@ -74,7 +80,7 @@ smart recommendations. You can see how the graph of nodes looks in Obsidian.
 ## Query 2 — Meeting preparation
 
 Let me show you a couple more things it can do. We have an executive review at
-10:00 a.m. that moved to today, and I have not prepared for it. I have not met
+5:00 p.m. that moved to today, and I have not prepared for it. I have not met
 with the team, and I need to gather all the project updates. Let's have our
 chief of staff help us.
 
@@ -84,23 +90,28 @@ chief of staff help us.
 
 **Intended response**
 
-> Here are the slides we prepared.
+> **Context**
 >
-> We have received updates that may be relevant to the content:
+> - The review moved to today and needs leadership decisions. Performance
+>   evidence is approved, and the latest deck feedback explains the remaining
+>   preparation.
 >
-> - We received the performance numbers overnight. We need to update slide 4.
-> - We received feedback to cut slide 6 and cover that material on slide 7.
-> - Your manager recommended moving quickly through the intro so we can spend
->   time on slide 10. [Link]
+> **What needs to get done before the meeting**
 >
-> The key decisions we were trying to get from the meeting were:
+> - Incorporate the approved performance evidence and required qualification.
+> - Streamline the presentation and prepare the proposed demo choices and owners.
 >
-> - Approval of our proposed keynote storyline.
-> - Alignment on the demos for IFA.
+> **Goals for the meeting**
+>
+> - Approval of the agent-first keynote storyline.
+> - Alignment on the IFA demo slate and owners.
+
+The live response links the feedback, leadership request, and deck. This prompt
+produces a preparation briefing; artifact edits are requested in follow-ups.
 
 ## Query 3 — Project tracking
 
-Another useful thing our chief of staff can do is help track project status. A
+You can also delegate work to the chief of staff, such as updating trackers. A
 major launch like RTX Spark has many moving pieces, and chasing people for
 updates is always a pain.
 
@@ -109,38 +120,41 @@ ask the chief of staff to help.
 
 **Prompt**
 
-> Update the status of the RTX Spark campaign tracker.
+> Update the RTX Spark campaign tracker using the latest email evidence.
+
+*Switch the campaign tracker to full screen while the agent works. Keep it full
+screen for the completion summary so every update shown by the agent corresponds
+to a visible row.*
 
 **Intended response**
 
-> On it…
+> **Updated**
 >
-> Reading email and Slack messages…
+> - Product performance claims — Complete
+> - Exec Review deck — In review
+> - Agent Messaging — In review
+> - Legal intake — Complete
 >
-> Updating Google Sheets…
+> **Still needs action**
 >
-> Done! I updated the tracker. We have not received updates for two lanes, and
-> one lane is blocked.
+> - Marketing shoot — Priya is waiting for a venue decision before the hold
+>   expires.
+> - Social rollout — Rafael has not provided a current status.
+> - Retail demo readiness — the final owner is still unassigned.
+>
+> I can prepare follow-up drafts for all three.
 
 **Prompt**
 
-> Let's ask Rafael and Grant for updates on those two lanes. Prepare drafts.
+> Prepare follow-up drafts for those three items.
 
 **Intended response**
 
 > Drafting…
 >
-> The drafts are ready for you to review.
-
-**Prompt**
-
-> Thanks! What's wrong with the blocked lane?
-
-**Intended response**
-
-> There is an issue with the marketing shoot. The venue is not available on
-> Wednesday, and we need to decide on a new date. You have to weigh in here.
-> [Link]
+> Three drafts are ready for review: a status request to Rafael, a response to
+> Priya on the venue hold, and a note to Elena requesting a final retail-demo
+> owner. Nothing was sent.
 
 ## Close
 

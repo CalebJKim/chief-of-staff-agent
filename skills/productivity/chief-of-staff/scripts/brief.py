@@ -212,7 +212,6 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
     events = snapshot.get("events", [])
     messages = snapshot.get("messages", [])
     files = snapshot.get("files", [])
-    trackers = snapshot.get("trackers", [])
     generated = parse_dt(snapshot.get("generated_at", ""), tz) or datetime.now(tz)
 
     ranked_events = []
@@ -274,7 +273,7 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
     }
     packet = {
         "schema": 1,
-        "instruction": "Use evidence, not signal_score alone. Group related mail into one outcome. Output no more than three distinct priorities. stale_timing means relative dates in that mail are historical: call the work unresolved and verify timing; never claim it is due today. ok_empty means success with zero results, not unavailable.",
+        "instruction": "Follow the chief-of-staff skill's three-section brief format. Prioritize meaningful outcomes in plain language; merge parent/subtask or overlapping items within each list. Calendar conflicts are constraints, not standalone priorities. Offer supported delegated work without executing it. Every substantive bullet needs a descriptive Markdown source link; do not mention slide numbers, cell references, or detailed metrics in the daily brief. stale_timing means relative dates in that mail are historical: call the work unresolved and verify timing; never claim it is due today. ok_empty means success with zero results, not unavailable.",
         "freshness": {"generated_at": snapshot.get("generated_at"), "timezone": tz_name, "window": snapshot.get("window")},
         "coverage": coverage,
         "source_status": source_status,
@@ -283,13 +282,17 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
         "meetings": ranked_events[: args.max_meetings],
         "mail": ranked_mail[: args.max_mail],
         "recent_files": recent_files,
-        "trackers": trackers,
     }
     return packet
 
 
 def fit_packet(packet: dict[str, Any], max_chars: int) -> str:
     encoded = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
+    # Busy calendars must not crowd out the work evidence in a daily brief.
+    while len(encoded) > max_chars and packet.get("conflicts"):
+        packet["conflicts"].pop()
+        packet["omitted_conflict_groups"] = packet.get("omitted_conflict_groups", 0) + 1
+        encoded = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
     while len(encoded) > max_chars:
         lists = [packet.get("mail", []), packet.get("recent_files", []), packet.get("meetings", [])]
         target = max(lists, key=len)

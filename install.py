@@ -102,6 +102,18 @@ def disable_desktop_ui(config_path: Path) -> None:
     config_path.write_text(text.rstrip() + "\n", encoding="utf-8")
 
 
+def configure_desktop_tools(env_path: Path) -> None:
+    """Pin Desktop's tool surface; its auto-discovery can re-add UI previews."""
+    text = env_path.read_text(encoding="utf-8") if env_path.exists() else ""
+    setting = "HERMES_TUI_TOOLSETS=skills,terminal"
+    pattern = r"(?m)^(?:export\s+)?HERMES_TUI_TOOLSETS=.*$"
+    if re.search(pattern, text):
+        text = re.sub(pattern, setting, text)
+    else:
+        text = text.rstrip() + "\n" + setting + "\n"
+    env_path.write_text(text, encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Install the Chief of Staff skills into a Hermes profile")
     parser.add_argument("--hermes-home", type=Path, default=default_home())
@@ -121,10 +133,12 @@ def main() -> int:
     config_path = target / "config.yaml"
     disabled = configure_enabled_skills(config_path, installed_skill_names(target))
     disable_desktop_ui(config_path)
+    configure_desktop_tools(target / ".env")
     print(f"Installed skills into {skills_target}")
     print(f"SOUL.md: {soul_status}")
     print(f"Skills: enabled {', '.join(sorted(ENABLED_SKILLS))}; disabled {len(disabled)} others")
     print("Toolsets: desktop_ui disabled")
+    print("Desktop: skills + terminal only; restart Hermes Desktop to apply")
     print("Next: enable the skills + terminal toolsets and complete Google OAuth (see QUICKSTART.md).")
     return 0
 

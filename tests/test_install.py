@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from install import ROUTING_START, configure_enabled_skills, install_soul, installed_skill_names
+from install import ROUTING_START, configure_desktop_tools, configure_enabled_skills, install_soul, installed_skill_names
 
 
 class InstallSoulTests(unittest.TestCase):
@@ -56,6 +56,17 @@ class InstallSkillsTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
+
+    def test_desktop_tools_setting_preserves_other_environment_values(self) -> None:
+        env = self.hermes_home / ".env"
+        env.write_text("UNRELATED_SETTING=keep-me\nHERMES_TUI_TOOLSETS=browser\n", encoding="utf-8")
+
+        configure_desktop_tools(env)
+        first = env.read_text(encoding="utf-8")
+        configure_desktop_tools(env)
+
+        self.assertEqual(first, env.read_text(encoding="utf-8"))
+        self.assertEqual("UNRELATED_SETTING=keep-me\nHERMES_TUI_TOOLSETS=skills,terminal\n", first)
 
     def test_disables_every_installed_skill_except_chief_of_staff_and_ingest(self) -> None:
         config = self.hermes_home / "config.yaml"

@@ -11,7 +11,10 @@ The seeder creates a self-contained realistic Chief of Staff workspace in the Go
   - Leadership-review legal clearance
   - Marketing shoot venue deadline
   - Agent Security PRD deadline
-- **80 Calendar events**: 16 per weekday, 8:00 AM–6:45 PM, with intentional overlaps.
+- **70 low-priority background messages** and **1 contact message** so the inbox is realistic without hiding the important work. Synthetic senders use the visibly fake local-part pattern `name.example@nvidia.com`.
+- **3 older request emails** support unfinished backlog work: a customer demo FAQ, pilot-program lessons learned, and a developer workshop budget. These are additional to the original 77 emails, which retain their same-day timestamps.
+- **89–90 Calendar events** across the workweek. Each day has a distinct, busy schedule with overlaps; the current workday also contains the 5 PM Exec Review.
+- **An optional Google Tasks checklist with 6 unfinished tasks in the account's default list (My Tasks)**: 3 due today and 3 backlog tasks originally due 7, 3, and 1 days ago. Dates are relative to each seed/reset day. Every task links to its source emails; today's tasks also link to the relevant files. Enable the Tasks API and authorize its scope before seeding it. Check items off in [Google Tasks](https://tasks.google.com/).
 - **1 Google Sheet**: `RTX Spark Campaign Tracker`
   - Tab: `Campaign Lanes`
   - Columns A:J: Lane, PIC, Status, Latest update, Next action, Due, Dependency/blocker, Evidence, Artifact, Notes
@@ -30,6 +33,16 @@ $HERMES_HOME/chief-of-staff-workspace-state.json
 ```
 
 The reset and cleanup commands use this file to delete imported mail/events and move generated Drive files to trash.
+
+Google Tasks uses the account's default list, resolved through the API and saved in
+the same state file. Reset replaces
+only its seeded tasks, including completed ones, with fresh links to the new emails;
+unrelated tasks are preserved. Cleanup also removes only seeded tasks and keeps the
+list itself. Older states that refer to a separate demo list are cleaned there on
+reset, then newly seeded tasks are placed in the default list. With an existing
+connection that lacks Tasks permission, the first Tasks seed is skipped with setup
+instructions; Gmail, Calendar, and Drive resets still work. Once a demo task list
+exists, Tasks access is checked before any reset starts.
 
 
 ## Template fidelity
@@ -66,8 +79,8 @@ If OAuth scopes or organization policy prevent the script from creating a resour
 1. **Sheet** — Create `RTX Spark Campaign Tracker`, tab `Campaign Lanes`, with the A:J columns listed above. Add at least these lanes: Product performance claims (Awaiting update), Exec Review deck (Awaiting update), Agent Messaging (Awaiting update), Marketing shoot (Blocked), Partner enablement (On track), Social rollout (Awaiting update), Retail demo readiness (Blocked), Legal intake (Awaiting update).
 2. **Slides** — Create a 10-slide `RTX Spark Exec Review`. Put `Performance to go here - Mike Chen to provide` on slide 4, `Move the detail out of the live flow` on slide 6, and two decision asks on slide 10.
 3. **Doc** — Create `RTX Spark Campaign Plan` with an agent-first narrative and open work for claims, retail demo ownership, shoot date, and Exec Review preparation.
-4. **Calendar** — Add overlapping weekday events from 8 AM through roughly 7 PM. Include an RTX Spark Exec Review at 5 PM and an overlapping decision-triage event.
-5. **Gmail** — Send or import messages to yourself containing the six topics above. Mark them unread/important. Include the generated Sheet/Slides/Doc links where relevant.
+4. **Calendar** — Add a varied schedule across the workweek rather than repeating the same meetings every day. On the current workday, include the RTX Spark Exec Review at 5 PM and an overlapping decision-triage event.
+5. **Gmail** — Send or import messages to yourself containing the six topics above. Mark them unread/important. Include the generated Sheet/Slides/Doc links where relevant. Use clearly synthetic addresses such as `elena.example@nvidia.com`.
 
 The exact names are helpful for artifact matching, but the Chief of Staff logic still reasons from the actual evidence rather than fixture IDs.
 

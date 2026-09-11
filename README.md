@@ -1,6 +1,6 @@
 # Hermes Chief of Staff Agent
 
-A portable Hermes Agent configuration for a lightweight Google Workspace chief of staff. It reads bounded Gmail, Calendar, Drive, Docs, Sheets, and Slides evidence; ranks the day; resolves calendar conflicts; prepares meeting work; drafts email; and proposes guarded tracker/document updates.
+A portable Hermes Agent configuration for a lightweight Google Workspace chief of staff. It reads bounded Gmail, Calendar, Drive, Docs, Sheets, and Slides evidence; highlights meaningful daily outcomes; accounts for calendar constraints; prepares meeting work; drafts email; and proposes guarded tracker/document updates.
 
 ## Included
 
@@ -21,6 +21,7 @@ For the shortest installation path, see [QUICKSTART.md](QUICKSTART.md). Every us
 - Python 3.11+.
 - A tool-calling model that meets Hermes context requirements.
 - A Google Cloud Desktop OAuth client with Gmail, Calendar, Drive, Docs, Sheets, and Slides APIs enabled.
+- Enable the [Google Tasks API](https://console.cloud.google.com/apis/library/tasks.googleapis.com) and grant the Tasks scope to include the optional sample checklist.
 
 Install dependencies:
 
@@ -42,7 +43,10 @@ Hermes profile. It preserves an existing `SOUL.md`, adds only the chief-of-staff
 routing instructions, and keeps only `chief-of-staff` and `ingest` enabled in
 the target profile's skill catalog. Configure the user name in the Soul if
 desired. Keep the `skills` and `terminal` toolsets enabled. The installer also
-disables `desktop_ui` so the agent does not open links in Hermes Desktop.
+disables `desktop_ui` and sets `HERMES_TUI_TOOLSETS=skills,terminal` in the
+profile's `.env` so Desktop auto-discovery cannot add preview tools back.
+Restart Hermes Desktop after installation. Links remain available inline;
+the agent uses the saved API connection instead of opening embedded web previews.
 
 ## Connect Google Workspace
 
@@ -66,6 +70,12 @@ address bar, then run:
 
 The resulting google_token.json and google_client_secret.json live under HERMES_HOME and are ignored by git.
 
+Normal demo commands refresh the saved token silently and do not open a sign-in
+window. Reconnection is a setup step when access expires or is revoked. To add
+Google Tasks to an existing connection, enable its API in the same OAuth project
+and repeat `--auth-url` / `--auth-code` once to approve the additional Tasks scope.
+The existing Workspace connection remains usable before this extra consent.
+
 ## Use
 
 Start a new Hermes session and say:
@@ -76,15 +86,22 @@ Typical follow-ups:
 
 - Help me prepare for the exec review.
 - What slides should I prepare?
-- Compare the latest email updates with the campaign tracker.
-- Apply the approved tracker updates.
-- Draft a follow-up to the owner of this blocked lane.
+- Update the campaign tracker using the latest email evidence.
+- Prepare follow-up drafts for the unresolved items.
+
+The daily brief presents material context, distinct work outcomes, and tasks the
+agent can take off your plate, with descriptive source links. Meeting preparation
+covers context, work needed before the meeting, and the meeting's intended goals.
+Use [Google Tasks](https://tasks.google.com/) to check off the seeded tasks. Chat
+lists in this Hermes Desktop version do not save checkbox progress or sync it to
+Google Tasks.
 
 ## Safety behavior
 
 - Broad ingestion is bounded and metadata/snippet-first.
 - Gmail drafts are created but never sent by these scripts.
-- Docs, Sheets, Slides, and Calendar writes require approval and `--confirm`.
+- A direct instruction to update a tracker is treated as approval for evidence-backed row changes; ambiguous requests and comparisons remain read-only.
+- Other Docs, Sheets, Slides, and Calendar writes require approval and `--confirm`.
 - Tracker updates preserve Lane/PIC, reject duplicate lanes, and validate statuses.
 - One-time codes are redacted before model context.
 
@@ -100,7 +117,7 @@ Live smoke test after OAuth:
 
 ```bash
 "$PYTHON" skills/productivity/ingest/scripts/ingest.py
-"$PYTHON" skills/productivity/chief-of-staff/scripts/brief.py --max-chars 9000
+"$PYTHON" skills/productivity/chief-of-staff/scripts/brief.py --max-chars 14000
 ```
 
 ## Portability and demo data

@@ -145,6 +145,30 @@ def gmail_search(args: argparse.Namespace) -> None:
     emit({"query": args.query, "matches": matches})
 
 
+def gmail_important(args: argparse.Namespace) -> None:
+    """Return a bounded set of recent important messages with full bodies."""
+    api = service("gmail", "v1")
+    limit = min(max(args.max, 1), 20)
+    days = min(max(args.newer_than_days, 1), 30)
+    query = f"is:important newer_than:{days}d"
+    refs = api.users().messages().list(userId="me", q=query, maxResults=limit).execute().get("messages", [])
+    messages = []
+    for ref in refs[:limit]:
+        msg = api.users().messages().get(userId="me", id=ref["id"], format="full").execute()
+        hdr = headers(msg.get("payload", {}))
+        messages.append({
+            "id": msg.get("id"),
+            "thread_id": msg.get("threadId"),
+            "from": hdr.get("from", ""),
+            "to": hdr.get("to", ""),
+            "cc": hdr.get("cc", ""),
+            "subject": hdr.get("subject", ""),
+            "date": hdr.get("date", ""),
+            "body": decode_body(msg.get("payload", {}))[: args.max_chars],
+        })
+    emit({"query": query, "messages": messages})
+
+
 def validate_recipient_header(value: str, field: str) -> None:
     addresses = [address.strip() for _name, address in getaddresses([value])]
     if not addresses or any("@" not in address or not all(address.rsplit("@", 1)) for address in addresses):
@@ -393,6 +417,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("query")
     p.add_argument("--max", type=int, default=5)
     p.set_defaults(func=gmail_search)
+    p = gmail.add_parser("important")
+    p.add_argument("--max", type=int, default=12)
+    p.add_argument("--newer-than-days", type=int, default=2)
+    p.add_argument("--max-chars", type=int, default=8000)
+    p.set_defaults(func=gmail_important)
     p = gmail.add_parser("draft")
     p.add_argument("--to", default="")
     p.add_argument("--cc", default="")

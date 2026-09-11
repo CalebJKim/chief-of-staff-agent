@@ -41,6 +41,8 @@ class BriefTests(unittest.TestCase):
         self.assertEqual(packet["mail"][0]["id"], "msg-urgent")
         self.assertEqual(packet["mail"][0]["url"], "https://mail.google.com/mail/u/0/#all/thread-urgent")
         self.assertEqual(packet["source_status"], {"calendar": "ok", "gmail": "ok", "drive": "ok"})
+        self.assertNotIn("trackers", packet)
+        self.assertIn("three-section brief format", packet["instruction"])
         exec_event = next(event for event in packet["meetings"] if event["id"] == "evt-exec")
         self.assertTrue(any(item["id"] == "deck-1" for item in exec_event["related"]["files"]))
 
@@ -58,6 +60,19 @@ class BriefTests(unittest.TestCase):
         packet = brief.build_packet(snapshot, self.args())
         self.assertEqual(packet["source_status"]["calendar"], "ok_empty")
         self.assertEqual(packet["source_status"]["drive"], "ok_empty")
+
+    def test_busy_calendar_does_not_crowd_out_work_evidence(self):
+        snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        packet = brief.build_packet(snapshot, self.args())
+        expected_mail = packet["mail"][:]
+        packet["conflicts"] *= 30
+
+        encoded = brief.fit_packet(packet, 14000)
+        fitted = json.loads(encoded)
+
+        self.assertLessEqual(len(encoded), 14000)
+        self.assertGreater(fitted["omitted_conflict_groups"], 0)
+        self.assertEqual(expected_mail, fitted["mail"])
 
 
 if __name__ == "__main__":

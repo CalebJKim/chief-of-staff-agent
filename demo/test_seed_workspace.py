@@ -3,7 +3,7 @@ import importlib.util
 import sys
 import unittest
 import zipfile
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from email import message_from_bytes
 from email.utils import parseaddr, parsedate_to_datetime
 from pathlib import Path
@@ -18,6 +18,96 @@ spec.loader.exec_module(seed)
 from baseline import PRE_EMAIL_ROWS
 
 class WorkspaceSeedTests(unittest.TestCase):
+    def test_tasks_without_permission_skip_unless_previous_tasks_need_reset(self):
+        creds = Mock()
+        creds.has_scopes.return_value = False
+        with patch.object(seed, "build") as build, patch("sys.stderr"):
+            self.assertIsNone(seed.task_service(creds))
+            with self.assertRaisesRegex(RuntimeError, "No workspace reset or cleanup was started"):
+                seed.task_service(creds, required=True)
+        build.assert_not_called()
+
+    def test_tasks_api_unavailable_is_detected_before_workspace_mutations(self):
+        creds = Mock()
+        creds.has_scopes.return_value = True
+        api = Mock()
+        api.tasklists().list.return_value.execute.side_effect = seed.HttpError(
+            Mock(status=403, reason="Forbidden"), b'{"error":{"message":"API disabled"}}'
+        )
+        state = {"task_list": {"id": "demo-list"}}
+        with patch.object(seed, "credentials", return_value=creds), patch.object(seed, "build", return_value=api), patch.object(seed, "remove_dynamic_items") as remove:
+            with self.assertRaisesRegex(RuntimeError, "Google Tasks API access is unavailable"):
+                seed.reset_in_place(state, date(2026, 9, 7))
+        remove.assert_not_called()
+        api.tasks().delete.assert_not_called()
+        api.tasklists().delete.assert_not_called()
+
+    def test_tasks_use_default_list_and_link_to_source_emails_and_files(self):
+        api = Mock()
+        api.tasklists().get.return_value.execute.return_value = {"id": "default-list", "title": "My Tasks"}
+        state = {
+            "task_list": {"id": "demo-list"},
+            "slides": {"url": "https://docs.google.com/presentation/d/deck"},
+            "sheet": {"url": "https://docs.google.com/spreadsheets/d/sheet"},
+            "doc": {"url": "https://docs.google.com/document/d/doc"},
+        }
+        evidence = {key: f"https://mail.google.com/mail/u/0/#all/{key}" for key in ("elena", "mike", "aisha", "daniel", "priya", "prd")}
+        evidence.update({item["key"]: f"https://mail.google.com/mail/u/0/#all/{item['key']}" for item in seed.BACKLOG_TASKS})
+        results = [{"id": f"task-{i}", "title": f"Task {i}", "webViewLink": f"https://tasks.google.com/task/{i}"} for i in range(3 + len(seed.BACKLOG_TASKS))]
+        now = datetime(2026, 9, 10, 10, 30, tzinfo=ZoneInfo("America/Los_Angeles"))
+        with patch.object(seed, "execute_batched", return_value=results), patch.object(seed, "local_now", return_value=now):
+            seed.create_tasks(api, state, evidence)
+        api.tasklists().insert.assert_not_called()
+        api.tasklists().get.assert_called_once_with(tasklist="@default")
+        self.assertEqual({"id": "default-list", "title": "My Tasks"}, state["task_list"])
+        bodies = [call.kwargs["body"] for call in api.tasks().insert.call_args_list]
+        self.assertEqual(3 + len(seed.BACKLOG_TASKS), len(bodies))
+        notes = "\n".join(body["notes"] for body in bodies)
+        self.assertTrue(all(url in notes for url in evidence.values()))
+        self.assertTrue(all(state[key]["url"] in notes for key in ("slides", "sheet", "doc")))
+        self.assertTrue(all(body["due"] == "2026-09-10T00:00:00Z" for body in bodies[:3]))
+        self.assertTrue(all(body["status"] == "needsAction" for body in bodies))
+        for item, body in zip(seed.BACKLOG_TASKS, bodies[3:]):
+            requested = now.date() - timedelta(days=item["requested_days_ago"])
+            due = date.fromisoformat(body["due"][:10])
+            self.assertLess(requested, due)
+            self.assertLess(due, now.date())
+            self.assertIn(requested.isoformat(), body["notes"])
+            self.assertIn("still unfinished", body["notes"])
+            self.assertIn(evidence[item["key"]], body["notes"])
+            self.assertNotIn("Working file:", body["notes"])
+        self.assertTrue(all(call.kwargs["tasklist"] == "default-list" for call in api.tasks().insert.call_args_list))
+        self.assertEqual(len(bodies), len(state["tasks"]))
+
+    def test_task_reset_preserves_unrelated_tasks_and_finds_completed_orphans(self):
+        api = Mock()
+        state = {"task_list": {"id": "demo-list"}, "tasks": [{"id": "tracked"}]}
+        api.tasks().list.return_value.execute.side_effect = [
+            {"items": [{"id": "tracked"}, {"id": "personal", "notes": "Keep this"}], "nextPageToken": "next"},
+            {"items": [{"id": "orphan", "notes": seed.MARKER, "status": "completed", "hidden": True}]},
+        ]
+        with patch.object(seed, "execute_batched"):
+            seed.clear_seeded_tasks(api, state)
+        self.assertEqual(["tracked", "orphan"], [call.kwargs["task"] for call in api.tasks().delete.call_args_list])
+        self.assertTrue(all(call.kwargs["tasklist"] == "demo-list" for call in api.tasks().delete.call_args_list))
+        self.assertTrue(all(call.kwargs["showHidden"] and call.kwargs["showCompleted"] for call in api.tasks().list.call_args_list))
+        self.assertEqual("demo-list", state["task_list"]["id"])
+        self.assertEqual([], state["tasks"])
+        api.tasklists().delete.assert_not_called()
+
+    def test_tasks_cleanup_preserves_default_list_and_personal_tasks(self):
+        api = Mock()
+        state = {"task_list": {"id": "default-list"}, "tasks": [{"id": "tracked"}]}
+        api.tasks().list.return_value.execute.return_value = {
+            "items": [{"id": "tracked"}, {"id": "personal", "notes": "Keep this"}]
+        }
+        with patch.object(seed, "services", return_value={"tasks": api}), patch.object(seed, "remove_dynamic_items"), patch.object(seed, "execute_batched"):
+            seed.cleanup(state)
+        api.tasks().delete.assert_called_once_with(tasklist="default-list", task="tracked")
+        api.tasklists().delete.assert_not_called()
+        self.assertEqual("default-list", state["task_list"]["id"])
+        self.assertEqual([], state["tasks"])
+
     def test_reference_names_and_no_private_labels(self):
         source = MODULE.read_text(encoding="utf-8")
         self.assertIn("RTX Spark Campaign Tracker", source)
@@ -40,15 +130,32 @@ class WorkspaceSeedTests(unittest.TestCase):
                 self.assertIn(member, archive.namelist())
 
     def test_reference_email_and_calendar_shape(self):
-        self.assertEqual(len(seed.EVENTS), 16)
-        self.assertTrue(any(x[2].startswith("RTX Spark Exec Review") for x in seed.EVENTS))
+        monday = date(2026, 8, 24)
+        specs = seed.calendar_event_specs(monday, "deck", "doc", "sheet", reference_day=monday + timedelta(days=3))
+        events_by_day = {
+            day: [title for event_day, _, _, title, _ in specs if event_day == day]
+            for day in (monday + timedelta(days=offset) for offset in range(5))
+        }
+        self.assertEqual(89, len(specs))
+        self.assertEqual(5, len({tuple(titles) for titles in events_by_day.values()}))
+        for day in events_by_day:
+            periods = sorted(
+                (begin, end)
+                for event_day, begin, end, _, _ in specs
+                if event_day == day
+            )
+            self.assertTrue(any(next_begin < end for (_, end), (next_begin, _) in zip(periods, periods[1:])))
+        exec_reviews = [item for item in specs if item[3].startswith("RTX Spark Exec Review")]
+        self.assertEqual(1, len(exec_reviews))
+        self.assertEqual(monday + timedelta(days=3), exec_reviews[0][0])
         self.assertIn("Mike Chen", MODULE.read_text(encoding="utf-8"))
         self.assertIn("2.1x faster", MODULE.read_text(encoding="utf-8"))
 
     def test_main_emails_are_preserved_with_diverse_background_mail_and_today_times(self):
         gmail = Mock()
         gmail.users().getProfile.return_value.execute.return_value = {"emailAddress": "demo@example.test"}
-        total = seed.MEANINGFUL_EMAIL_COUNT + seed.BACKGROUND_EMAIL_COUNT + seed.CONTACT_EMAIL_COUNT
+        today_count = seed.MEANINGFUL_EMAIL_COUNT + seed.BACKGROUND_EMAIL_COUNT + seed.CONTACT_EMAIL_COUNT
+        total = today_count + len(seed.BACKLOG_TASKS)
         results = [
             {"id": f"message-{index}", "threadId": f"thread-{index}"}
             for index in range(total)
@@ -78,9 +185,16 @@ class WorkspaceSeedTests(unittest.TestCase):
             ],
             [message["Subject"] for message in imported[:seed.MEANINGFUL_EMAIL_COUNT]],
         )
-        self.assertEqual({"elena", "mike", "aisha", "daniel", "priya", "prd"}, set(evidence))
+        self.assertEqual({"elena", "mike", "aisha", "daniel", "priya", "prd"} | {item["key"] for item in seed.BACKLOG_TASKS}, set(evidence))
         received_at = [parsedate_to_datetime(message["Date"]) for message in imported]
-        self.assertEqual({date(2026, 8, 27)}, {value.date() for value in received_at})
+        self.assertEqual({date(2026, 8, 27)}, {value.date() for value in received_at[:today_count]})
+        self.assertEqual(seed.seeded_email_times(today_count, now), received_at[:today_count])
+        for index, item in enumerate(seed.BACKLOG_TASKS, today_count):
+            due = now.date() - timedelta(days=item["due_days_ago"])
+            self.assertLess(received_at[index].date(), due)
+            self.assertLess(due, now.date())
+            self.assertIn(due.isoformat(), imported[index].get_payload())
+            self.assertEqual(created[index]["url"], evidence[item["key"]])
         self.assertEqual(total, len(set(received_at)))
         self.assertTrue(all("IMPORTANT" in value for value in labels[:seed.MEANINGFUL_EMAIL_COUNT]))
         self.assertTrue(all("IMPORTANT" not in value for value in labels[seed.MEANINGFUL_EMAIL_COUNT:]))
@@ -89,12 +203,11 @@ class WorkspaceSeedTests(unittest.TestCase):
         self.assertEqual(seed.BACKGROUND_EMAIL_COUNT, len({message["From"] for message in background}))
         self.assertEqual(seed.BACKGROUND_EMAIL_COUNT, len({message["Subject"] for message in background}))
         self.assertTrue(all("no action is required" in message.get_payload().casefold() for message in background))
-        contacts = imported[background_end:]
+        contacts = imported[background_end:today_count]
         self.assertEqual(seed.CONTACT_EMAIL_COUNT, len(contacts))
         self.assertEqual(
             {
-                "Grant Walker <grant.walker@nvidia.example>": "Retail demo coordination contact",
-                "Rafael Costa <rafael.costa@nvidia.example>": "Social rollout coordination contact",
+                "Rafael Costa <rafael.example@nvidia.com>": "REFERENCE CONTACT ONLY - Social rollout",
             },
             {message["From"]: message["Subject"] for message in contacts},
         )
@@ -105,9 +218,10 @@ class WorkspaceSeedTests(unittest.TestCase):
             for name, address in [parseaddr(message["From"])]
             if name and address
         }
-        tracker_people = {row[1] for row in PRE_EMAIL_ROWS if row[1] != "Workspace Owner"}
+        tracker_people = {row[1] for row in PRE_EMAIL_ROWS if row[1] not in {"Workspace Owner", "Unassigned"}}
         self.assertEqual(set(), tracker_people - seeded_addresses.keys())
         self.assertTrue(all("@" in seeded_addresses[name] for name in tracker_people))
+        self.assertTrue(all(address.endswith(".example@nvidia.com") for address in seeded_addresses.values()))
 
     def test_google_requests_are_executed_in_bounded_batches(self):
         batches = []
@@ -217,6 +331,31 @@ class WorkspaceSeedTests(unittest.TestCase):
             ["'Campaign Lanes'!A7:J14", "'Campaign Lanes'!A3:J3"],
             [item["range"] for item in call.kwargs["body"]["data"]],
         )
+
+    def test_deck_reset_restores_every_demo_mutation_surface(self):
+        slides = Mock()
+        presentation = {
+            "slides": [
+                {
+                    "pageElements": [
+                        {"objectId": f"title-{number}", "shape": {"text": {"textElements": [{"textRun": {"content": "Old title"}}]}}},
+                        {"objectId": f"body-{number}", "shape": {"text": {"textElements": [{"textRun": {"content": "Old body"}}]}}},
+                    ]
+                }
+                for number in range(1, 11)
+            ]
+        }
+        slides.presentations().get.return_value.execute.return_value = presentation
+
+        seed.reset_deck_baseline(slides, "deck-1")
+
+        call = slides.presentations().batchUpdate.call_args
+        requests = call.kwargs["body"]["requests"]
+        inserted = [item["insertText"]["text"] for item in requests if "insertText" in item]
+        self.assertEqual(32, len(requests))
+        self.assertTrue(any("Performance to go here" in text for text in inserted))
+        self.assertTrue(any("Two decisions to leave with" in text for text in inserted))
+        self.assertFalse(any("Retail demo owner" in text for text in inserted))
 
 if __name__ == "__main__":
     unittest.main()

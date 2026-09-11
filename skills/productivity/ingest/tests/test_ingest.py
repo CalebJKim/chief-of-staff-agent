@@ -110,6 +110,57 @@ class IngestTests(unittest.TestCase):
         self.assertEqual("Person <person@example.com>", result["matches"][0]["from"])
         self.assertNotIn("body", result["matches"][0])
 
+    def test_recent_important_mail_returns_bounded_full_evidence(self):
+        calls = {}
+
+        class Request:
+            def __init__(self, value):
+                self.value = value
+
+            def execute(self):
+                return self.value
+
+        encoded = base64.urlsafe_b64encode(b"Complete evidence body").decode("ascii")
+
+        class Messages:
+            def list(self, **kwargs):
+                calls["list"] = kwargs
+                return Request({"messages": [{"id": "message-1"}]})
+
+            def get(self, **kwargs):
+                calls["get"] = kwargs
+                return Request({
+                    "id": "message-1",
+                    "threadId": "thread-1",
+                    "payload": {
+                        "mimeType": "text/plain",
+                        "body": {"data": encoded},
+                        "headers": [
+                            {"name": "From", "value": "Person <person@example.com>"},
+                            {"name": "Subject", "value": "Approved update"},
+                        ],
+                    },
+                })
+
+        class Users:
+            def messages(self):
+                return Messages()
+
+        class Api:
+            def users(self):
+                return Users()
+
+        with patch.object(actions, "service", return_value=Api()):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                actions.gmail_important(argparse.Namespace(max=50, newer_than_days=2, max_chars=8000))
+
+        result = json.loads(output.getvalue())
+        self.assertEqual("is:important newer_than:2d", calls["list"]["q"])
+        self.assertEqual(20, calls["list"]["maxResults"])
+        self.assertEqual("full", calls["get"]["format"])
+        self.assertEqual("Complete evidence body", result["messages"][0]["body"])
+
     def test_reply_draft_is_threaded(self):
         captured = {}
 

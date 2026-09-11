@@ -18,7 +18,7 @@ The only structural specialization is the `Campaign Lanes` tracker schema (A:J).
 
 ## What was not cheated
 
-The tested workflow made live Google API calls. The model discovered current messages/events/files, read selected full threads/artifacts, proposed changes, waited for approval, wrote to Google, and read back results. The scripts do deterministic retrieval, compression, conflict detection, and validation; they do not contain the expected RTX Spark answer.
+The tested workflow made live Google API calls. The model discovered current messages/events/files, read selected full threads/artifacts, applied evidence-backed tracker changes when explicitly instructed, and read back results. Other guarded writes still require separate approval. The scripts do deterministic retrieval, compression, conflict detection, and validation; they do not contain the expected RTX Spark answer.
 
 The demo account was deliberately seeded with coherent emails, calendar conflicts, and stale tracker/deck state. That is staged test data, equivalent to a demo dataset. It improves reproducibility but does not bypass reasoning or Google writes.
 
