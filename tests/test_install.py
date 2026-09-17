@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import os
+import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -56,6 +58,7 @@ class PrepareProfileTests(unittest.TestCase):
             "image_cache/image.png": b"cached image",
             "logs/agent.log": b"source log",
             "hooks/custom-hook.py": b"# unrelated hook",
+            "cron/jobs.json": b'{"jobs": [{"id": "default-only-job", "enabled": true}]}',
             "skills/custom-helper/__pycache__/helper.pyc": b"regenerable bytecode",
             "skills/custom-helper/helper.pyc": b"regenerable bytecode",
             "profiles/other/SOUL.md": b"Another profile's identity",
@@ -154,6 +157,37 @@ class PrepareProfileTests(unittest.TestCase):
         run.assert_not_called()
         self.assertEqual(b"Existing profile runtime\n", marker.read_bytes())
 
+    def test_installer_connects_vault_and_preserves_connection_on_rerun(self) -> None:
+        vault = Path(self.temp_dir.name) / "Project Notes"
+        vault.mkdir()
+        installer = Path(__file__).resolve().parents[1] / "install.py"
+        command = [sys.executable, "-B", str(installer), "--hermes-home", str(self.target)]
+        env = dict(os.environ, HERMES_HOME=str(self.base), PYTHONIOENCODING="utf-8")
+        subprocess.run(command + ["--second-brain", str(vault)], env=env, capture_output=True, check=True)
+        connection = self.target / "second-brain.json"
+        self.assertEqual({"vault_path": str(vault.resolve())}, json.loads(connection.read_text()))
+        first = connection.read_bytes()
+        self.assertIn("HERMES_TUI_TOOLSETS=skills,terminal,cronjob", (self.target / ".env").read_text())
+        self.assertIn("    - desktop_ui", (self.target / "config.yaml").read_text())
+        self.assertFalse((self.target / "cron").exists())
+        jobs = self.write_fixture("cron/jobs.json", b'{"jobs": [{"id": "keep-paused", "enabled": false}]}', root=self.target)
+        previous_jobs = jobs.read_bytes()
+        subprocess.run(command, env=env, capture_output=True, check=True)
+        self.assertEqual(first, connection.read_bytes())
+        self.assertEqual(previous_jobs, jobs.read_bytes())
+        self.assertFalse((self.base / "cron").exists())
+        self.assertFalse((self.base / "second-brain.json").exists())
+        self.assertEqual([], list(vault.iterdir()))
+
+    def test_invalid_vault_is_rejected_before_installing(self) -> None:
+        installer = Path(__file__).resolve().parents[1] / "install.py"
+        result = subprocess.run(
+            [sys.executable, "-B", str(installer), "--hermes-home", str(self.target), "--second-brain", str(self.base / "missing")],
+            env=dict(os.environ, HERMES_HOME=str(self.base)), capture_output=True,
+        )
+        self.assertNotEqual(0, result.returncode)
+        self.assertFalse(self.target.exists())
+
 
 class InstallSoulTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -214,9 +248,35 @@ class InstallSkillsTests(unittest.TestCase):
         configure_desktop_tools(env)
 
         self.assertEqual(first, env.read_text(encoding="utf-8"))
-        self.assertEqual("UNRELATED_SETTING=keep-me\nHERMES_TUI_TOOLSETS=skills,terminal\n", first)
+        self.assertEqual("UNRELATED_SETTING=keep-me\nHERMES_TUI_TOOLSETS=skills,terminal,cronjob\n", first)
 
-    def test_disables_every_installed_skill_except_chief_of_staff_and_ingest(self) -> None:
+    def test_desktop_tools_migrate_old_allowlist_and_preserve_local_jobs(self) -> None:
+        env = self.hermes_home / ".env"
+        env.write_text("# Keep this comment\nexport HERMES_TUI_TOOLSETS=skills,terminal\nOTHER=value\n", encoding="utf-8")
+        jobs = self.hermes_home / "cron" / "jobs.json"
+        jobs.parent.mkdir()
+        content = b'{"jobs": [{"id": "existing-job", "enabled": false}]}'
+        jobs.write_bytes(content)
+
+        configure_desktop_tools(env)
+        configure_desktop_tools(env)
+
+        self.assertEqual("# Keep this comment\nHERMES_TUI_TOOLSETS=skills,terminal,cronjob\nOTHER=value\n", env.read_text())
+        self.assertEqual(content, jobs.read_bytes())
+
+    def test_desktop_tools_missing_setting_adds_only_the_three_toolsets(self) -> None:
+        env = self.hermes_home / ".env"
+        configure_desktop_tools(env)
+        self.assertEqual("HERMES_TUI_TOOLSETS=skills,terminal,cronjob", env.read_text().strip())
+        self.assertFalse((self.hermes_home / "cron").exists())
+
+    def test_example_toolsets_separate_job_management_from_execution(self) -> None:
+        config = (Path(__file__).resolve().parents[1] / "config.example.yaml").read_text(encoding="utf-8")
+        self.assertIn("  cli:\n    - skills\n    - terminal\n    - cronjob\n", config)
+        self.assertIn("  cron:\n    - skills\n    - terminal\n", config)
+        self.assertIn("  disabled_toolsets:\n    - desktop_ui", config)
+
+    def test_disables_every_installed_skill_except_demo_and_workspace_fallback(self) -> None:
         config = self.hermes_home / "config.yaml"
         config.write_text(
             "model:\n  default: local-model\nskills:\n  creation_nudge_interval: 15\n  disabled:\n    - old-skill\nagent:\n  max_turns: 40\n",
@@ -226,10 +286,11 @@ class InstallSkillsTests(unittest.TestCase):
         disabled = configure_enabled_skills(config, installed_skill_names(self.hermes_home))
         result = config.read_text(encoding="utf-8")
 
-        self.assertEqual({"google-workspace", "pdf"}, disabled)
+        self.assertEqual({"pdf"}, disabled)
         self.assertIn("model:\n  default: local-model", result)
         self.assertIn("  creation_nudge_interval: 15", result)
-        self.assertIn("  disabled:\n    - google-workspace\n    - pdf", result)
+        self.assertIn("  disabled:\n    - pdf", result)
+        self.assertNotIn("    - google-workspace", result)
         self.assertNotIn("old-skill", result)
         self.assertNotIn("    - chief-of-staff", result)
         self.assertNotIn("    - ingest", result)
@@ -241,7 +302,7 @@ class InstallSkillsTests(unittest.TestCase):
         configure_enabled_skills(config, installed_skill_names(self.hermes_home))
 
         self.assertEqual(
-            "skills:\n  disabled:\n    - google-workspace\n    - pdf\n",
+            "skills:\n  disabled:\n    - pdf\n",
             config.read_text(encoding="utf-8"),
         )
 

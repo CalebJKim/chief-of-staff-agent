@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import shutil
@@ -9,12 +10,12 @@ from pathlib import Path
 
 
 ROUTING_START = 'When the user addresses you as "chief of staff"'
-ENABLED_SKILLS = {"chief-of-staff", "ingest"}
+ENABLED_SKILLS = {"chief-of-staff", "ingest", "google-workspace"}
 PROFILE_NAME = "chief-of-staff"
 PROFILE_FILES = (
     "config.yaml", ".env", "SOUL.md", "auth.json", ".no-bundled-skills",
     "google_client_secret.json", "google_token.json",
-    "chief-of-staff-workspace-state.json", "memories/MEMORY.md", "memories/USER.md",
+    "chief-of-staff-workspace-state.json", "second-brain.json", "memories/MEMORY.md", "memories/USER.md",
 )
 
 
@@ -96,7 +97,7 @@ def installed_skill_names(hermes_home: Path) -> set[str]:
 
 
 def configure_enabled_skills(config_path: Path, installed: set[str]) -> set[str]:
-    """Disable every installed skill except this demo's two required skills."""
+    """Disable installed skills except the demo skills and Workspace fallback."""
     disabled = sorted(installed - ENABLED_SKILLS)
     text = config_path.read_text(encoding="utf-8") if config_path.exists() else ""
     lines = text.splitlines()
@@ -149,7 +150,7 @@ def disable_desktop_ui(config_path: Path) -> None:
 def configure_desktop_tools(env_path: Path) -> None:
     """Pin Desktop's tool surface; its auto-discovery can re-add UI previews."""
     text = env_path.read_text(encoding="utf-8") if env_path.exists() else ""
-    setting = "HERMES_TUI_TOOLSETS=skills,terminal"
+    setting = "HERMES_TUI_TOOLSETS=skills,terminal,cronjob"
     pattern = r"(?m)^(?:export\s+)?HERMES_TUI_TOOLSETS=.*$"
     if re.search(pattern, text):
         text = re.sub(pattern, setting, text)
@@ -162,7 +163,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Install the Chief of Staff skills into a Hermes profile")
     parser.add_argument("--hermes-home", type=Path, help="Explicit target override (default: profiles/chief-of-staff under the Hermes root)")
     parser.add_argument("--overwrite-soul", action="store_true", help="Replace an existing SOUL.md (otherwise preserve it)")
+    parser.add_argument("--second-brain", type=Path, help="Connect an existing local Markdown/Obsidian vault read-only")
     args = parser.parse_args()
+    vault = args.second_brain.expanduser().resolve() if args.second_brain else None
+    if vault is not None and not vault.is_dir():
+        parser.error("--second-brain must name an existing folder")
     source = Path(__file__).resolve().parent
     base = profile_base(default_home())
     target = (args.hermes_home or base / "profiles" / PROFILE_NAME).expanduser().resolve()
@@ -180,11 +185,14 @@ def main() -> int:
     disabled = configure_enabled_skills(config_path, installed_skill_names(target))
     disable_desktop_ui(config_path)
     configure_desktop_tools(target / ".env")
+    if vault is not None:
+        (target / "second-brain.json").write_text(json.dumps({"vault_path": str(vault)}, indent=2) + "\n", encoding="utf-8")
     print(f"Installed skills into {skills_target}")
     print(f"SOUL.md: {soul_status}")
     print(f"Skills: enabled {', '.join(sorted(ENABLED_SKILLS))}; disabled {len(disabled)} others")
     print("Toolsets: desktop_ui disabled")
-    print("Desktop: skills + terminal only; restart Hermes Desktop to apply")
+    print("Desktop: skills + terminal + cronjob; restart Hermes Desktop to apply")
+    print("Scheduling is opt-in: no scheduled jobs were created or enabled by installation.")
     print(f"Profile location: {target}")
     if target.parent.name == "profiles":
         print(f"Select {target.name} in Hermes Desktop and start a new chat.")

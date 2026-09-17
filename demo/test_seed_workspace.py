@@ -148,6 +148,9 @@ class WorkspaceSeedTests(unittest.TestCase):
         exec_reviews = [item for item in specs if item[3].startswith("RTX Spark Exec Review")]
         self.assertEqual(1, len(exec_reviews))
         self.assertEqual(monday + timedelta(days=3), exec_reviews[0][0])
+        self.assertIn(seed.EXEC_REVIEW_ROLES, exec_reviews[0][4])
+        self.assertIn("You will present", seed.EXEC_REVIEW_ROLES)
+        self.assertIn("Planned attendees:", seed.EXEC_REVIEW_ROLES)
         self.assertIn("Mike Chen", MODULE.read_text(encoding="utf-8"))
         self.assertIn("2.1x faster", MODULE.read_text(encoding="utf-8"))
 
@@ -186,6 +189,11 @@ class WorkspaceSeedTests(unittest.TestCase):
             [message["Subject"] for message in imported[:seed.MEANINGFUL_EMAIL_COUNT]],
         )
         self.assertEqual({"elena", "mike", "aisha", "daniel", "priya", "prd"} | {item["key"] for item in seed.BACKLOG_TASKS}, set(evidence))
+        review_feedback = imported[2].get_payload(decode=True).decode("utf-8")
+        self.assertIn(seed.EXEC_REVIEW_ROLES, imported[0].get_payload(decode=True).decode("utf-8"))
+        for phrase in ("I have not edited the deck", "proposed customer-use example", "Customer Example section of slide 7",
+                       "then remove slide 6", "not customer validation", "owners still need a decision"):
+            self.assertIn(phrase, review_feedback)
         received_at = [parsedate_to_datetime(message["Date"]) for message in imported]
         self.assertEqual({date(2026, 8, 27)}, {value.date() for value in received_at[:today_count]})
         self.assertEqual(seed.seeded_email_times(today_count, now), received_at[:today_count])
@@ -328,7 +336,7 @@ class WorkspaceSeedTests(unittest.TestCase):
         call = sheets.spreadsheets().values().batchUpdate.call_args
         self.assertEqual("sheet-1", call.kwargs["spreadsheetId"])
         self.assertEqual(
-            ["'Campaign Lanes'!A7:J14", "'Campaign Lanes'!A3:J3"],
+            ["'Campaign Lanes'!A7:J14", "'Campaign Lanes'!A3:J3", "'Campaign Lanes'!A4"],
             [item["range"] for item in call.kwargs["body"]["data"]],
         )
 

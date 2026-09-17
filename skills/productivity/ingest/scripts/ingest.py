@@ -195,6 +195,8 @@ def fetch_calendars(calendar_service: Any, start: datetime, end: datetime, max_e
 
 
 def fetch_mail(gmail_service: Any, days_back: int, max_messages: int, query: str | None) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    from actions import decode_body
+
     profile = gmail_service.users().getProfile(userId="me").execute()
     # The chief of staff manages the active inbox, not just mail received in a
     # rolling time window. Older unread/important work remains actionable until
@@ -220,11 +222,12 @@ def fetch_mail(gmail_service: Any, days_back: int, max_messages: int, query: str
         msg = gmail_service.users().messages().get(
             userId="me",
             id=ref["id"],
-            format="metadata",
-            metadataHeaders=["From", "To", "Cc", "Subject", "Date", "Reply-To"],
+            format="full",
         ).execute()
         headers = msg.get("payload", {}).get("headers", [])
-        snippet = redact_sensitive(re.sub(r"\s+", " ", msg.get("snippet", "")).strip())
+        text = decode_body(msg.get("payload", {})) or msg.get("snippet", "")
+        snippet = redact_sensitive(re.sub(r"\s+", " ", text).strip())
+        preview = snippet if len(snippet) <= 500 else snippet[:499].rsplit(" ", 1)[0] + "…"
         messages.append(
             {
                 "id": msg.get("id"),
@@ -238,7 +241,7 @@ def fetch_mail(gmail_service: Any, days_back: int, max_messages: int, query: str
                 "unread": "UNREAD" in msg.get("labelIds", []),
                 "important": "IMPORTANT" in msg.get("labelIds", []),
                 "labels": msg.get("labelIds", []),
-                "snippet": snippet[:500],
+                "snippet": preview,
                 "links": _links(snippet),
             }
         )
@@ -273,6 +276,41 @@ def fetch_drive(drive_service: Any, days_back: int, max_files: int) -> list[dict
             }
         )
     return files
+
+
+def fetch_tasks(tasks_service: Any, max_tasks: int = 20, task_list: str = "@default") -> tuple[list[dict[str, Any]], bool]:
+    """Read one bounded page of unfinished tasks; never modify the task list."""
+    if not 1 <= max_tasks <= 100:
+        raise ValueError("max_tasks must be between 1 and 100")
+    response = tasks_service.tasks().list(
+        tasklist=task_list,
+        maxResults=max_tasks,
+        showCompleted=False,
+        showDeleted=False,
+        showHidden=False,
+        showAssigned=True,
+        fields="nextPageToken,items(id,title,status,due,notes,webViewLink,links,deleted,hidden)",
+    ).execute()
+    tasks = []
+    seen = set()
+    for item in response.get("items", [])[:max_tasks]:
+        task_id = item.get("id")
+        if not task_id or task_id in seen or item.get("status") != "needsAction" or item.get("deleted") or item.get("hidden"):
+            continue
+        seen.add(task_id)
+        notes = redact_sensitive(re.sub(r"\s+", " ", item.get("notes") or "").strip())
+        links = " ".join(link.get("link", "") for link in item.get("links", []))
+        tasks.append({
+            "id": task_id,
+            "title": redact_sensitive(item.get("title") or "(untitled)")[:200],
+            "status": item["status"],
+            # Google Tasks stores a date, not a time to convert to another zone.
+            "due": (item.get("due") or "")[:10],
+            "notes": notes[:500],
+            "links": _links(notes + " " + links),
+            "url": item.get("webViewLink") or "https://tasks.google.com/",
+        })
+    return tasks, bool(response.get("nextPageToken"))
 
 
 def fetch_trackers(credentials: Any, files: list[dict[str, Any]], max_rows: int = 14) -> list[dict[str, Any]]:
@@ -325,6 +363,8 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
     messages: list[dict[str, Any]] = []
     files: list[dict[str, Any]] = []
     trackers: list[dict[str, Any]] = []
+    tasks: list[dict[str, Any]] = []
+    tasks_has_more = False
     identity: dict[str, Any] = {}
     try:
         events, calendar_errors = fetch_calendars(calendar, start, end, args.max_events)
@@ -343,6 +383,13 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
         trackers = fetch_trackers(credentials, files)
     except Exception as exc:
         errors.append(f"sheets: {exc}")
+    try:
+        tasks, tasks_has_more = fetch_tasks(
+            build("tasks", "v1", credentials=credentials, cache_discovery=False),
+            getattr(args, "max_tasks", 20), getattr(args, "task_list", "@default"),
+        )
+    except Exception as exc:
+        errors.append(f"tasks: {exc}")
 
     return {
         "schema": 1,
@@ -355,12 +402,15 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
             "events": len(events),
             "messages": len(messages),
             "files": len(files),
+            "tasks": len(tasks),
+            "tasks_has_more": tasks_has_more,
             "errors": errors,
         },
         "events": events,
         "messages": messages,
         "files": files,
         "trackers": trackers,
+        "tasks": tasks,
     }
 
 
@@ -372,6 +422,8 @@ def main() -> int:
     parser.add_argument("--max-events", type=int, default=60)
     parser.add_argument("--max-messages", type=int, default=50)
     parser.add_argument("--max-files", type=int, default=30)
+    parser.add_argument("--task-list", default="@default", help="Google Tasks list ID; defaults to My Tasks")
+    parser.add_argument("--max-tasks", type=int, default=20, help="Read one page of 1-100 unfinished Google Tasks")
     parser.add_argument("--gmail-query", help="Override the bounded Gmail query")
     parser.add_argument("--output", type=Path, default=default_snapshot_path())
     parser.add_argument("--fixture", type=Path, help=argparse.SUPPRESS)
@@ -379,6 +431,8 @@ def main() -> int:
     args = parser.parse_args()
     if min(args.days_ahead, args.days_back, args.max_events, args.max_messages, args.max_files) < 1:
         parser.error("all numeric bounds must be positive")
+    if not 1 <= args.max_tasks <= 100:
+        parser.error("--max-tasks must be between 1 and 100")
 
     try:
         snapshot = collect(args)

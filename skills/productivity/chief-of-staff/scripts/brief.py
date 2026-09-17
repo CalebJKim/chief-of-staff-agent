@@ -10,6 +10,7 @@ import sys
 from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote, urlsplit
 from zoneinfo import ZoneInfo
 
 KEYWORDS = {
@@ -158,15 +159,17 @@ def conflicts(events: list[dict[str, Any]], tz: ZoneInfo) -> list[dict[str, Any]
     return output
 
 
-def focus_blocks(events: list[dict[str, Any]], tz: ZoneInfo, day_value: str, start_hour: int, end_hour: int, minimum: int) -> list[dict[str, Any]]:
+def focus_blocks(events: list[dict[str, Any]], tz: ZoneInfo, day_value: str, start_hour: int, end_hour: int, minimum: int, not_before: datetime | None = None) -> list[dict[str, Any]]:
     target = datetime.fromisoformat(day_value).astimezone(tz).date()
     cursor = datetime.combine(target, time(hour=start_hour), tzinfo=tz)
     work_end = datetime.combine(target, time(hour=end_hour), tzinfo=tz)
+    if not_before is not None:
+        cursor = max(cursor, not_before.astimezone(tz))
     intervals: list[tuple[datetime, datetime]] = []
     for event in events:
         start = parse_dt(event.get("start", ""), tz)
         end = parse_dt(event.get("end", ""), tz)
-        if start and end and start.date() == target and end > cursor and start < work_end:
+        if start and end and end > cursor and start < work_end:
             intervals.append((max(start, cursor), min(end, work_end)))
     intervals.sort()
     merged: list[tuple[datetime, datetime]] = []
@@ -200,6 +203,28 @@ def linked_context(event: dict[str, Any], messages: list[dict[str, Any]], files:
     return {"mail": mail_matches[:4], "files": file_matches[:5]}
 
 
+def task_context(tasks: list[dict[str, Any]], messages: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
+    """Link task evidence by exact Gmail thread IDs, never by similar titles."""
+    pending = [task for task in tasks if task.get("status") == "needsAction" and not task.get("deleted") and not task.get("hidden")]
+    pending.sort(key=lambda task: (task.get("due") or "9999-12-31", task.get("title") or ""))
+    output = []
+    for task in pending[:limit]:
+        item = {key: task.get(key) for key in ("id", "title", "status", "due", "url", "links")}
+        item["notes"] = (task.get("notes") or "")[:240]
+        threads = set()
+        for link in task.get("links", []):
+            try:
+                parsed = urlsplit(link)
+            except ValueError:
+                continue
+            if parsed.hostname == "mail.google.com" and "/" in parsed.fragment:
+                threads.add(unquote(parsed.fragment).rsplit("/", 1)[-1])
+        item["related_mail_ids"] = [message["id"] for message in messages
+                                    if message.get("id") and message.get("thread_id") in threads]
+        output.append(item)
+    return output
+
+
 def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
     tz_name = snapshot.get("timezone") or "UTC"
     try:
@@ -218,11 +243,15 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
     for event in events:
         score, reasons = event_score(event, self_email)
         context = linked_context(event, messages, files)
+        start = parse_dt(event.get("start", ""), tz)
+        end = parse_dt(event.get("end", ""), tz)
+        time_status = ("ended" if generated >= end else "upcoming" if generated < start else "in_progress") if start and end else "unknown"
         ranked_events.append({
             "id": event.get("id"),
             "title": event.get("title"),
             "start": event.get("start"),
             "end": event.get("end"),
+            "time_status": time_status,
             "all_day": event.get("all_day"),
             "organizer": event.get("organizer"),
             "self_status": event.get("self_status"),
@@ -274,28 +303,40 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
     packet = {
         "schema": 1,
         "instruction": "Follow the chief-of-staff skill's three-section brief format. Prioritize meaningful outcomes in plain language; merge parent/subtask or overlapping items within each list. Calendar conflicts are constraints, not standalone priorities. Offer supported delegated work without executing it. Every substantive bullet needs a descriptive Markdown source link; do not mention slide numbers, cell references, or detailed metrics in the daily brief. stale_timing means relative dates in that mail are historical: call the work unresolved and verify timing; never claim it is due today. ok_empty means success with zero results, not unavailable.",
-        "freshness": {"generated_at": snapshot.get("generated_at"), "timezone": tz_name, "window": snapshot.get("window")},
+        "freshness": {"generated_at": snapshot.get("generated_at"), "local_time": generated.astimezone(tz).isoformat(), "timezone": tz_name, "window": snapshot.get("window")},
         "coverage": coverage,
         "source_status": source_status,
         "conflicts": conflicts(events, tz),
-        "focus_blocks": focus_blocks(events, tz, window_start, args.work_start, args.work_end, args.min_focus_minutes),
+        "focus_blocks": focus_blocks(events, tz, window_start, args.work_start, args.work_end, args.min_focus_minutes, generated),
         "meetings": ranked_events[: args.max_meetings],
         "mail": ranked_mail[: args.max_mail],
         "recent_files": recent_files,
     }
+    packet["instruction"] += " Use the skill's Action | Due | Suggested work time table, with a descriptive source link in every action row. Compare deadlines against freshness.generated_at; mark elapsed deadlines as passed/unverified. Approval of inputs or completed feedback does not mean the requested edits were applied: keep that work pending unless explicit completion evidence exists. Copy supplied link URLs exactly, including obsidian:// links without an https:// prefix."
+    if "tasks" in snapshot:
+        source_status["tasks"] = "error" if "tasks:" in error_text else ("ok" if snapshot["tasks"] else "ok_empty")
+        packet["tasks"] = task_context(snapshot["tasks"], packet["mail"], getattr(args, "max_tasks", 8))
+        packet["instruction"] += " Google Tasks are pending work. related_mail_ids link supporting email evidence, not additional to-dos; describe the same work once. Distinct deliverables may share a source. Task dates are date-only planning dates, not proof of hard deadlines."
     return packet
 
 
 def fit_packet(packet: dict[str, Any], max_chars: int) -> str:
     encoded = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
+    # Inferred meeting matches repeat primary mail/file evidence. Drop these
+    # copies before losing the requests and deadlines the brief must summarize.
+    if len(encoded) > max_chars:
+        for meeting in packet.get("meetings", []):
+            meeting.pop("related", None)
+        encoded = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
     # Busy calendars must not crowd out the work evidence in a daily brief.
     while len(encoded) > max_chars and packet.get("conflicts"):
         packet["conflicts"].pop()
         packet["omitted_conflict_groups"] = packet.get("omitted_conflict_groups", 0) + 1
         encoded = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
     while len(encoded) > max_chars:
-        lists = [packet.get("mail", []), packet.get("recent_files", []), packet.get("meetings", [])]
-        target = max(lists, key=len)
+        lists = [packet.get("mail", []), packet.get("recent_files", []), packet.get("meetings", []), packet.get("tasks", [])]
+        meetings = packet.get("meetings", [])
+        target = meetings if len(meetings) > 1 else max(lists, key=len)
         if len(target) <= 1:
             break
         target.pop()
@@ -313,18 +354,27 @@ def main() -> int:
     parser.add_argument("--max-meetings", type=int, default=15)
     parser.add_argument("--max-mail", type=int, default=12)
     parser.add_argument("--max-files", type=int, default=12)
+    parser.add_argument("--max-tasks", type=int, default=8, help="Maximum unfinished tasks in the briefing packet")
     parser.add_argument("--max-chars", type=int, default=14000)
     parser.add_argument("--work-start", type=int, default=8)
     parser.add_argument("--work-end", type=int, default=18)
     parser.add_argument("--min-focus-minutes", type=int, default=30)
     args = parser.parse_args()
+    if args.max_tasks < 1:
+        parser.error("--max-tasks must be positive")
     if not args.snapshot.exists():
         print(json.dumps({"ok": False, "error": f"Snapshot not found: {args.snapshot}"}), file=sys.stderr)
         return 1
     try:
         snapshot = json.loads(args.snapshot.read_text(encoding="utf-8"))
         packet = build_packet(snapshot, args)
-        print(fit_packet(packet, args.max_chars))
+        fit_packet(packet, args.max_chars)
+        # Add a small local context allowance without dropping Workspace evidence.
+        from second_brain import packet_context
+        context = packet_context(packet, hermes_home())
+        if context is not None:
+            packet["second_brain"] = context
+        print(json.dumps(packet, ensure_ascii=False, separators=(",", ":")))
         return 0
     except Exception as exc:
         print(json.dumps({"ok": False, "error": str(exc)}), file=sys.stderr)

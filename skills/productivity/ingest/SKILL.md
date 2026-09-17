@@ -1,6 +1,6 @@
 ---
 name: ingest
-description: Pull bounded Gmail, Calendar, and Drive evidence.
+description: Pull bounded Gmail, Calendar, Drive, and Google Tasks evidence.
 version: 0.1.0
 author: NVIDIA, Hermes Agent
 license: MIT
@@ -26,6 +26,7 @@ Pull a bounded, metadata-first Workspace snapshot for planning. It deliberately 
 
 - OAuth token at the active Hermes profile's `google_token.json`.
 - Gmail, Calendar, Drive, Docs, Sheets, and Slides APIs enabled.
+- Google Tasks API and Tasks read access for the optional unfinished-task evidence. A Tasks error is reported separately and does not discard other Workspace evidence.
 - Google Python dependencies installed by the bundled Google Workspace setup.
 
 ## How to Run
@@ -45,6 +46,8 @@ if [ -f "$COS_HOME/hermes-agent/venv/Scripts/python.exe" ]; then PYTHON="$COS_HO
 ```
 
 The snapshot is written to `$COS_HOME/chief-of-staff/snapshot.json`. The command prints only counts and connector errors.
+
+Tasks retrieval reads one page of up to 20 unfinished tasks from My Tasks by default. Use `--task-list LIST_ID` for another list and `--max-tasks N` (1-100) to change the bound. Task titles, date-only due values, short notes, and source links are included; `coverage.tasks_has_more` indicates more tasks remain outside the page. No tasks are changed.
 
 ## Quick Reference
 

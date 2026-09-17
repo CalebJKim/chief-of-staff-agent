@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import json
 import os
 import sys
@@ -13,6 +14,8 @@ from email.message import EmailMessage
 from email.utils import format_datetime
 from pathlib import Path
 from typing import Any
+from xml.etree import ElementTree
+from zipfile import ZipFile
 from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -205,7 +208,10 @@ def upload_template(drive, folder_id: str, filename: str, name: str, mime_type: 
     return {"id": result["id"], "url": result.get("webViewLink", "")}
 
 def create_doc(drive, folder_id): return upload_template(drive, folder_id, "rtx-spark-campaign-plan.docx", "RTX Spark Campaign Plan", "application/vnd.google-apps.document")
-def create_slides(drive, folder_id): return upload_template(drive, folder_id, "rtx-spark-exec-review.pptx", "RTX Spark Exec Review", "application/vnd.google-apps.presentation")
+def create_slides(drive, folder_id):
+    result = upload_template(drive, folder_id, "rtx-spark-exec-review.pptx", "RTX Spark Exec Review", "application/vnd.google-apps.presentation")
+    result["template_sha256"] = deck_template_hash()
+    return result
 def create_sheet(drive, folder_id): return upload_template(drive, folder_id, "rtx-spark-campaign-tracker.xlsx", "RTX Spark Campaign Tracker", "application/vnd.google-apps.spreadsheet")
 
 def seeded_email_times(count: int, now: datetime | None = None) -> list[datetime]:
@@ -261,12 +267,15 @@ def mail_import_request(
     return gmail.users().messages().import_(userId="me", body={"raw": raw, "labelIds": labels}, internalDateSource="dateHeader", neverMarkSpam=True, processForCalendar=False)
 
 
+EXEC_REVIEW_ROLES = "You will present the storyline and proposed demo slate. Planned attendees: you, Elena Park (chair and your manager), Mike Chen (performance evidence), Aisha Rahman (deck and partner readiness), and Daniel Cho (Legal). Final demo selection and the retail demo owner remain open decisions."
+
+
 def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str) -> tuple[list[dict], dict[str, str]]:
     account = gmail.users().getProfile(userId="me").execute()["emailAddress"]
     meaningful = [
-        ("Elena Park <elena.example@nvidia.com>", "URGENT: RTX Spark Exec Review moved to 5 PM today", f"Hi,\n\nLeadership moved the RTX Spark Exec Review from Thursday to 5:00 PM today. Following up on our last conversation, this is a decision meeting, not a working session. We need two outcomes: approval of the agent-first keynote storyline, and alignment on the IFA demo slate and owners.\n\nDeck: {deck_url}\n\n— Elena"),
+        ("Elena Park <elena.example@nvidia.com>", "URGENT: RTX Spark Exec Review moved to 5 PM today", f"Hi,\n\nAs your manager, I need your focus on today's leadership decisions. Leadership moved the RTX Spark Exec Review from Thursday to 5:00 PM today. This is a decision meeting, not a working session. We need two outcomes: approval of the agent-first keynote storyline, and alignment on the IFA demo slate and owners.\n\n{EXEC_REVIEW_ROLES}\n\nDeck: {deck_url}\n\n— Elena"),
         ("Mike Chen <mike.example@nvidia.com>", "APPROVED: RTX Spark inference numbers for slide 4", "The performance package is approved for today's Exec Review. Use exactly: 2.1x faster time-to-first-token versus the prior approved release; 38 tokens/second sustained on the fixed 35B workflow; 22% lower energy per completed workflow. Required footnote: Pre-production measurements on the RTX Spark reference configuration. Results vary by model, quantization, and workload. Daniel cleared this wording for leadership review."),
-        ("Aisha Rahman <aisha.example@nvidia.com>", "Exec Review deck pass: cut slide 6; protect slide 10", f"I finished the latest deck pass. Put Mike's approved numbers on slide 4. Cut slide 6 from the live flow, carry its essential point into slide 7, and move quickly through the opening so there is enough discussion time on slide 10.\n\nDeck: {deck_url}"),
+        ("Aisha Rahman <aisha.example@nvidia.com>", "Exec Review deck pass: cut slide 6; protect slide 10", f"My review is complete; I have not edited the deck. These edits are still for you to apply: put Mike's approved numbers on slide 4. Summarize the proposed customer-use example from slide 6 in the Customer Example section of slide 7, then remove slide 6 from the live flow. Preserve the local laptop comparison, the draft follow-up reviewed by the associate, and customer details staying on the device. This is a proposed use case, not customer validation or an approved demo selection; the demo slate and owners still need a decision. Move quickly through the opening so there is enough discussion time on slide 10.\n\nDeck: {deck_url}"),
         ("Daniel Cho <daniel.example@nvidia.com>", "Legal scope: RTX Spark wording cleared for leadership review", "The RTX Spark performance wording and pre-production qualification are cleared for today's leadership review. This is not blanket campaign-wide approval; keep the qualification intact and route final external copy through Legal."),
         ("Priya Nair <priya.example@nvidia.com>", "Decision by 4:30 PM today: marketing shoot venue hold", f"The planned venue is unavailable. We can hold Studio B Friday or Studio C Tuesday, with the preferred crew, until 4:30 PM today. Choose one before the hold expires or we risk a campaign slip.\n\nTracker: {sheet_url}"),
         ("Elena Park <elena.example@nvidia.com>", "Agent Security PRD needs to reach Engineering today", f"Please finish and send the Agent Security PRD to Engineering today. Protect a focused hour for the final pass. You can skip the optional launch storyboard session; notes will be posted afterward.\n\nCampaign plan: {doc_url}"),
@@ -488,7 +497,7 @@ TODAY_EVENTS = [
     ("14:00", "14:30", "Legal qualification check", "Confirm leadership-review wording and the required footnote."),
     ("15:00", "16:00", "Launch storyboard working session — notes available", "Optional working session; notes will be posted afterward."),
     ("16:00", "17:00", "Executive prep block", "Apply deck feedback and prepare the two leadership decisions."),
-    ("17:00", "17:45", "RTX Spark Exec Review — leadership decisions", "Decision meeting: approve the agent-first keynote storyline and align on IFA demos and owners."),
+    ("17:00", "17:45", "RTX Spark Exec Review — leadership decisions", f"Decision meeting: approve the agent-first keynote storyline and align on IFA demos and owners. {EXEC_REVIEW_ROLES}"),
     ("17:00", "17:30", "Decision follow-up triage", "Capture decisions, unresolved owners, and required follow-ups."),
 ]
 
@@ -601,7 +610,7 @@ def seed(week_of: date) -> dict:
         state["folder"] = create_folder(svc["drive"])
         state["doc"] = create_doc(svc["drive"], state["folder"]["id"])
         state["slides"] = create_slides(svc["drive"], state["folder"]["id"])
-        reset_deck_baseline(svc["slides"], state["slides"]["id"])
+        reset_deck_baseline(svc["slides"], state["slides"]["id"], drive=svc["drive"])
         state["sheet"] = create_sheet(svc["drive"], state["folder"]["id"])
         state["emails"], evidence = create_emails(svc["gmail"], state["slides"]["url"], state["sheet"]["url"], state["doc"]["url"])
         create_tasks(svc["tasks"], state, evidence)
@@ -617,20 +626,49 @@ def seed(week_of: date) -> dict:
 
 def reset_in_place(state: dict, week_of: date) -> dict:
     svc = services(tasks_required=bool(state.get("task_list")))
+    template_hash = deck_template_hash()
+    reset_deck_baseline(svc["slides"], state["slides"]["id"], drive=svc["drive"],
+                        restore_template=state["slides"].get("template_sha256") != template_hash)
+    state["slides"]["template_sha256"] = template_hash
     clear_seeded_tasks(svc["tasks"], state)
     remove_dynamic_items(state, svc, clear_drafts=True)
     state["emails"], evidence = create_emails(svc["gmail"], state["slides"]["url"], state["sheet"]["url"], state["doc"]["url"])
     create_tasks(svc["tasks"], state, evidence)
     reset_sheet_baseline(svc["sheets"], state, evidence, local_now().date().isoformat())
-    reset_deck_baseline(svc["slides"], state["slides"]["id"])
     state["events"] = create_calendar(svc["calendar"], week_of, state["slides"]["url"], state["doc"]["url"], state["sheet"]["url"])
     state["week_of"] = week_of.isoformat()
     state_path().write_text(json.dumps(state, indent=2), encoding="utf-8")
     return state
 
 
-def reset_deck_baseline(slides, presentation_id: str) -> None:
+def deck_template_hash() -> str:
+    return hashlib.sha256((ROOT / "demo" / "templates" / "rtx-spark-exec-review.pptx").read_bytes()).hexdigest()
+
+
+def reset_deck_baseline(slides, presentation_id: str, *, drive=None, restore_template=False) -> None:
     presentation = slides.presentations().get(presentationId=presentation_id).execute()
+    source = ROOT / "demo" / "templates" / "rtx-spark-exec-review.pptx"
+    with ZipFile(source) as template:
+        root = ElementTree.fromstring(template.read("ppt/presentation.xml"))
+    ns = {"p": "http://schemas.openxmlformats.org/presentationml/2006/main"}
+    expected_slides = len(root.findall("p:sldIdLst/p:sldId", ns))
+    if not expected_slides:
+        raise RuntimeError("The seed deck template contains no slides")
+    if restore_template or len(presentation.get("slides", [])) != expected_slides:
+        if drive is None:
+            raise RuntimeError("The demo deck template or structure changed; reset needs Drive access to restore its template")
+        from googleapiclient.http import MediaFileUpload
+
+        # Refresh the design or restore deleted slides without changing existing deck links.
+        drive.files().update(
+            fileId=presentation_id,
+            body={"mimeType": "application/vnd.google-apps.presentation"},
+            media_body=MediaFileUpload(str(source), mimetype="application/vnd.openxmlformats-officedocument.presentationml.presentation", resumable=False),
+            fields="id",
+        ).execute()
+        presentation = slides.presentations().get(presentationId=presentation_id).execute()
+        if len(presentation.get("slides", [])) != expected_slides:
+            raise RuntimeError("The demo deck template was not fully restored; retry the reset before running the demo")
     wanted = {
         3: ("Campaign readiness", """CLAIMS
 Approved evidence is ready to incorporate.
@@ -652,22 +690,22 @@ Approve wording and disclaimer once, then propagate without drift.
 
 CONTROL
 Do not invent, extrapolate, or preserve superseded multipliers."""),
-        6: ("Move the detail out of the live flow", """RECOMMENDATION
-Cut this standalone detail slide from the live presentation.
+        6: ("Customer use example", """SCENARIO
+A retail associate compares two laptops using a local product catalog.
 
-WHY
-It duplicates the storyline and delays the decisions.
+ASSISTANCE
+The assistant summarizes the differences and drafts a customer follow-up.
 
-USE
-Keep supporting detail in the appendix or presenter notes; carry the essential point into slide 7."""),
+CUSTOMER VALUE
+The associate reviews the draft before sending. Customer details stay on the device."""),
         7: ("IFA demos — alignment needed", """DECISION
-Align on the demo slate that best proves the agent-first story.
+Choose demos that show useful assistance with the user in control.
 
-KNOWN
-The event brief requires this decision.
+CUSTOMER EXAMPLE
+Candidate use case still to be summarized for the review.
 
 OPEN
-Current project notes do not name an approved demo list; confirm the proposed demos and owners before final review."""),
+Confirm the demo slate and owners. No selection is approved yet."""),
         8: ("Execution dependencies", """CLAIMS
 Approval unlocks deck, messaging, and creative updates.
 

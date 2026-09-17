@@ -70,10 +70,15 @@ check off in Google Tasks; Hermes chat bullets do not sync completion state.
 As you can see, I have set up my chief of staff to be succinct and help me cut
 through the noise. But how do we know the answers are correct?
 
-It knows what to prioritize because I have given the agent access to a popular
-technique called a second brain. It reads my email and Slack messages, and it
-can see my prioritized projects in Obsidian. With that context, it can make
-smart recommendations. You can see how the graph of nodes looks in Obsidian.
+Alongside current email, calendar, and files, it can read my Second Brain
+project notes in Obsidian. Those notes provide background and relationships;
+the latest workspace evidence determines current status and requested changes.
+You can see how the graph of linked notes looks in Obsidian. The demo reads
+these notes without rewriting them or importing Slack messages.
+
+**Follow-up prompt — Second Brain**
+
+> What notes from my Second Brain would help me prepare for the executive review?
 
 *Show Obsidian.*
 
@@ -120,7 +125,7 @@ ask the chief of staff to help.
 
 **Prompt**
 
-> Update the RTX Spark campaign tracker using the latest email evidence.
+> Update the RTX Spark campaign tracker using the latest email evidence, then save follow-up drafts for any items still missing updates. Show me the drafts for review. Don’t send anything.
 
 *Switch the campaign tracker to full screen while the agent works. Keep it full
 screen for the completion summary so every update shown by the agent corresponds
@@ -142,19 +147,39 @@ to a visible row.*
 > - Social rollout — Rafael has not provided a current status.
 > - Retail demo readiness — the final owner is still unassigned.
 >
-> I can prepare follow-up drafts for all three.
+> I saved follow-up drafts for the items still missing updates. Here are the
+> drafts for your review. Nothing was sent.
 
-**Prompt**
+Show the actual saved drafts' recipients, subjects, and contents. The number
+and recipients depend on the current evidence, not a fixed list. An unresolved
+decision or unassigned owner does not by itself mean a status update is missing.
 
-> Prepare follow-up drafts for those three items.
+## Optional — Scheduled project tracking
 
-**Intended response**
+The same tracker-and-draft workflow can run through Hermes's native scheduler.
+Only include this segment after the scheduled workflow has passed live validation;
+installation alone does not create a job or demonstrate a successful run.
 
-> Drafting…
->
-> Three drafts are ready for review: a status request to Rafael, a response to
-> Priya on the venue hold, and a note to Elena requesting a final retail-demo
-> owner. Nothing was sent.
+Use the [job-creation prompt and validation checklist](README.md#scheduled-project-tracking-optional)
+to set it up explicitly in the Chief of Staff profile. Show the job's schedule,
+time zone, and next run. Scheduled work updates the tracker and prepares drafts;
+it never sends email. There is no fixed number of follow-ups or recipients.
+
+To demonstrate without waiting for the scheduled time, use an enabled job and ask:
+
+> Run Campaign tracker follow-ups now.
+
+Review the actual run output, tracker, and saved drafts. Do not overlap this run
+with Query 3 or a reset. If the job is paused, resume it first; a manual trigger
+still performs real writes and model inference.
+
+After the demonstration:
+
+> Pause Campaign tracker follow-ups.
+
+Confirm it is paused and any in-progress execution has finished before resetting
+the workspace. Recurring execution and duplicate-draft avoidance must be tested,
+not assumed from the presentation script.
 
 ## Close
 

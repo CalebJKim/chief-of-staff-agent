@@ -40,9 +40,10 @@ hermes -p chief-of-staff tools list --platform cli
 
 The installer keeps only `chief-of-staff` and `ingest` enabled in the target
 profile's skill catalog. Other installed skills remain installed but disabled.
-It also disables `desktop_ui` and pins Desktop to `skills,terminal` to prevent
+It also disables `desktop_ui` and pins Desktop to `skills,terminal,cronjob` to prevent
 automatic link previews. The existing Hermes Python runtime is shared through
 a local link, so the skill commands remain unchanged.
+The scheduling tool is available, but installation does not create or enable jobs.
 
 If Hermes already has a customized `SOUL.md`, the installer preserves it and adds
 chief-of-staff routing if missing. Use `--overwrite-soul` only if replacement is intended.
@@ -104,8 +105,9 @@ The agent will use the Gmail, Calendar, and Drive data from the account you conn
 
 ## Dedicated lightweight profile
 
-The installer disables unrelated skills automatically. Keep only the `skills`
-and `terminal` toolsets enabled; use these commands to review the configuration:
+The installer disables unrelated skills automatically. Keep `skills`, `terminal`,
+and `cronjob` enabled for interactive Desktop use; scheduled workers need only
+`skills` and `terminal`. Use these commands to review the configuration:
 
 ```bash
 hermes -p chief-of-staff tools
@@ -113,3 +115,10 @@ hermes -p chief-of-staff skills config
 ```
 
 Do not disable `chief-of-staff`, `skills`, or `terminal`.
+
+## Optional: scheduled tracker updates and drafts
+
+See [Scheduled project tracking](README.md#scheduled-project-tracking-optional)
+for the opt-in job-creation prompt, runtime requirements, and live-validation
+checklist. Jobs remain draft-only. Validate repeat runs before leaving a schedule
+active, and pause it before a workspace reset or manual demo run.

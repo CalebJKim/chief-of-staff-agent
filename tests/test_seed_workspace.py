@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "demo"))
-from baseline import PRE_EMAIL_ROWS, reset_sheet_baseline
+from baseline import PRE_EMAIL_ROWS, STATUS_GUIDE, reset_sheet_baseline
 
 
 class SeedWorkspaceTests(unittest.TestCase):
@@ -26,9 +26,16 @@ class SeedWorkspaceTests(unittest.TestCase):
             len(PRE_EMAIL_ROWS),
         )
         self.assertEqual(
-            ["'Campaign Lanes'!A7:J14", "'Campaign Lanes'!A3:J3"],
+            ["'Campaign Lanes'!A7:J14", "'Campaign Lanes'!A3:J3", "'Campaign Lanes'!A4"],
             [item["range"] for item in sheets.spreadsheets().values().batchUpdate.call_args.kwargs["body"]["data"]],
         )
+
+        data = sheets.spreadsheets().values().batchUpdate.call_args.kwargs["body"]["data"]
+        self.assertEqual(data[-1]["values"], [[STATUS_GUIDE]])
+        for status in ("Awaiting update", "In review", "Complete", "Blocked", "On track"):
+            self.assertIn(status + " =", STATUS_GUIDE)
+        for lane in PRE_EMAIL_ROWS:
+            self.assertNotIn(lane[0], STATUS_GUIDE)
 
 
 if __name__ == "__main__":

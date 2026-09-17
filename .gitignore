@@ -6,6 +6,7 @@ google_oauth_pending.json
 client_secret*.json
 client-secret*.json
 chief-of-staff-workspace-state.json
+second-brain.json
 config.yaml
 
 # Runtime state

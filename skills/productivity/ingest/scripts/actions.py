@@ -10,6 +10,7 @@ import re
 import sys
 from email.message import EmailMessage
 from email.utils import getaddresses
+from html import unescape
 from pathlib import Path
 from typing import Any
 
@@ -60,8 +61,10 @@ def decode_body(payload: dict[str, Any]) -> str:
     candidates: list[tuple[str, str]] = []
 
     def walk(part: dict[str, Any]) -> None:
+        if part.get("filename"):
+            return
         data = part.get("body", {}).get("data")
-        if data:
+        if data and part.get("mimeType") in {"text/plain", "text/html"}:
             try:
                 text = base64.urlsafe_b64decode(data + "=" * (-len(data) % 4)).decode("utf-8", errors="replace")
                 candidates.append((part.get("mimeType", ""), text))
@@ -76,12 +79,16 @@ def decode_body(payload: dict[str, Any]) -> str:
     plain = next((text for mime, text in candidates if mime == "text/plain"), None)
     text = plain if plain is not None else candidates[0][1]
     if plain is None:
-        text = re.sub(r"<[^>]+>", " ", text)
+        text = unescape(re.sub(r"<[^>]+>", " ", text))
     return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
 def headers(payload: dict[str, Any]) -> dict[str, str]:
     return {h.get("name", "").lower(): h.get("value", "") for h in payload.get("headers", [])}
+
+
+def gmail_url(thread_id: str | None) -> str | None:
+    return f"https://mail.google.com/mail/u/0/#all/{thread_id}" if thread_id else None
 
 
 def gmail_get(args: argparse.Namespace) -> None:
@@ -91,6 +98,7 @@ def gmail_get(args: argparse.Namespace) -> None:
     emit({
         "id": msg.get("id"),
         "thread_id": msg.get("threadId"),
+        "url": gmail_url(msg.get("threadId")),
         "from": hdr.get("from", ""),
         "to": hdr.get("to", ""),
         "cc": hdr.get("cc", ""),
@@ -115,7 +123,7 @@ def gmail_thread(args: argparse.Namespace) -> None:
             "date": hdr.get("date", ""),
             "body": decode_body(msg.get("payload", {}))[: args.max_chars],
         })
-    emit({"thread_id": args.thread_id, "messages": output})
+    emit({"thread_id": args.thread_id, "url": gmail_url(thread.get("id") or args.thread_id), "messages": output})
 
 
 def gmail_search(args: argparse.Namespace) -> None:
@@ -135,6 +143,8 @@ def gmail_search(args: argparse.Namespace) -> None:
         matches.append({
             "id": msg.get("id"),
             "thread_id": msg.get("threadId"),
+            "labels": msg.get("labelIds", []),
+            "url": gmail_url(msg.get("threadId")),
             "from": hdr.get("from", ""),
             "to": hdr.get("to", ""),
             "cc": hdr.get("cc", ""),
@@ -143,6 +153,39 @@ def gmail_search(args: argparse.Namespace) -> None:
             "date": hdr.get("date", ""),
         })
     emit({"query": args.query, "matches": matches})
+
+
+def gmail_drafts(args: argparse.Namespace) -> None:
+    """Read all saved drafts, including bodies, without a recipient filter."""
+    drafts_api = service("gmail", "v1").users().drafts()
+    drafts = []
+    page_token = None
+    while True:
+        params = {"userId": "me", "maxResults": 500}
+        if page_token:
+            params["pageToken"] = page_token
+        page = drafts_api.list(**params).execute()
+        for ref in page.get("drafts", []):
+            draft = drafts_api.get(userId="me", id=ref["id"], format="full").execute()
+            msg = draft["message"]
+            payload = msg.get("payload", {})
+            hdr = headers(payload)
+            drafts.append({
+                "draft_id": draft["id"],
+                "message_id": msg.get("id"),
+                "thread_id": msg.get("threadId"),
+                "url": gmail_url(msg.get("threadId")),
+                "to": hdr.get("to", ""),
+                "cc": hdr.get("cc", ""),
+                "bcc": hdr.get("bcc", ""),
+                "subject": hdr.get("subject", ""),
+                "body": decode_body(payload),
+            })
+        page_token = page.get("nextPageToken")
+        if not page_token:
+            break
+    # Emit only after every page and body succeeds, never a misleading partial list.
+    emit({"complete": True, "count": len(drafts), "drafts": drafts})
 
 
 def gmail_important(args: argparse.Namespace) -> None:
@@ -159,6 +202,7 @@ def gmail_important(args: argparse.Namespace) -> None:
         messages.append({
             "id": msg.get("id"),
             "thread_id": msg.get("threadId"),
+            "url": gmail_url(msg.get("threadId")),
             "from": hdr.get("from", ""),
             "to": hdr.get("to", ""),
             "cc": hdr.get("cc", ""),
@@ -175,7 +219,44 @@ def validate_recipient_header(value: str, field: str) -> None:
         raise RuntimeError(f"{field} must include a complete email address; search Gmail or reply to a verified message instead")
 
 
+def _verify_draft_recipients(api: Any, recipient_headers: list[str]) -> None:
+    """Verify explicit mailboxes against at most five non-draft messages each."""
+    addresses = sorted({address.strip().casefold() for _name, address in getaddresses(recipient_headers) if address.strip()})
+    messages = api.users().messages()
+    for address in addresses:
+        quoted = address.replace("\\", "\\\\").replace('"', '\\"')
+        query = f'-in:drafts {{from:"{quoted}" to:"{quoted}" cc:"{quoted}"}}'
+        verified = False
+        try:
+            refs = messages.list(userId="me", q=query, maxResults=5).execute().get("messages", [])
+            for ref in refs[:5]:
+                candidate = messages.get(
+                    userId="me", id=ref["id"], format="metadata",
+                    metadataHeaders=["From", "Reply-To", "To", "Cc"],
+                ).execute()
+                if "DRAFT" in candidate.get("labelIds", []):
+                    continue
+                values = [header.get("value", "") for header in candidate.get("payload", {}).get("headers", [])
+                          if header.get("name", "").casefold() in {"from", "reply-to", "to", "cc"}]
+                if address in {mailbox.strip().casefold() for _name, mailbox in getaddresses(values)}:
+                    verified = True
+                    break
+        except Exception as exc:
+            raise RuntimeError(f"Recipient {address!r} not verified: Gmail header lookup failed: {type(exc).__name__}: {exc}") from exc
+        if not verified:
+            raise RuntimeError(f"Recipient {address!r} not verified in bounded non-draft Gmail evidence; use a verified address, or --allow-new-recipient only for an address explicitly supplied or confirmed by the user")
+
+
 def gmail_draft(args: argparse.Namespace) -> None:
+    body_file = getattr(args, "body_file", None)
+    body_text = (sys.stdin.read() if body_file == "-" else Path(body_file).read_text(encoding="utf-8")) if body_file else args.body
+    if not body_text or not body_text.strip():
+        raise RuntimeError("A draft needs a nonempty body")
+    expected_to = getattr(args, "expected_to", "")
+    if args.reply_to_message and not args.to and not expected_to:
+        raise RuntimeError("A reply without --to requires --expected-to from the intended recipient's verified email address")
+    if expected_to:
+        validate_recipient_header(expected_to, "--expected-to")
     api = service("gmail", "v1")
     message = EmailMessage()
     to = args.to
@@ -202,19 +283,27 @@ def gmail_draft(args: argparse.Namespace) -> None:
     if not to or not subject:
         raise RuntimeError("A draft needs recipients and a subject")
     validate_recipient_header(to, "To")
+    if expected_to:
+        expected = {address.strip().casefold() for _name, address in getaddresses([expected_to])}
+        resolved = {address.strip().casefold() for _name, address in getaddresses([to])}
+        if expected != resolved:
+            raise RuntimeError(f"Draft recipient mismatch: expected {expected_to!r}, resolved {to!r}. Read the intended thread and correct the source message or recipient before retrying")
     if args.cc:
         validate_recipient_header(args.cc, "Cc")
+    if not getattr(args, "allow_new_recipient", False) and (args.to or args.cc):
+        _verify_draft_recipients(api, [args.to, args.cc])
     message["To"] = to
     if args.cc:
         message["Cc"] = args.cc
     message["Subject"] = subject
-    message.set_content(args.body)
+    message.set_content(body_text)
     raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
     body: dict[str, Any] = {"message": {"raw": raw}}
     if thread_id:
         body["message"]["threadId"] = thread_id
     result = api.users().drafts().create(userId="me", body=body).execute()
-    emit({"status": "drafted", "draft_id": result.get("id"), "message_id": result.get("message", {}).get("id")})
+    emit({"status": "drafted", "to": str(message["To"]), "subject": str(message["Subject"]),
+          "draft_id": result.get("id"), "message_id": result.get("message", {}).get("id")})
 
 
 def drive_search(args: argparse.Namespace) -> None:
@@ -320,6 +409,14 @@ def sheets_update_lanes(args: argparse.Namespace) -> None:
     if len(set(lanes)) != len(lanes):
         raise RuntimeError("Each tracker lane may be updated only once")
     for item in updates:
+        unknown = set(item) - {"lane", "status", "latest", "next", "due", "blocker", "evidence"}
+        if unknown:
+            raise RuntimeError(f"Unsupported tracker fields: {sorted(unknown)}; use lane, status, latest, next, due, blocker, evidence")
+        if getattr(args, "status_only", True) and set(item) - {"lane", "status"}:
+            raise RuntimeError(
+                "Status-only updates accept only lane and status; remove other fields and retry. "
+                "Nothing was written. Use --include-details only when the user explicitly requested non-status edits."
+            )
         if item.get("status") not in TRACKER_STATUSES:
             raise RuntimeError(f"Invalid status for {item['lane']!r}; use one of {sorted(TRACKER_STATUSES)}")
 
@@ -334,13 +431,27 @@ def sheets_update_lanes(args: argparse.Namespace) -> None:
         raise RuntimeError(f"Tracker lane(s) not found: {missing}")
 
     data = []
+    unreviewed_blockers = []
     for item in updates:
         row = row_by_lane[item["lane"]]
+        if getattr(args, "status_only", True):
+            data.append({"range": f"'{args.sheet}'!C{row}", "values": [[item["status"]]]})
+            continue
+        existing = current[row - 6]
+        if (len(existing) > 6 and str(existing[6] or "").strip()
+                and item["status"] != existing[2] and not isinstance(item.get("blocker"), str)):
+            unreviewed_blockers.append(item["lane"])
+        # Sheets skips null cells; an explicit empty string still clears a cell.
         values = [[
-            item["status"], item.get("latest", ""), item.get("next", ""),
-            item.get("due", ""), item.get("blocker", ""), item.get("evidence", ""),
+            item["status"], item.get("latest"), item.get("next"),
+            item.get("due"), item.get("blocker"), item.get("evidence"),
         ]]
         data.append({"range": f"'{args.sheet}'!C{row}:H{row}", "values": values})
+    if unreviewed_blockers:
+        raise RuntimeError(
+            f"Status changes need explicit blocker text for {unreviewed_blockers}: "
+            "preserve or revise each dependency, or use an empty string if resolved. Nothing was written."
+        )
     result = api.spreadsheets().values().batchUpdate(
         spreadsheetId=args.spreadsheet_id,
         body={"valueInputOption": "USER_ENTERED", "data": data},
@@ -371,13 +482,34 @@ def slides_get(args: argparse.Namespace) -> None:
 
 def slides_replace(args: argparse.Namespace) -> None:
     require_confirm(args, "Slides text replacement")
+    replacement = {"containsText": {"text": args.find, "matchCase": args.match_case}, "replaceText": args.replace}
+    slide_id = getattr(args, "slide_id", None)
+    if slide_id is not None:
+        if not slide_id.strip():
+            raise RuntimeError("--slide-id cannot be empty; use an object_id returned by slides get")
+        replacement["pageObjectIds"] = [slide_id]
     result = service("slides", "v1").presentations().batchUpdate(
         presentationId=args.presentation_id,
-        body={"requests": [{"replaceAllText": {"containsText": {"text": args.find, "matchCase": args.match_case}, "replaceText": args.replace}}]},
+        body={"requests": [{"replaceAllText": replacement}]},
     ).execute()
     replies = result.get("replies", [])
     occurrences = sum(r.get("replaceAllText", {}).get("occurrencesChanged", 0) for r in replies)
+    if not occurrences:
+        raise RuntimeError("No matching slide text was replaced; read the intended slide and correct the target before continuing")
     emit({"status": "updated", "presentation_id": args.presentation_id, "occurrences_changed": occurrences})
+
+
+def slides_delete(args: argparse.Namespace) -> None:
+    require_confirm(args, "slide deletion")
+    api = service("slides", "v1").presentations()
+    deck = api.get(presentationId=args.presentation_id, fields="revisionId,slides(objectId)").execute()
+    if args.slide_id not in {slide["objectId"] for slide in deck.get("slides", [])}:
+        raise RuntimeError("Slide not found in this presentation; read the deck again before deleting")
+    body = {"requests": [{"deleteObject": {"objectId": args.slide_id}}]}
+    if deck.get("revisionId"):
+        body["writeControl"] = {"requiredRevisionId": deck["revisionId"]}
+    api.batchUpdate(presentationId=args.presentation_id, body=body).execute()
+    emit({"status": "deleted", "presentation_id": args.presentation_id, "slide_id": args.slide_id})
 
 
 def calendar_create(args: argparse.Namespace) -> None:
@@ -417,6 +549,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("query")
     p.add_argument("--max", type=int, default=5)
     p.set_defaults(func=gmail_search)
+    p = gmail.add_parser("drafts", help="Read all saved drafts with recipients, subjects, threads, and bodies")
+    p.set_defaults(func=gmail_drafts)
     p = gmail.add_parser("important")
     p.add_argument("--max", type=int, default=12)
     p.add_argument("--newer-than-days", type=int, default=2)
@@ -424,9 +558,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=gmail_important)
     p = gmail.add_parser("draft")
     p.add_argument("--to", default="")
+    p.add_argument("--expected-to", default="", help="Verify intended recipients; required when deriving a reply recipient")
+    p.add_argument("--allow-new-recipient", action="store_true", help="Allow explicit To/Cc addresses supplied or confirmed by the user without prior Gmail evidence")
     p.add_argument("--cc", default="")
     p.add_argument("--subject", default="")
-    p.add_argument("--body", required=True)
+    draft_body = p.add_mutually_exclusive_group(required=True)
+    draft_body.add_argument("--body")
+    draft_body.add_argument("--body-file", help="Read UTF-8 body text from a file, or - for standard input")
     p.add_argument("--thread-id", default="")
     p.add_argument("--reply-to-message", default="", help="Build a correctly threaded reply draft")
     p.set_defaults(func=gmail_draft)
@@ -459,7 +597,7 @@ def build_parser() -> argparse.ArgumentParser:
     sheets = groups.add_parser("sheets").add_subparsers(dest="action", required=True)
     p = sheets.add_parser("get")
     p.add_argument("spreadsheet_id")
-    p.add_argument("range")
+    p.add_argument("range", nargs="?", default="A1:J80")
     p.set_defaults(func=sheets_get)
     p = sheets.add_parser("update")
     p.add_argument("spreadsheet_id")
@@ -473,6 +611,9 @@ def build_parser() -> argparse.ArgumentParser:
     updates_input = p.add_mutually_exclusive_group(required=True)
     updates_input.add_argument("--updates", help="JSON array of named lane updates")
     updates_input.add_argument("--updates-file", help="JSON file path, or - to read JSON from standard input")
+    scope = p.add_mutually_exclusive_group()
+    scope.add_argument("--status-only", dest="status_only", action="store_true", default=True, help="Write only Status cells (default); reject all other update fields")
+    scope.add_argument("--include-details", dest="status_only", action="store_false", help="Allow named non-status fields only when explicitly requested by the user")
     p.add_argument("--confirm", action="store_true")
     p.set_defaults(func=sheets_update_lanes)
 
@@ -483,11 +624,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=slides_get)
     p = slides.add_parser("replace-text")
     p.add_argument("presentation_id")
+    p.add_argument("--slide-id", help="Limit replacement to a slide object_id returned by slides get")
     p.add_argument("--find", required=True)
     p.add_argument("--replace", required=True)
     p.add_argument("--match-case", action="store_true")
     p.add_argument("--confirm", action="store_true")
     p.set_defaults(func=slides_replace)
+    p = slides.add_parser("delete")
+    p.add_argument("presentation_id")
+    p.add_argument("--slide-id", required=True, help="Slide object_id returned by slides get, not its display number")
+    p.add_argument("--confirm", action="store_true")
+    p.set_defaults(func=slides_delete)
 
     calendar = groups.add_parser("calendar").add_subparsers(dest="action", required=True)
     p = calendar.add_parser("create")

@@ -1,15 +1,20 @@
 # Merge these keys into the target profile's config.yaml.
 # Keep the user's model/provider configuration and other platform settings.
-# install.py also sets HERMES_TUI_TOOLSETS=skills,terminal in the profile .env
+# install.py also sets HERMES_TUI_TOOLSETS=skills,terminal,cronjob in the profile .env
 # because Desktop auto-discovery can otherwise add preview tools back.
 
 platform_toolsets:
   cli:
     - skills
     - terminal
+    - cronjob
+  # Scheduled workers execute the workflow, not manage other jobs.
+  cron:
+    - skills
+    - terminal
 
 # install.py populates skills.disabled from the target machine's installed
-# catalog, keeping only chief-of-staff and ingest enabled. Do not copy that
+# catalog, keeping chief-of-staff, ingest, and google-workspace enabled. Do not copy that
 # generated machine-specific list into this portable example.
 skills:
   creation_nudge_interval: 15

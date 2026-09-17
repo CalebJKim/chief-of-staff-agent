@@ -47,7 +47,9 @@ exists, Tasks access is checked before any reset starts.
 
 ## Template fidelity
 
-The Sheet, Doc, and Slides are imported from exact Office exports of the reference workspace stored under `demo/templates/`. This preserves the tracker styling, conditional formatting, document structure, and slide design instead of rebuilding approximations through API calls. The imported files receive fresh Google IDs and are linked dynamically from seeded mail and calendar entries.
+The Sheet, Doc, and Slides are imported from Office templates stored under `demo/templates/`. The executive deck uses a charcoal-and-green design with editable title/body fields and the same ten-slide scenario. Importing the templates preserves the tracker styling, conditional formatting, document structure, and slide design instead of rebuilding approximations through API calls. The imported files receive fresh Google IDs and are linked dynamically from seeded mail and calendar entries.
+
+If slides were removed or added during the demo, or the local deck template has changed, reset re-imports the deck template into the same Google Slides file before restoring baseline text. The file ID and deck links stay unchanged; slide IDs may change, so start a fresh demo chat after reset. The workspace state records the template's SHA-256 fingerprint. Older states without that fingerprint receive a one-time refresh. With an unchanged template and the original slide count, reset keeps its existing text-only path. This restores the template deck, not custom structural edits.
 
 ## Seed
 
@@ -77,7 +79,7 @@ python demo/seed_workspace.py --cleanup --confirm
 If OAuth scopes or organization policy prevent the script from creating a resource, create the components manually:
 
 1. **Sheet** — Create `RTX Spark Campaign Tracker`, tab `Campaign Lanes`, with the A:J columns listed above. Add at least these lanes: Product performance claims (Awaiting update), Exec Review deck (Awaiting update), Agent Messaging (Awaiting update), Marketing shoot (Blocked), Partner enablement (On track), Social rollout (Awaiting update), Retail demo readiness (Blocked), Legal intake (Awaiting update).
-2. **Slides** — Create a 10-slide `RTX Spark Exec Review`. Put `Performance to go here - Mike Chen to provide` on slide 4, `Move the detail out of the live flow` on slide 6, and two decision asks on slide 10.
+2. **Slides** — Create a 10-slide `RTX Spark Exec Review`. Put `Performance to go here - Mike Chen to provide` on slide 4, a proposed retail customer-use example on slide 6 (local laptop comparison, an associate-reviewed follow-up draft, and customer details staying on the device), a pending Customer Example section on slide 7, and two decision asks on slide 10. Aisha's feedback asks to summarize that example in slide 7 before removing slide 6. The example is not customer validation or approval of the demo slate or owners.
 3. **Doc** — Create `RTX Spark Campaign Plan` with an agent-first narrative and open work for claims, retail demo ownership, shoot date, and Exec Review preparation.
 4. **Calendar** — Add a varied schedule across the workweek rather than repeating the same meetings every day. On the current workday, include the RTX Spark Exec Review at 5 PM and an overlapping decision-triage event.
 5. **Gmail** — Send or import messages to yourself containing the six topics above. Mark them unread/important. Include the generated Sheet/Slides/Doc links where relevant. Use clearly synthetic addresses such as `elena.example@nvidia.com`.

@@ -50,10 +50,12 @@ adds chief-of-staff routing if missing and enables only `chief-of-staff` and
 `ingest`. Other installed skills stay installed but disabled. An explicit
 `--hermes-home PATH` still installs directly into that exact target.
 The installer also
-disables `desktop_ui` and sets `HERMES_TUI_TOOLSETS=skills,terminal` in the
+disables `desktop_ui` and sets `HERMES_TUI_TOOLSETS=skills,terminal,cronjob` in the
 profile's `.env` so Desktop auto-discovery cannot add preview tools back.
 Restart Hermes Desktop after installation. Links remain available inline;
 the agent uses the saved API connection instead of opening embedded web previews.
+The `cronjob` tool manages Hermes's native scheduler; installation does not create,
+enable, copy, or run scheduled jobs. Existing jobs in the target profile are preserved.
 
 Select **chief-of-staff** in Hermes Desktop and start a new chat. Before running
 OAuth or seed/reset scripts from a separate terminal, select the same profile:
@@ -102,6 +104,32 @@ Google Tasks to an existing connection, enable its API in the same OAuth project
 and repeat `--auth-url` / `--auth-code` once to approve the additional Tasks scope.
 The existing Workspace connection remains usable before this extra consent.
 
+## Connect Second Brain (optional)
+
+Connect an existing local Markdown/Obsidian vault to the demo profile:
+
+```bash
+python install.py --second-brain "/path/to/your/Second Brain"
+```
+
+The folder path is saved in the profile's local `second-brain.json`, not in Git.
+The vault is read in place: it is not copied, edited, synced to Google, or opened
+automatically. Reconnect the local folder when setting up another machine.
+
+The existing daily-brief call adds up to three relevant note excerpts in a separate
+1,800-character allowance, without removing any of the existing bounded Google
+evidence. Selection is a local word match, not an extra model call or vector index.
+Excerpts show the matching passage. Each lookup scans at most 1,000 folders and
+1,000 Markdown files (128 KiB per note), skipping hidden folders and notes.
+Focused follow-ups can search or read a note when needed; already-returned context
+is reused. Notes provide background, while current Google evidence controls
+timing, status, approval scope, recipients, and writes. An unavailable vault is
+reported separately and does not prevent the Google brief from running.
+
+Note links use the [Obsidian URI](https://help.obsidian.md/Extending+Obsidian/Obsidian+URI)
+format and open only when the user clicks them. Restart Hermes Desktop or start a
+fresh profile chat after installation to load the updated skill.
+
 ## Use
 
 Start a new Hermes Desktop chat in **chief-of-staff** (or run
@@ -122,6 +150,48 @@ covers context, work needed before the meeting, and the meeting's intended goals
 Use [Google Tasks](https://tasks.google.com/) to check off the seeded tasks. Chat
 lists in this Hermes Desktop version do not save checkbox progress or sync it to
 Google Tasks.
+
+## Scheduled project tracking (optional)
+
+Scheduling is a separate, explicit opt-in after the interactive workflow works.
+Use Hermes's native scheduler from the **chief-of-staff** profile; no Windows
+scheduled task or separate scheduling service is needed. Keep Hermes Desktop's
+backend (or the profile's Hermes gateway), the model server, and the machine
+running for scheduled execution. Do not run a scheduled job alongside manual
+testing or a workspace reset against the same account.
+
+For CLI scheduling, enable `cronjob` with `hermes -p chief-of-staff tools` if it
+is not already available. `config.example.yaml` includes the CLI configuration
+and a `cron` worker toolset limited to `skills` and `terminal`; the installer pins
+the Desktop toolsets but does not replace existing platform toolset settings.
+
+Example job-creation prompt (choose your own schedule and verify the reported
+time zone and next run before leaving it active):
+
+> Create a scheduled task named "Campaign tracker follow-ups" in this Chief of Staff profile, running every weekday at 9:00 AM America/Los_Angeles. Use only the skills and terminal toolsets for the scheduled worker, and load the chief-of-staff skill. On each run, check the latest email evidence and update the RTX Spark campaign tracker where supported. Save follow-up drafts for items still missing updates, checking existing drafts first so the same unresolved request to the same recipient is not drafted again. Never send emails or make unrelated changes. Save a local report of what changed, what remains unresolved, and which drafts are ready for review. Show me the configured schedule and next run.
+
+The name, tracker, time, and time zone are examples, not installer defaults.
+Creating the job explicitly authorizes its recurring tracker edits and draft
+creation, not sending mail. Ask Hermes to list existing jobs first; update or
+reuse a matching job instead of creating another copy. Reports remain in the
+job's run history/local output; do not assume delivery to the current chat.
+
+Before leaving recurrence enabled, validate it when live testing is authorized:
+
+1. Inspect the job's profile, schedule/time zone, workflow prompt, and worker toolsets.
+2. Run the job once, then inspect its tracker changes, draft recipients/bodies,
+   and local report. A manual trigger still writes to Workspace and uses the model.
+3. Run it again without resetting data. Confirm that unchanged work creates no
+   duplicate drafts. This is a prompted behavior to validate, not a guaranteed
+   deduplication mechanism in the helper.
+4. If a command is blocked by unattended execution approvals, inspect the failure;
+   do not globally disable approvals or report that the work succeeded.
+5. Pause the job after the demonstration and before resetting or manual testing.
+
+Useful management prompts: "List my scheduled tasks", "Run Campaign tracker
+follow-ups now", and "Pause Campaign tracker follow-ups". A paused job must be
+resumed before a manual run. Check for an already-running execution before
+triggering another or resetting the workspace.
 
 ## Safety behavior
 
