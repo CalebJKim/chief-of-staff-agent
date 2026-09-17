@@ -206,7 +206,7 @@ class IngestTests(unittest.TestCase):
         actions.require_confirm(argparse.Namespace(confirm=True), "test mutation")
 
     def test_tracker_updates_can_be_read_from_standard_input(self):
-        payload = '[{"lane":"Exec Review deck","status":"In review","latest":"Aisha\'s review is complete."}]'
+        payload = '[{"lane":"Exec Review deck","status":"In progress","latest":"Aisha\'s review is complete."}]'
         args = argparse.Namespace(updates=None, updates_file="-")
 
         with patch.object(actions.sys, "stdin", io.StringIO(payload)):
@@ -215,7 +215,7 @@ class IngestTests(unittest.TestCase):
         self.assertEqual("Aisha's review is complete.", updates[0]["latest"])
 
     def test_inline_tracker_updates_remain_supported(self):
-        payload = '[{"lane":"Exec Review deck","status":"In review"}]'
+        payload = '[{"lane":"Exec Review deck","status":"In progress"}]'
         args = argparse.Namespace(updates=payload, updates_file=None)
 
         self.assertEqual("Exec Review deck", actions._load_tracker_updates(args)[0]["lane"])
@@ -812,7 +812,7 @@ class IngestTests(unittest.TestCase):
 
     def test_tracker_omitted_fields_are_skipped_and_explicit_empty_clears(self):
         updates = [
-            {"lane": "Packaging check", "status": "In review", "latest": "Review received"},
+            {"lane": "Packaging check", "status": "In progress", "latest": "Review received"},
             {"lane": "Supplier clearance", "status": "Complete", "blocker": ""},
         ]
         args = actions.build_parser().parse_args([
@@ -830,7 +830,7 @@ class IngestTests(unittest.TestCase):
             actions.sheets_update_lanes(args)
         values.batchUpdate.assert_called_once_with(spreadsheetId="sheet-id", body={
             "valueInputOption": "USER_ENTERED", "data": [
-                {"range": "'Operations'!C7:H7", "values": [["In review", "Review received", None, None, None, None]]},
+                {"range": "'Operations'!C7:H7", "values": [["In progress", "Review received", None, None, None, None]]},
                 {"range": "'Operations'!C8:H8", "values": [["Complete", None, None, None, "", None]]},
             ],
         })
@@ -840,7 +840,7 @@ class IngestTests(unittest.TestCase):
             with self.subTest(field=unsupported):
                 args = actions.build_parser().parse_args([
                     "sheets", "update-lanes", "sheet-id", "--confirm", "--updates", json.dumps([
-                        {"lane": "Packaging check", "status": "In review", unsupported: "New text"},
+                        {"lane": "Packaging check", "status": "In progress", unsupported: "New text"},
                     ]),
                 ])
                 with patch.object(actions, "service") as service:
@@ -930,7 +930,7 @@ class TrackerBlockerReviewTests(unittest.TestCase):
             ["Inventory", "Owner", "Awaiting update"],
         ], [
             {"lane": "Inventory", "status": "On track"},
-            {"lane": "Packing", "status": "In review"},
+            {"lane": "Packing", "status": "In progress"},
             {"lane": "Routing", "status": "Complete", "blocker": None},
         ])
         with patch.object(actions, "service", return_value=api):
@@ -947,7 +947,7 @@ class TrackerBlockerReviewTests(unittest.TestCase):
             with self.subTest(blocker=blocker):
                 args, api, values = self.setup_update([
                     ["Packing", "Owner", "Blocked", "", "", "", "Supplier confirmation"],
-                ], [{"lane": "Packing", "status": "In review", "blocker": blocker}])
+                ], [{"lane": "Packing", "status": "In progress", "blocker": blocker}])
                 with patch.object(actions, "service", return_value=api):
                     with self.assertRaisesRegex(RuntimeError, "explicit blocker text"):
                         actions.sheets_update_lanes(args)
@@ -958,13 +958,13 @@ class TrackerBlockerReviewTests(unittest.TestCase):
             with self.subTest(blocker=blocker):
                 args, api, values = self.setup_update([
                     ["Packing", "Owner", "Blocked", "Old", "Next", "2031-04-09", "Supplier confirmation", "source"],
-                ], [{"lane": "Packing", "status": "In review", "blocker": blocker}])
+                ], [{"lane": "Packing", "status": "In progress", "blocker": blocker}])
                 with patch.object(actions, "service", return_value=api), redirect_stdout(io.StringIO()):
                     actions.sheets_update_lanes(args)
                 values.get.assert_called_once()
                 values.batchUpdate.assert_called_once_with(spreadsheetId="ops-sheet", body={
                     "valueInputOption": "USER_ENTERED", "data": [
-                        {"range": "'Operations'!C7:H7", "values": [["In review", None, None, None, blocker, None]]},
+                        {"range": "'Operations'!C7:H7", "values": [["In progress", None, None, None, blocker, None]]},
                     ],
                 })
 

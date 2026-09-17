@@ -136,8 +136,8 @@ to a visible row.*
 > **Updated**
 >
 > - Product performance claims — Complete
-> - Exec Review deck — In review
-> - Agent Messaging — In review
+> - Exec Review deck — In progress
+> - Agent Messaging — In progress
 > - Legal intake — Complete
 >
 > **Still needs action**

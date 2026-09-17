@@ -383,7 +383,7 @@ def sheets_update(args: argparse.Namespace) -> None:
     emit({"status": "updated", **result})
 
 
-TRACKER_STATUSES = {"On track", "In review", "Awaiting update", "Blocked", "Complete"}
+TRACKER_STATUSES = {"On track", "In progress", "Awaiting update", "Blocked", "Complete"}
 
 
 def _load_tracker_updates(args: argparse.Namespace) -> Any:

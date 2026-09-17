@@ -28,7 +28,7 @@ from googleapiclient.errors import HttpError  # noqa: E402
 MARKER = "chief-of-staff-reference-workspace-v1"
 STATE_FILE = "chief-of-staff-workspace-state.json"
 TZ_NAME = os.environ.get("CHIEF_OF_STAFF_WORKSPACE_TZ", "America/Los_Angeles")
-STATUS_VALUES = ["On track", "In review", "Awaiting update", "Blocked", "Complete"]
+STATUS_VALUES = ["On track", "In progress", "Awaiting update", "Blocked", "Complete"]
 MEANINGFUL_EMAIL_COUNT = 6
 BACKGROUND_EMAIL_COUNT = 70
 CONTACT_EMAIL_COUNT = 1

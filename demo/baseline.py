@@ -2,7 +2,7 @@ from __future__ import annotations
 
 STATUS_GUIDE = (
     "Status guide (lane scope, not downstream work): Awaiting update = missing input; "
-    "In review = input received, own drafting/edits pending; Complete = own deliverable done; "
+    "In progress = input received, own drafting/edits pending; Complete = own deliverable done; "
     "Blocked = unresolved dependency; On track = progressing without a blocker."
 )
 

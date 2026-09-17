@@ -18,7 +18,7 @@ The seeder creates a self-contained realistic Chief of Staff workspace in the Go
 - **1 Google Sheet**: `RTX Spark Campaign Tracker`
   - Tab: `Campaign Lanes`
   - Columns A:J: Lane, PIC, Status, Latest update, Next action, Due, Dependency/blocker, Evidence, Artifact, Notes
-  - Status dropdown: On track, In review, Awaiting update, Blocked, Complete
+  - Status dropdown: On track, In progress, Awaiting update, Blocked, Complete
 - **1 Google Doc**: `RTX Spark Campaign Plan`
 - **1 Google Slides deck**: `RTX Spark Exec Review`
   - 10 slides
