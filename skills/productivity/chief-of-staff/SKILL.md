@@ -115,7 +115,46 @@ If the scheduled time has passed, briefly flag that and still summarize the outs
 
    **Goals for the meeting**
 
-Use short bullets, with subbullets for related details. Give each fact once in its most useful section; refer briefly to context already established instead of repeating the daily brief. Keep email/file links. Put any follow-up offer or question under **Next step**. Preparation is a read-only briefing; proposed edits or drafts remain proposed until the user requests or approves them. Include artifact-specific details only where they help explain the preparation.
+Keep the existing three headings, content requirements, and section order.
+Use this presentation:
+
+- Context: use compact text with only these bold labels:
+  Purpose, People, and Your Role, where supported by evidence. Do not
+  repeat the meeting time in Context or add other fields. Describe
+  the meeting's purpose in concrete, plain language, not a generic
+  label such as “a decision meeting.” Retain relevant dependencies;
+  keep specific desired outcomes under Goals rather than repeating
+  them here. Omit unsupported fields.
+  Put each bold label and its value in a separate paragraph, with a blank
+  line between fields; never combine multiple fields into one paragraph.
+  Under People, list only other participants; omit the user (whether
+  named or called “you”), since their role is covered under Your Role.
+  Keep Purpose and People unboxed. Show Your Role once, inside an
+  Important callout with the bold label and description on the same line:
+
+  > [!IMPORTANT]
+  >
+  > **Your Role:** Evidence-backed role description with its supporting source link.
+
+- What needs to get done before the meeting: use numbered items with
+  bold action titles and short explanations. Put suggested work times
+  and scheduling caveats in indented subbullets beneath the relevant
+  action. Do not use a table.
+
+- Goals for the meeting: use plain bullets beneath the heading, without
+  a callout box or checkboxes. Start each bullet with a bold outcome.
+  Put the most important goal first only when the organizer's evidence
+  establishes its priority; otherwise preserve the source order.
+  Do not repeat the heading or add an introduction before the bullets.
+  Render each goal as a separate Markdown bullet, never a combined paragraph.
+  Use this pattern, with one bullet per evidence-backed goal:
+
+  ```markdown
+  - **Outcome** — explanation and source link.
+  - **Another outcome** — explanation and source link.
+  ```
+
+Give each fact once in its most useful section; refer briefly to context already established instead of repeating the daily brief. Put descriptive Markdown source links beside each factual bullet, preparation action, and meeting goal. Link the supporting email, Calendar event, or Drive file as appropriate—for example, the event for meeting details, the organizer’s email for requested outcomes, and the relevant file for proposed preparation. Reuse retrieved URLs; never invent links or imply a source supports something it does not. Keep Second Brain citations as plain note titles. Put any follow-up offer or question under **Next step**. Preparation is a read-only briefing; proposed edits or drafts remain proposed until the user requests or approves them. Include artifact-specific details only where they help explain the preparation.
 
 ## Follow-ups
 
