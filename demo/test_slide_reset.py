@@ -131,6 +131,7 @@ class SlideResetTests(unittest.TestCase):
              patch.object(seed, "clear_seeded_tasks"), patch.object(seed, "remove_dynamic_items"), \
              patch.object(seed, "create_emails", return_value=([{"id": "new-mail"}], {})) as emails, \
              patch.object(seed, "create_tasks") as tasks, patch.object(seed, "reset_sheet_baseline") as sheet, \
+             patch.object(seed, "reset_original_sheet") as original, \
              patch.object(seed, "create_calendar", return_value=[]) as calendar, patch.object(seed, "state_path") as path:
             result = seed.reset_in_place(state, date(2026, 9, 14))
         restore.assert_called_once_with(svc["slides"], "same-deck", drive=svc["drive"], restore_template=True)
@@ -140,6 +141,7 @@ class SlideResetTests(unittest.TestCase):
         self.assertEqual(result["slides"], tasks.call_args.args[1]["slides"])
         self.assertEqual(result["slides"], sheet.call_args.args[1]["slides"])
         path().write_text.assert_called_once()
+        original.assert_called_once_with(svc["drive"], svc["sheets"], state, {}, sheet.call_args.args[3])
 
     def test_only_missing_or_changed_template_fingerprint_triggers_design_refresh(self):
         current = seed.deck_template_hash()
@@ -156,6 +158,7 @@ class SlideResetTests(unittest.TestCase):
                      patch.object(seed, "clear_seeded_tasks"), patch.object(seed, "remove_dynamic_items"), \
                      patch.object(seed, "create_emails", return_value=([], {})), \
                      patch.object(seed, "create_tasks"), patch.object(seed, "reset_sheet_baseline"), \
+                     patch.object(seed, "reset_original_sheet"), \
                      patch.object(seed, "create_calendar", return_value=[]), patch.object(seed, "state_path"):
                     seed.reset_in_place(state, date(2026, 9, 14))
                 self.assertEqual(previous != current, restore.call_args.kwargs["restore_template"])

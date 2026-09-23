@@ -370,6 +370,54 @@ class WorkspaceSeedTests(unittest.TestCase):
             [item["range"] for item in call.kwargs["body"]["data"]],
         )
 
+    def test_original_tracker_is_copied_once_and_reset_to_same_baseline(self):
+        drive, sheets = Mock(), Mock()
+        drive.files().create.return_value.execute.return_value = {"id": "reference-1", "webViewLink": "reference-url"}
+        drive.files().copy.return_value.execute.return_value = {"id": "original-1", "webViewLink": "original-url"}
+        state = {
+            "folder": {"id": "folder-1"},
+            "sheet": {"id": "sheet-1", "url": "sheet-url"},
+            "slides": {"url": "deck-url"}, "doc": {"url": "doc-url"},
+        }
+        evidence = {"priya": "priya-url", "aisha": "aisha-url"}
+        seed.reset_sheet_baseline(sheets, state, evidence, "2026-09-22")
+        working_body = sheets.spreadsheets().values().batchUpdate.call_args.kwargs["body"]
+
+        for _ in range(2):
+            seed.reset_original_sheet(drive, sheets, state, evidence, "2026-09-22")
+            call = sheets.spreadsheets().values().batchUpdate.call_args
+            self.assertEqual("original-1", call.kwargs["spreadsheetId"])
+            self.assertEqual(working_body, call.kwargs["body"])
+            self.assertEqual({"id": "sheet-1", "url": "sheet-url"}, state["sheet"])
+        drive.files().copy.assert_called_once_with(
+            fileId="sheet-1",
+            body={"name": "[ORIGINAL] RTX Spark Campaign Tracker", "parents": ["reference-1"]},
+            fields="id,webViewLink",
+        )
+        self.assertEqual({"id": "original-1", "url": "original-url"}, state["original_sheet"])
+        drive.files().create.assert_called_once_with(
+            body={"name": "Reference Materials - DO NOT MODIFY", "mimeType": "application/vnd.google-apps.folder", "parents": ["folder-1"]},
+            fields="id,webViewLink",
+        )
+
+    def test_existing_original_is_moved_into_reference_folder(self):
+        drive, sheets = Mock(), Mock()
+        drive.files().create.return_value.execute.return_value = {"id": "reference-1", "webViewLink": "reference-url"}
+        state = {"folder": {"id": "folder-1"}, "sheet": {"id": "working-1"}, "original_sheet": {"id": "original-1"}}
+        with patch.object(seed, "move_to_folder") as move, patch.object(seed, "reset_sheet_baseline") as reset:
+            seed.reset_original_sheet(drive, sheets, state, {}, "2026-09-22")
+        move.assert_called_once_with(drive, "original-1", "reference-1")
+        self.assertEqual("original-1", reset.call_args.args[1]["sheet"]["id"])
+        drive.files().copy.assert_not_called()
+
+    def test_original_tracker_cannot_target_working_tracker(self):
+        drive, sheets = Mock(), Mock()
+        state = {"sheet": {"id": "sheet-1"}, "original_sheet": {"id": "sheet-1"}}
+        with self.assertRaises(ValueError):
+            seed.reset_original_sheet(drive, sheets, state, {}, "2026-09-22")
+        drive.files().copy.assert_not_called()
+        sheets.spreadsheets.assert_not_called()
+
     def test_deck_reset_restores_every_demo_mutation_surface(self):
         slides = Mock()
         presentation = {

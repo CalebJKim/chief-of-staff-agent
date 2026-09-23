@@ -216,6 +216,32 @@ def create_slides(drive, folder_id):
     return result
 def create_sheet(drive, folder_id): return upload_template(drive, folder_id, "rtx-spark-campaign-tracker.xlsx", "RTX Spark Campaign Tracker", "application/vnd.google-apps.spreadsheet")
 
+def reset_original_sheet(drive, sheets, state: dict, evidence: dict, refreshed: str) -> None:
+    """Keep one comparison copy at the seeded baseline, separate from the working tracker."""
+    if state.get("original_sheet", {}).get("id") == state["sheet"]["id"]:
+        raise ValueError("The original comparison copy must be separate from the working tracker.")
+    if not state.get("reference_folder", {}).get("id"):
+        folder = drive.files().create(
+            body={"name": "Reference Materials - DO NOT MODIFY", "mimeType": "application/vnd.google-apps.folder",
+                  "parents": [state["folder"]["id"]]},
+            fields="id,webViewLink",
+        ).execute()
+        state["reference_folder"] = {"id": folder["id"], "url": folder["webViewLink"]}
+        if state.get("original_sheet", {}).get("id"):
+            move_to_folder(drive, state["original_sheet"]["id"], folder["id"])
+    if not state.get("original_sheet", {}).get("id"):
+        copied = drive.files().copy(
+            fileId=state["sheet"]["id"],
+            body={"name": "[ORIGINAL] RTX Spark Campaign Tracker", "parents": [state["reference_folder"]["id"]]},
+            fields="id,webViewLink",
+        ).execute()
+        state["original_sheet"] = {"id": copied["id"], "url": copied["webViewLink"]}
+    if state["original_sheet"]["id"] == state["sheet"]["id"]:
+        raise ValueError("The original comparison copy must be separate from the working tracker.")
+    # Keep the same evidence/working-file links; only the write target changes.
+    comparison_state = {**state, "sheet": {**state["sheet"], "id": state["original_sheet"]["id"]}}
+    reset_sheet_baseline(sheets, comparison_state, evidence, refreshed)
+
 def seeded_email_times(count: int, now: datetime | None = None) -> list[datetime]:
     """Repeat an irregular local-time schedule relative to each reset date."""
     current = (now or local_now()).astimezone(ZoneInfo(TZ_NAME))
@@ -616,6 +642,7 @@ def seed(week_of: date) -> dict:
         state["emails"], evidence = create_emails(svc["gmail"], state["slides"]["url"], state["sheet"]["url"], state["doc"]["url"])
         create_tasks(svc["tasks"], state, evidence)
         reset_sheet_baseline(svc["sheets"], state, evidence, local_now().date().isoformat())
+        reset_original_sheet(svc["drive"], svc["sheets"], state, evidence, local_now().date().isoformat())
         state["events"] = create_calendar(svc["calendar"], week_of, state["slides"]["url"], state["doc"]["url"], state["sheet"]["url"])
         state_path().parent.mkdir(parents=True, exist_ok=True)
         state_path().write_text(json.dumps(state, indent=2), encoding="utf-8")
@@ -636,6 +663,7 @@ def reset_in_place(state: dict, week_of: date) -> dict:
     state["emails"], evidence = create_emails(svc["gmail"], state["slides"]["url"], state["sheet"]["url"], state["doc"]["url"])
     create_tasks(svc["tasks"], state, evidence)
     reset_sheet_baseline(svc["sheets"], state, evidence, local_now().date().isoformat())
+    reset_original_sheet(svc["drive"], svc["sheets"], state, evidence, local_now().date().isoformat())
     state["events"] = create_calendar(svc["calendar"], week_of, state["slides"]["url"], state["doc"]["url"], state["sheet"]["url"])
     state["week_of"] = week_of.isoformat()
     state_path().write_text(json.dumps(state, indent=2), encoding="utf-8")
