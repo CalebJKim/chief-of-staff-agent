@@ -154,7 +154,7 @@ class WorkspaceSeedTests(unittest.TestCase):
         self.assertIn("Mike Chen", MODULE.read_text(encoding="utf-8"))
         self.assertIn("2.1x faster", MODULE.read_text(encoding="utf-8"))
 
-    def test_main_emails_are_preserved_with_diverse_background_mail_and_today_times(self):
+    def test_main_emails_are_preserved_with_diverse_background_mail_and_fixed_times(self):
         gmail = Mock()
         gmail.users().getProfile.return_value.execute.return_value = {"emailAddress": "demo@example.test"}
         today_count = seed.MEANINGFUL_EMAIL_COUNT + seed.BACKGROUND_EMAIL_COUNT + seed.CONTACT_EMAIL_COUNT
@@ -195,7 +195,8 @@ class WorkspaceSeedTests(unittest.TestCase):
                        "then remove slide 6", "not customer validation", "owners still need a decision"):
             self.assertIn(phrase, review_feedback)
         received_at = [parsedate_to_datetime(message["Date"]) for message in imported]
-        self.assertEqual({date(2026, 8, 27)}, {value.date() for value in received_at[:today_count]})
+        self.assertEqual({now.date()}, {value.date() for value in received_at[:seed.MEANINGFUL_EMAIL_COUNT]})
+        self.assertEqual({now.date(), now.date() - timedelta(days=1)}, {value.date() for value in received_at[:today_count]})
         self.assertEqual(seed.seeded_email_times(today_count, now), received_at[:today_count])
         for index, item in enumerate(seed.BACKLOG_TASKS, today_count):
             due = now.date() - timedelta(days=item["due_days_ago"])
@@ -258,7 +259,29 @@ class WorkspaceSeedTests(unittest.TestCase):
         self.assertEqual(seed.BATCH_SIZE, len(batches[0].items))
         self.assertEqual({"value": requests[-1]}, results[-1])
 
-    def test_seeded_email_times_stay_unique_and_on_today_even_just_after_midnight(self):
+    def test_seeded_email_clock_times_are_independent_of_reset_time(self):
+        tz = ZoneInfo(seed.TZ_NAME)
+        count = seed.MEANINGFUL_EMAIL_COUNT + seed.BACKGROUND_EMAIL_COUNT + seed.CONTACT_EMAIL_COUNT
+        expected = seed.seeded_email_times(count, datetime(2026, 8, 27, 0, 0, tzinfo=tz))
+        self.assertEqual((9, 12), (expected[0].hour, expected[0].minute))
+        gaps = [a - b for a, b in zip(expected, expected[1:])]
+        self.assertTrue(all(gap > timedelta(0) for gap in gaps))
+        self.assertGreater(len(set(gaps)), 10)
+        for hour in (6, 8, 12, 16, 23):
+            with self.subTest(hour=hour):
+                self.assertEqual(expected, seed.seeded_email_times(count, datetime(2026, 8, 27, hour, 37, tzinfo=tz)))
+
+    def test_seeded_email_date_advances_but_clock_times_stay_fixed(self):
+        tz = ZoneInfo(seed.TZ_NAME)
+        today = datetime(2026, 8, 27, 9, 0, tzinfo=tz)
+        tomorrow = today + timedelta(days=1)
+        count = seed.MEANINGFUL_EMAIL_COUNT + seed.BACKGROUND_EMAIL_COUNT + seed.CONTACT_EMAIL_COUNT
+        first = seed.seeded_email_times(count, today)
+        second = seed.seeded_email_times(count, tomorrow)
+        self.assertEqual([value.time() for value in first], [value.time() for value in second])
+        self.assertEqual([value + timedelta(days=1) for value in first], second)
+
+    def test_seeded_email_times_span_today_and_previous_day_even_after_midnight(self):
         now = datetime(2026, 8, 27, 0, 0, 10, tzinfo=ZoneInfo("America/Los_Angeles"))
 
         values = seed.seeded_email_times(
@@ -266,8 +289,15 @@ class WorkspaceSeedTests(unittest.TestCase):
             now,
         )
 
-        self.assertEqual({now.date()}, {value.date() for value in values})
+        self.assertEqual({now.date(), now.date() - timedelta(days=1)}, {value.date() for value in values})
         self.assertEqual(len(values), len(set(values)))
+        self.assertTrue(any(value.date() < now.date() and 12 <= value.hour < 18 for value in values))
+        self.assertTrue(any(value.date() < now.date() and value.hour >= 18 for value in values))
+
+    def test_seeded_email_times_handle_empty_and_single_message(self):
+        now = datetime(2026, 8, 27, 16, 0, tzinfo=ZoneInfo(seed.TZ_NAME))
+        self.assertEqual([], seed.seeded_email_times(0, now))
+        self.assertEqual([now.replace(hour=9, minute=12)], seed.seeded_email_times(1, now))
 
     def test_cleanup_permanently_deletes_seeded_mail_including_trash(self):
         gmail = Mock()

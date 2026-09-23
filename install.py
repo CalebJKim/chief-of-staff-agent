@@ -159,11 +159,24 @@ def configure_desktop_tools(env_path: Path) -> None:
     env_path.write_text(text, encoding="utf-8")
 
 
+def connect_second_brain(source: Path, target: Path, vault: Path | None = None) -> Path:
+    """Default to the bundled demo vault, preserving existing connections and notes."""
+    connection = target / "second-brain.json"
+    if vault is None and connection.exists():
+        return Path(json.loads(connection.read_text(encoding="utf-8"))["vault_path"])
+    vault = (vault or source / "demo" / "CoS_SecondBrain").expanduser().resolve()
+    if not vault.is_dir():
+        raise ValueError(f"Second Brain folder does not exist: {vault}")
+    target.mkdir(parents=True, exist_ok=True)
+    connection.write_text(json.dumps({"vault_path": str(vault)}, indent=2) + "\n", encoding="utf-8")
+    return vault
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Install the Chief of Staff skills into a Hermes profile")
     parser.add_argument("--hermes-home", type=Path, help="Explicit target override (default: profiles/chief-of-staff under the Hermes root)")
     parser.add_argument("--overwrite-soul", action="store_true", help="Replace an existing SOUL.md (otherwise preserve it)")
-    parser.add_argument("--second-brain", type=Path, help="Connect an existing local Markdown/Obsidian vault read-only")
+    parser.add_argument("--second-brain", type=Path, help="Explicitly connect an existing vault (default: preserve connection, otherwise demo/CoS_SecondBrain)")
     args = parser.parse_args()
     vault = args.second_brain.expanduser().resolve() if args.second_brain else None
     if vault is not None and not vault.is_dir():
@@ -185,13 +198,13 @@ def main() -> int:
     disabled = configure_enabled_skills(config_path, installed_skill_names(target))
     disable_desktop_ui(config_path)
     configure_desktop_tools(target / ".env")
-    if vault is not None:
-        (target / "second-brain.json").write_text(json.dumps({"vault_path": str(vault)}, indent=2) + "\n", encoding="utf-8")
+    connected_vault = connect_second_brain(source, target, vault)
     print(f"Installed skills into {skills_target}")
     print(f"SOUL.md: {soul_status}")
     print(f"Skills: enabled {', '.join(sorted(ENABLED_SKILLS))}; disabled {len(disabled)} others")
     print("Toolsets: desktop_ui disabled")
     print("Desktop: skills + terminal + cronjob; restart Hermes Desktop to apply")
+    print(f"Second Brain: {connected_vault} (open this folder as a separate vault in Obsidian)")
     print("Scheduling is opt-in: no scheduled jobs were created or enabled by installation.")
     print(f"Profile location: {target}")
     if target.parent.name == "profiles":

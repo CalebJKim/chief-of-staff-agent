@@ -312,7 +312,7 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
         "mail": ranked_mail[: args.max_mail],
         "recent_files": recent_files,
     }
-    packet["instruction"] += " Use the skill's Action | Due | Suggested work time table, with a descriptive source link in every action row. Compare deadlines against freshness.generated_at; mark elapsed deadlines as passed/unverified. Approval of inputs or completed feedback does not mean the requested edits were applied: keep that work pending unless explicit completion evidence exists. Copy supplied link URLs exactly, including obsidian:// links without an https:// prefix."
+    packet["instruction"] += " Use the skill's Action | Due | Suggested work time table, with a descriptive source link in every action row. Compare deadlines against freshness.generated_at; mark elapsed deadlines as passed/unverified. Approval of inputs or completed feedback does not mean the requested edits were applied: keep that work pending unless explicit completion evidence exists. Cite Second Brain notes by their supplied title as plain text, without links, URLs, or file paths. Keep Google Workspace source links unchanged."
     if "tasks" in snapshot:
         source_status["tasks"] = "error" if "tasks:" in error_text else ("ok" if snapshot["tasks"] else "ok_empty")
         packet["tasks"] = task_context(snapshot["tasks"], packet["mail"], getattr(args, "max_tasks", 8))

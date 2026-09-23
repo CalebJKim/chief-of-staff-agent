@@ -7,6 +7,7 @@ import base64
 import hashlib
 import json
 import os
+import random
 import sys
 import uuid
 from datetime import date, datetime, timedelta
@@ -22,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "skills" / "productivity" / "ingest" / "scripts"))
 from actions import credentials  # noqa: E402
 from baseline import reset_sheet_baseline  # noqa: E402
+from second_brain_seed import check_reset, reset_second_brain  # noqa: E402
 from googleapiclient.discovery import build  # noqa: E402
 from googleapiclient.errors import HttpError  # noqa: E402
 
@@ -32,8 +34,8 @@ STATUS_VALUES = ["On track", "In progress", "Awaiting update", "Blocked", "Compl
 MEANINGFUL_EMAIL_COUNT = 6
 BACKGROUND_EMAIL_COUNT = 70
 CONTACT_EMAIL_COUNT = 1
-EMAIL_REFERENCE_HOUR = 13
-EMAIL_SPACING_MINUTES = 2
+EMAIL_REFERENCE_HOUR = 9
+EMAIL_REFERENCE_MINUTE = 12
 BATCH_SIZE = 50
 TASKS_SCOPE = "https://www.googleapis.com/auth/tasks"
 
@@ -215,17 +217,16 @@ def create_slides(drive, folder_id):
 def create_sheet(drive, folder_id): return upload_template(drive, folder_id, "rtx-spark-campaign-tracker.xlsx", "RTX Spark Campaign Tracker", "application/vnd.google-apps.spreadsheet")
 
 def seeded_email_times(count: int, now: datetime | None = None) -> list[datetime]:
+    """Repeat an irregular local-time schedule relative to each reset date."""
     current = (now or local_now()).astimezone(ZoneInfo(TZ_NAME))
-    reference = current.replace(hour=EMAIL_REFERENCE_HOUR, minute=0, second=0, microsecond=0)
-    if reference > current:
-        reference = current.replace(second=0, microsecond=0)
-    if count <= 1:
-        return [reference] if count else []
-    midnight = reference.replace(hour=0, minute=0, second=0, microsecond=0)
-    reference = max(reference, midnight + timedelta(seconds=count - 1))
-    available_seconds = int((reference - midnight).total_seconds())
-    spacing_seconds = min(EMAIL_SPACING_MINUTES * 60, available_seconds // (count - 1))
-    return [reference - timedelta(seconds=spacing_seconds * index) for index in range(count)]
+    cursor = current.replace(hour=EMAIL_REFERENCE_HOUR, minute=EMAIL_REFERENCE_MINUTE, second=0, microsecond=0)
+    # A local fixed seed keeps each email's time stable without uniform spacing.
+    rng = random.Random("chief-of-staff-email-times")
+    times = []
+    for _ in range(count):
+        times.append(cursor)
+        cursor -= timedelta(minutes=rng.randint(5, 24))
+    return times
 
 
 def background_email_specs() -> list[tuple[str, str, str]]:
@@ -767,8 +768,10 @@ def main() -> int:
         if not path.exists(): raise SystemExit(f"No workspace state at {path}")
         previous = json.loads(path.read_text(encoding="utf-8"))
         chosen_week = date.fromisoformat(args.week_of or previous["week_of"])
+        check_reset(ROOT, hermes_home())
         state = reset_in_place(previous, chosen_week)
-        print(json.dumps({"ok": True, "status": "reset", "state": str(path), "week_of": state["week_of"], "folder": state["folder"], "sheet": state["sheet"], "doc": state["doc"], "slides": state["slides"], "emails": len(state["emails"]), "events": len(state["events"]), "tasks": len(state.get("tasks", []))}, indent=2))
+        second_brain = reset_second_brain(ROOT, hermes_home())
+        print(json.dumps({"ok": True, "status": "reset", "state": str(path), "week_of": state["week_of"], "folder": state["folder"], "sheet": state["sheet"], "doc": state["doc"], "slides": state["slides"], "emails": len(state["emails"]), "events": len(state["events"]), "tasks": len(state.get("tasks", [])), "second_brain": second_brain}, indent=2))
         return 0
     elif path.exists():
         raise SystemExit(f"Workspace already exists. Run reset or cleanup first: {path}")

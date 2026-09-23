@@ -104,20 +104,36 @@ Google Tasks to an existing connection, enable its API in the same OAuth project
 and repeat `--auth-url` / `--auth-code` once to approve the additional Tasks scope.
 The existing Workspace connection remains usable before this extra consent.
 
-## Connect Second Brain (optional)
+## Second Brain
 
-Connect an existing local Markdown/Obsidian vault to the demo profile:
+The demo notes are included in `demo/CoS_SecondBrain/`. Open that folder as a
+separate vault in Obsidian. The installer connects it by default when no vault is
+already configured; existing connections and personal notes are preserved.
+
+To explicitly switch an existing demo profile to the bundled vault, run from the repo:
 
 ```bash
-python install.py --second-brain "/path/to/your/Second Brain"
+python install.py --second-brain "demo/CoS_SecondBrain"
 ```
 
 The folder path is saved in the profile's local `second-brain.json`, not in Git.
-The vault is read in place: it is not copied, edited, synced to Google, or opened
-automatically. Reconnect the local folder when setting up another machine.
+You can still use `--second-brain "/path/to/your/Second Brain"` to connect another
+vault without copying or overwriting it. Reading context does not edit notes;
+a separately configured scheduled job can update them when authorized.
 
-The existing daily-brief call adds up to three relevant note excerpts in a separate
-1,800-character allowance, without removing any of the existing bounded Google
+`python demo/reset_workspace.py` (or `python demo/seed_workspace.py --reset --confirm`)
+resets Google Workspace and restores **only** `demo/CoS_SecondBrain/` from
+`demo/templates/CoS_SecondBrain.zip`. Existing demo notes, including job-created
+files, are first moved into the Git-ignored `demo/.second-brain-backups/` folder.
+Local `.obsidian` settings are preserved. Other vaults are never reset, even if
+connected to the profile. Finish running profile jobs before resetting and do not
+start new jobs during a reset. No jobs are removed by reset.
+
+The baseline excludes machine-specific Obsidian settings. Note edits appear as
+Git changes; review them before committing, especially after ingesting real data.
+
+The existing daily-brief call adds up to five relevant note excerpts in a separate
+3,000-character allowance, without removing any of the existing bounded Google
 evidence. Selection is a local word match, not an extra model call or vector index.
 Excerpts show the matching passage. Each lookup scans at most 1,000 folders and
 1,000 Markdown files (128 KiB per note), skipping hidden folders and notes.

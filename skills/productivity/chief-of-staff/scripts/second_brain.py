@@ -13,7 +13,7 @@ from urllib.parse import quote
 MAX_FILES = 1000
 MAX_DIRECTORIES = 1000
 MAX_FILE_BYTES = 128 * 1024
-CONTEXT_CHARS = 1800
+CONTEXT_CHARS = 3000
 STOPWORDS = set("the and for from with this that today please update updated review notes needs into your".split())
 
 
@@ -134,7 +134,7 @@ def packet_context(packet: dict, profile: Path) -> dict | None:
         queries = [m.get("subject", "") for m in packet.get("mail", [])]
         queries += [f.get("name", "") for f in packet.get("recent_files", [])]
         queries += [m.get("title", "") for m in packet.get("meetings", [])]
-        context = {"status": "ok", "role": "Background notes, not live status or write authorization.", "notes": search(root, queries)}
+        context = {"status": "ok", "role": "Background notes, not live status or write authorization.", "notes": search(root, queries, limit=5)}
         while len(json.dumps(context, ensure_ascii=False, separators=(",", ":"))) > CONTEXT_CHARS and context["notes"]:
             context["notes"].pop()
         if not context["notes"]:

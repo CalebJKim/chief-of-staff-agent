@@ -12,7 +12,7 @@ The seeder creates a self-contained realistic Chief of Staff workspace in the Go
   - Marketing shoot venue deadline
   - Agent Security PRD deadline
 - **70 low-priority background messages** and **1 contact message** so the inbox is realistic without hiding the important work. Synthetic senders use the visibly fake local-part pattern `name.example@nvidia.com`.
-- **3 older request emails** support unfinished backlog work: a customer demo FAQ, pilot-program lessons learned, and a developer workshop budget. These are additional to the original 77 emails, which retain their same-day timestamps.
+- **3 older request emails** support unfinished backlog work: a customer demo FAQ, pilot-program lessons learned, and a developer workshop budget. These are additional to the original 77 emails, whose repeatable, irregular timestamps run backward from 9:12 AM today into the previous afternoon/evening, in the configured workspace time zone. Resetting advances the dates but preserves clock times and ordering, even when run before 9:12 AM. The six important messages remain dated today.
 - **89–90 Calendar events** across the workweek. Each day has a distinct, busy schedule with overlaps; the current workday also contains the 5 PM Exec Review.
 - **An optional Google Tasks checklist with 6 unfinished tasks in the account's default list (My Tasks)**: 3 due today and 3 backlog tasks originally due 7, 3, and 1 days ago. Dates are relative to each seed/reset day. Every task links to its source emails; today's tasks also link to the relevant files. Enable the Tasks API and authorize its scope before seeding it. Check items off in [Google Tasks](https://tasks.google.com/).
 - **1 Google Sheet**: `RTX Spark Campaign Tracker`
@@ -73,6 +73,10 @@ python demo/reset_workspace.py
 # Permanently remove the seeded workspace instead:
 python demo/seed_workspace.py --cleanup --confirm
 ```
+
+Reset also restores `demo/CoS_SecondBrain/` from the bundled baseline ZIP, saving
+the previous demo vault under `demo/.second-brain-backups/`. Other vaults and cron
+jobs are untouched. `--cleanup` removes Google Workspace seed data only.
 
 ## Manual fallback
 

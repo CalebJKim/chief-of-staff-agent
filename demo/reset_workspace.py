@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Reset the reference Workspace to its original seeded state."""
+"""Reset Google Workspace and the repository's demo Second Brain to their baselines."""
 from __future__ import annotations
 import subprocess, sys
 from pathlib import Path

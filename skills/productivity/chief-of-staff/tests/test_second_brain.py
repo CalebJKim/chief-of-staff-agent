@@ -285,7 +285,7 @@ class SecondBrainTests(unittest.TestCase):
             {"mail": [{"subject": topic} for topic in topics]}, self.profile
         )
         self.assertEqual(context["status"], "ok")
-        self.assertLessEqual(len(compact(context)), 1800)
+        self.assertLessEqual(len(compact(context)), 3000)
         self.assertGreaterEqual(len(context["notes"]), 2)
         self.assertLessEqual(len(context["notes"]), 3)
         for i, note in enumerate(context["notes"]):
@@ -294,6 +294,23 @@ class SecondBrainTests(unittest.TestCase):
             self.assertTrue(note["url"].startswith("obsidian://open?path="))
             self.assertIn("%20", note["url"])
             self.assertNotIn(" ", note["url"])
+
+    def test_packet_includes_at_most_five_distinct_notes_with_unchanged_excerpts(self):
+        self.configure()
+        for i in range(7):
+            self.note(f"projects/option-{i}.md", f"# Orchard Migration option {i}\n"
+                      + "Sequence decisions need dependency context. " * 20)
+        packet = {"mail": [{"subject": "Orchard Migration"}] * 7}
+        context = second_brain.packet_context(packet, self.profile)
+        self.assertEqual(len(context["notes"]), 5)
+        self.assertEqual(len({note["note"] for note in context["notes"]}), 5)
+        self.assertTrue(all(len(note["excerpt"]) <= 280 for note in context["notes"]))
+        self.assertLessEqual(len(compact(context)), 3000)
+        with patch.object(second_brain, "CONTEXT_CHARS", 700):
+            limited = second_brain.packet_context(packet, self.profile)
+        self.assertGreater(len(limited["notes"]), 0)
+        self.assertLess(len(limited["notes"]), 5)
+        self.assertLessEqual(len(compact(limited)), 700)
 
     def test_vault_operations_do_not_write_files_or_change_existing_content(self):
         self.configure()
@@ -339,10 +356,10 @@ class SecondBrainTests(unittest.TestCase):
         context = combined.pop("second_brain")
         self.assertEqual(context["status"], "ok")
         self.assertIn("Unique bridge dependency", context["notes"][0]["excerpt"])
-        self.assertLessEqual(len(compact(context)), 1800)
+        self.assertLessEqual(len(compact(context)), 3000)
         self.assertEqual(compact(combined), original.stdout.strip())
         self.assertGreater(len(result.stdout.strip()), len(original.stdout.strip()))
-        self.assertLessEqual(len(result.stdout.strip()), len(original.stdout.strip()) + 1820)
+        self.assertLessEqual(len(result.stdout.strip()), len(original.stdout.strip()) + 3020)
         self.assertEqual(self.fingerprint(), before)
 
 

@@ -29,3 +29,8 @@ venv/
 Thumbs.db
 .vscode/
 .idea/
+
+# Local demo vault UI state and recoverable reset backups
+/demo/CoS_SecondBrain/.obsidian/
+/demo/.second-brain-backups/
+/demo/.second-brain-reset-*/

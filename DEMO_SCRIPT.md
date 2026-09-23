@@ -181,6 +181,20 @@ Confirm it is paused and any in-progress execution has finished before resetting
 the workspace. Recurring execution and duplicate-draft avoidance must be tested,
 not assumed from the presentation script.
 
+## Reference — Scheduled Second Brain updates
+
+In Hermes Desktop's **New cron job** dialog, use **Update Second Brain** as the
+name and paste the following into **Prompt**. Choose the schedule separately.
+This is setup reference material, not an additional live-demo step.
+
+```text
+Collect recent Google Workspace information and identify meaningful updates: decisions, progress, blockers, changed plans, and outstanding commitments. Combine related updates and verify them against the relevant sources.
+
+For each update, find the relevant Second Brain notes and compare what they already say. Add missing information or update outdated facts, preserving unrelated text and history. Keep source links, flag conflicting evidence, and leave files completely untouched when nothing has changed.
+
+Only edit Second Brain, not Google Workspace. Verify your edits. Report only changes actually saved, using one top-level bullet per changed note with a descriptive link, and short sub-bullets summarizing its updates. Do not include a daily brief, recommendations, status markers, or next steps.
+```
+
 ## Close
 
 As you can see, the chief of staff I put together simplifies my life. It helps
