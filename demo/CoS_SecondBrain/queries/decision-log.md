@@ -14,7 +14,7 @@ confidence: high
 | Decision | Owner | Status | Needed by | Context |
 |---|---|---|---|---|
 | Approve agent-first keynote storyline | Executive sponsor | Open | Executive Review | [[agent-first-storyline]] |
-| Finalize IFA demos and owners | Executive sponsor | Open | Executive Review | [[ifa-demo-slate]] |
+| Finalize GTC demos and owners | Executive sponsor | Open | Executive Review | [[gtc-demo-slate]] |
 | Choose replacement shoot date | Executive sponsor | Open | Before venue holds expire | [[marketing-shoot]] |
 | Approve default-deny egress posture | Security + executive sponsor | Open | Before partner rehearsal | [[openshell]] |
 | Use qualified 1.8x throughput claim | [[daniel-cho]] | Approved | 2026-09-09 | [[inference-performance-claims]] |

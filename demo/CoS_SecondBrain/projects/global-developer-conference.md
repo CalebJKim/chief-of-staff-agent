@@ -32,4 +32,4 @@ Prepare a recording or screenshot walkthrough if appropriate, with its limitatio
 
 A successful keynote moment is not enough if attendees cannot find or use the supporting material. Check the experience after the event as well as on stage.
 
-Partner examples can be reviewed through [[partner-certification]]. The conference program and [[ifa-demo-slate|IFA demo list]] require separate selections. Confirm owners and next decisions through [[weekly-leadership-staff]] and record commitments in [[decision-log]].
+Partner examples can be reviewed through [[partner-certification]]. The conference program and [[gtc-demo-slate|GTC demo list]] require separate selections. Confirm owners and next decisions through [[weekly-leadership-staff]] and record commitments in [[decision-log]].

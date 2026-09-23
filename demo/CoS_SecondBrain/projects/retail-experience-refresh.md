@@ -24,6 +24,6 @@ Consider interruptions, different levels of staff experience, accessibility, and
 - Are training and support material ready for reuse?
 - Who is responsible for the particular demo, not just the overall retail program?
 
-The recorded project is blocked. The [[ifa-demo-slate|IFA demo list]] still has an ownership question, and [[regional-launch-readiness]] covers local rollout needs.
+The recorded project is blocked. The [[gtc-demo-slate|GTC demo list]] still has an ownership question, and [[regional-launch-readiness]] covers local rollout needs.
 
 Confirm the responsible owner, success checks, and next decision through [[weekly-leadership-staff]]. Record accepted commitments in [[decision-log]]. Being the retail program contact does not automatically mean accepting every individual demo assignment.

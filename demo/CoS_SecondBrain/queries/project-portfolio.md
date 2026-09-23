@@ -31,7 +31,7 @@ confidence: high
 | [[leadership-succession]] | Planned | Owner and milestone confirmation | [[workforce-plan]] / [[executive-recruiting]] |
 | [[executive-recruiting]] | Active | Owner and milestone confirmation | [[leadership-succession]] / [[workforce-plan]] |
 | [[developer-ecosystem-expansion]] | Active | Owner and milestone confirmation | [[hermes-partner-program]] / [[global-developer-conference]] |
-| [[global-developer-conference]] | Planned | Owner and milestone confirmation | [[developer-ecosystem-expansion]] / [[ifa-demo-slate]] |
+| [[global-developer-conference]] | Planned | Owner and milestone confirmation | [[developer-ecosystem-expansion]] / [[gtc-demo-slate]] |
 | [[customer-advisory-council]] | Active | Owner and milestone confirmation | [[meridian-strategic-account]] / [[northstar-customer-recovery]] |
 | [[global-sales-forecast]] | At Risk | Owner and milestone confirmation | [[meridian-strategic-account]] / [[regional-launch-readiness]] |
 | [[regional-launch-readiness]] | Active | Owner and milestone confirmation | [[rtx-spark-launch]] / [[global-sales-forecast]] |
@@ -42,7 +42,7 @@ confidence: high
 | [[analyst-relations-program]] | Planned | Owner and milestone confirmation | [[communications-readiness]] / [[competitive-response-deepseek]] |
 | [[supply-allocation-plan]] | At Risk | Owner and milestone confirmation | [[regional-launch-readiness]] / [[global-sales-forecast]] |
 | [[partner-certification]] | Active | Owner and milestone confirmation | [[hermes-partner-program]] / [[developer-ecosystem-expansion]] |
-| [[retail-experience-refresh]] | Blocked | Owner and milestone confirmation | [[ifa-demo-slate]] / [[regional-launch-readiness]] |
+| [[retail-experience-refresh]] | Blocked | Owner and milestone confirmation | [[gtc-demo-slate]] / [[regional-launch-readiness]] |
 
 Use the [[executive-attention-model|executive attention model]] and [[decision-log|decision log]] to decide what needs attention.
 

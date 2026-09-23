@@ -109,7 +109,7 @@ chief of staff help us.
 > **Goals for the meeting**
 >
 > - Approval of the agent-first keynote storyline.
-> - Alignment on the IFA demo slate and owners.
+> - Alignment on the GTC demo slate and owners.
 
 The live response links the feedback, leadership request, and deck. This prompt
 produces a preparation briefing; artifact edits are requested in follow-ups.

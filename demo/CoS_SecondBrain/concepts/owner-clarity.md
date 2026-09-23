@@ -21,4 +21,4 @@ The coordinator, subject expert, and accountable owner may be different people. 
 ## Resolving an unclear assignment
 Ask which result the person owns and which decisions belong elsewhere. For work shared across teams, define the handoffs rather than giving several people the same vague responsibility.
 
-Apply this to [[ifa-demo-slate|the IFA demo slate]] and the [[project-portfolio|project portfolio]]. Check current evidence for what changed, who has accepted the outcome, and the next decision required.
+Apply this to [[gtc-demo-slate|the GTC demo slate]] and the [[project-portfolio|project portfolio]]. Check current evidence for what changed, who has accepted the outcome, and the next decision required.

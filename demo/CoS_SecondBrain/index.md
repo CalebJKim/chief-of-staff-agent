@@ -22,7 +22,7 @@ Start with Home for a guided overview. Detailed briefs cover Meridian's proposed
 - [[global-developer-conference|Global Developer Conference]]
 - [[global-sales-forecast|Global Sales Forecast]]
 - [[hermes-partner-program|Hermes Partner Program]]
-- [[ifa-demo-slate|IFA Demo Slate]]
+- [[gtc-demo-slate|GTC Demo Slate]]
 - [[leadership-succession|Leadership Succession]]
 - [[marketing-claims-rollout|Marketing Claims Rollout]]
 - [[marketing-shoot|Marketing Shoot]]

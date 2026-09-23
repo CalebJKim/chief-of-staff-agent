@@ -19,7 +19,7 @@ confidence: high
 ## Time and open decisions
 The source-period plan uses the optional creative session for a protected PRD block and delegates the customer escalation during the first half of the Executive Review.
 
-The [[marketing-shoot|marketing shoot]] needs a date decision. [[ifa-demo-slate|The IFA demo slate]] needs retail ownership, and [[openshell|OpenShell]] needs a decision on its default network-access policy.
+The [[marketing-shoot|marketing shoot]] needs a date decision. [[gtc-demo-slate|The GTC demo slate]] needs retail ownership, and [[openshell|OpenShell]] needs a decision on its default network-access policy.
 
 These outcomes and meeting tradeoffs reflect the source period. Check current commitments and availability before carrying them into a new week.
 

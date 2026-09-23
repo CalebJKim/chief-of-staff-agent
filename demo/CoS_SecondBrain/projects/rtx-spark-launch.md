@@ -11,7 +11,7 @@ confidence: high
 
 # RTX Spark Launch
 
-This project brings together the presentation, product evidence, partner demos, retail preparation, and campaign materials for the RTX Spark launch. The immediate goal is to help leadership choose the keynote story and the demos to show at IFA.
+This project brings together the presentation, product evidence, partner demos, retail preparation, and campaign materials for the RTX Spark launch. The immediate goal is to help leadership choose the keynote story and the demos to show at GTC.
 
 ## Where things stand
 The recorded performance evidence is approved for use with its stated conditions. The executive presentation and marketing materials still need updates. The retail demo still needs a confirmed owner, and the marketing shoot needs a replacement date.
@@ -28,7 +28,7 @@ Approved evidence is ready to use, but the slides still need editing and propose
 
 ## What leadership needs to decide
 1. Approve the [[agent-first-storyline|proposed keynote story]].
-2. Choose the [[ifa-demo-slate|IFA demos]] and confirm who is responsible for each.
+2. Choose the [[gtc-demo-slate|GTC demos]] and confirm who is responsible for each.
 3. Select a replacement shoot date.
 
 Before the review, prepare a recommendation and explain the alternatives. The decisions themselves belong in the meeting.
@@ -93,7 +93,7 @@ For a draft, I would look beyond whether text appeared. Was it addressed to the 
 
 Those checks make the demonstration meaningful without introducing a hardware benchmark. They also help explain why an assistant may prepare an action for review instead of completing every possible next step.
 
-The [[ifa-demo-slate|IFA demo list]] should give each candidate a distinct purpose. If two examples tell the same story, changing the application or output format alone may not justify showing both. A short description of what the audience learns from each would help compare them.
+The [[gtc-demo-slate|GTC demo list]] should give each candidate a distinct purpose. If two examples tell the same story, changing the application or output format alone may not justify showing both. A short description of what the audience learns from each would help compare them.
 
 ### Questions to keep for later reading
 - Which exact application and system configuration does a proposed example require?

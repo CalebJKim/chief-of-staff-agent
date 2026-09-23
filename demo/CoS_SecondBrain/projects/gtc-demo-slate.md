@@ -1,5 +1,5 @@
 ---
-title: IFA Demo Slate
+title: GTC Demo Slate
 created: 2026-09-09
 updated: 2026-09-22
 type: project
@@ -9,9 +9,9 @@ status: blocked
 confidence: high
 ---
 
-# IFA Demo Slate
+# GTC Demo Slate
 
-This note tracks the proposed list of demos for IFA. The list should show useful, different examples of local AI assistance. Final selection belongs in the [[rtx-spark-executive-review|executive review]].
+This note tracks the proposed list of demos for GTC. The list should show useful, different examples of local AI assistance. Final selection belongs in the [[rtx-spark-executive-review|executive review]].
 
 ## Candidates in the current notes
 - An agent workflow using the [[hermes-partner-program|Hermes partner program]].

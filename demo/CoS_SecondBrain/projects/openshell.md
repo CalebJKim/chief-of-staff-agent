@@ -29,4 +29,4 @@ Check that the operator can identify the policy, understand a denial, and reques
 
 Record the environment and limits of the evidence. A smoke check is a basic test of one path, not proof of every failure case.
 
-Before using OpenShell in [[ifa-demo-slate|the IFA demo list]], resolve the policy choice and validate the operator workflow. The table and walkthrough are preparation, not new approval or completed test results.
+Before using OpenShell in [[gtc-demo-slate|the GTC demo list]], resolve the policy choice and validate the operator workflow. The table and walkthrough are preparation, not new approval or completed test results.

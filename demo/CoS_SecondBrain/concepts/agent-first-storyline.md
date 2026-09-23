@@ -27,6 +27,6 @@ The [[hermes-partner-program|partner program]] can explain how different parts o
 For each example, answer: What did the person ask? What information was used? What appeared on screen? What remained for the person to review? Those answers are more useful than terms such as orchestration without an explanation.
 
 ## What still needs approval
-The proposed story and [[ifa-demo-slate|demo list]] go to the [[rtx-spark-executive-review|executive review]]. A clear narrative does not mean the selection has been approved.
+The proposed story and [[gtc-demo-slate|demo list]] go to the [[rtx-spark-executive-review|executive review]]. A clear narrative does not mean the selection has been approved.
 
 If a live example is not appropriate, an annotated walkthrough can explain the idea. Label it as a walkthrough during the presentation. It is not evidence of live execution, unrestricted autonomy, or new product performance.

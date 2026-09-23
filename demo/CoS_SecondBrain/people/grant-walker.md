@@ -13,7 +13,7 @@ confidence: high
 
 Role: Retail readiness lead.
 
-Grant connects [[ifa-demo-slate|the IFA demo list]] with the [[rtx-spark-launch|launch]]. Retail readiness includes the demonstration, associate training, setup, and the experience a customer has in the store.
+Grant connects [[gtc-demo-slate|the GTC demo list]] with the [[rtx-spark-launch|launch]]. Retail readiness includes the demonstration, associate training, setup, and the experience a customer has in the store.
 
 ## The open ownership question
 The final owner of the retail demo is still unresolved in these notes. Being the retail-readiness contact does not automatically mean accepting that particular assignment.

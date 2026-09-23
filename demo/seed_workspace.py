@@ -300,7 +300,7 @@ EXEC_REVIEW_ROLES = "You will present the storyline and proposed demo slate. Pla
 def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str) -> tuple[list[dict], dict[str, str]]:
     account = gmail.users().getProfile(userId="me").execute()["emailAddress"]
     meaningful = [
-        ("Elena Park <elena.example@nvidia.com>", "URGENT: RTX Spark Exec Review moved to 5 PM today", f"Hi,\n\nAs your manager, I need your focus on today's leadership decisions. Leadership moved the RTX Spark Exec Review from Thursday to 5:00 PM today. This is a decision meeting, not a working session. We need two outcomes: approval of the agent-first keynote storyline, and alignment on the IFA demo slate and owners.\n\n{EXEC_REVIEW_ROLES}\n\nDeck: {deck_url}\n\n— Elena"),
+        ("Elena Park <elena.example@nvidia.com>", "URGENT: RTX Spark Exec Review moved to 5 PM today", f"Hi,\n\nAs your manager, I need your focus on today's leadership decisions. Leadership moved the RTX Spark Exec Review from Thursday to 5:00 PM today. This is a decision meeting, not a working session. We need two outcomes: approval of the agent-first keynote storyline, and alignment on the GTC demo slate and owners.\n\n{EXEC_REVIEW_ROLES}\n\nDeck: {deck_url}\n\n— Elena"),
         ("Mike Chen <mike.example@nvidia.com>", "APPROVED: RTX Spark inference numbers for slide 4", "The performance package is approved for today's Exec Review. Use exactly: 2.1x faster time-to-first-token versus the prior approved release; 38 tokens/second sustained on the fixed 35B workflow; 22% lower energy per completed workflow. Required footnote: Pre-production measurements on the RTX Spark reference configuration. Results vary by model, quantization, and workload. Daniel cleared this wording for leadership review."),
         ("Aisha Rahman <aisha.example@nvidia.com>", "Exec Review deck pass: cut slide 6; protect slide 10", f"My review is complete; I have not edited the deck. These edits are still for you to apply: put Mike's approved numbers on slide 4. Summarize the proposed customer-use example from slide 6 in the Customer Example section of slide 7, then remove slide 6 from the live flow. Preserve the local laptop comparison, the draft follow-up reviewed by the associate, and customer details staying on the device. This is a proposed use case, not customer validation or an approved demo selection; the demo slate and owners still need a decision. Move quickly through the opening so there is enough discussion time on slide 10.\n\nDeck: {deck_url}"),
         ("Daniel Cho <daniel.example@nvidia.com>", "Legal scope: RTX Spark wording cleared for leadership review", "The RTX Spark performance wording and pre-production qualification are cleared for today's leadership review. This is not blanket campaign-wide approval; keep the qualification intact and route final external copy through Legal."),
@@ -350,7 +350,7 @@ def create_tasks(api, state: dict, evidence: dict[str, str]) -> None:
     task_list = api.tasklists().get(tasklist="@default").execute()
     state["task_list"] = {"id": task_list["id"], "title": task_list["title"]}
     specs = [
-        ("Prepare RTX Spark leadership decisions", "Prepare the keynote storyline and proposed IFA demos and owners for today's executive review. Incorporate the approved performance wording, its qualification, and the deck review feedback.", ("elena", "mike", "aisha", "daniel"), "slides", 0),
+        ("Prepare RTX Spark leadership decisions", "Prepare the keynote storyline and proposed GTC demos and owners for today's executive review. Incorporate the approved performance wording, its qualification, and the deck review feedback.", ("elena", "mike", "aisha", "daniel"), "slides", 0),
         ("Choose the marketing shoot venue", "Choose Studio B Friday or Studio C Tuesday before the 4:30 PM hold expires so Priya can protect the crew and campaign schedule.", ("priya",), "sheet", 0),
         ("Finish and send the Agent Security PRD", "Complete the final PRD pass and send it to Engineering today. Protect focused time for the handoff.", ("prd",), "doc", 0),
     ]
@@ -407,7 +407,7 @@ WEEKDAY_EVENTS = [
     [
         ("08:30", "09:00", "Launch-week priorities", "Set the week's critical path and decision owners."),
         ("09:30", "10:15", "Keynote speaker risk review", "Review the speaker lineup, alternates, and outreach."),
-        ("10:30", "11:30", "IFA keynote structure workshop", "Align the four-talk sequence with the agent-first narrative."),
+        ("10:30", "11:30", "GTC keynote structure workshop", "Align the four-talk sequence with the agent-first narrative."),
         ("12:00", "13:00", "Working lunch — partner story", "Review how partner proof points support the launch narrative."),
         ("13:30", "14:15", "Campaign operations sync", "Check creative, legal, partner, and production dependencies."),
         ("15:00", "16:00", "Focus block — campaign plan", "Update the campaign plan and unresolved decisions."),
@@ -432,10 +432,10 @@ WEEKDAY_EVENTS = [
         ("16:15", "17:00", "Creative production review", "Review the shoot plan and unresolved venue options."),
     ],
     [
-        ("08:30", "09:00", "IFA campaign PMO", "Review critical path, partner commitments, and print readiness."),
+        ("08:30", "09:00", "GTC campaign PMO", "Review critical path, partner commitments, and print readiness."),
         ("09:30", "10:15", "Performance package review", "Check the latest inference evidence and required footnote."),
         ("10:45", "11:30", "Executive deck working session", "Reconcile review comments before leadership circulation."),
-        ("12:00", "13:00", "Working lunch — demo slate", "Narrow the IFA demo options and proposed owners."),
+        ("12:00", "13:00", "Working lunch — demo slate", "Narrow the GTC demo options and proposed owners."),
         ("13:30", "14:15", "Launch video agency review", "Resolve venue, crew, and production tradeoffs."),
         ("15:00", "16:00", "Focus block — executive deck", "Apply final content updates and verify decision slides."),
         ("16:30", "17:15", "Leadership pre-read handoff", "Prepare the decision-focused pre-read for leadership."),
@@ -517,14 +517,14 @@ WEEKDAY_ADDITIONAL_EVENTS = [
 
 TODAY_EVENTS = [
     ("08:00", "08:25", "Today's priorities", "Review overnight changes and today's critical decisions."),
-    ("09:00", "09:45", "IFA campaign PMO", "Review critical path, partner commitments, and print readiness."),
+    ("09:00", "09:45", "GTC campaign PMO", "Review critical path, partner commitments, and print readiness."),
     ("10:15", "11:00", "Agent messaging review", "Align campaign wording with the approved performance package."),
     ("11:00", "12:00", "Focus block — Agent Security PRD", "Complete the final pass before sending the PRD to Engineering."),
     ("12:30", "13:15", "Partner working lunch", "Review partner proof points and pilot readiness."),
     ("14:00", "14:30", "Legal qualification check", "Confirm leadership-review wording and the required footnote."),
     ("15:00", "16:00", "Launch storyboard working session — notes available", "Optional working session; notes will be posted afterward."),
     ("16:00", "17:00", "Executive prep block", "Apply deck feedback and prepare the two leadership decisions."),
-    ("17:00", "17:45", "RTX Spark Exec Review — leadership decisions", f"Decision meeting: approve the agent-first keynote storyline and align on IFA demos and owners. {EXEC_REVIEW_ROLES}"),
+    ("17:00", "17:45", "RTX Spark Exec Review — leadership decisions", f"Decision meeting: approve the agent-first keynote storyline and align on GTC demos and owners. {EXEC_REVIEW_ROLES}"),
     ("17:00", "17:30", "Decision follow-up triage", "Capture decisions, unresolved owners, and required follow-ups."),
 ]
 
@@ -545,7 +545,7 @@ def calendar_event_specs(
         day = start_day + timedelta(days=offset)
         events = TODAY_EVENTS if offset == active_offset else weekday_events
         for begin, end, title, description in [*events, *WEEKDAY_ADDITIONAL_EVENTS[offset]]:
-            link = f"\nDeck: {deck_url}" if title.startswith("RTX Spark Exec Review") else f"\nNotes: {doc_url}" if title.startswith("Launch storyboard") else f"\nTracker: {sheet_url}" if title == "IFA campaign PMO" else ""
+            link = f"\nDeck: {deck_url}" if title.startswith("RTX Spark Exec Review") else f"\nNotes: {doc_url}" if title.startswith("Launch storyboard") else f"\nTracker: {sheet_url}" if title == "GTC campaign PMO" else ""
             specs.append((day, begin, end, title, f"{description}{link}"))
     return specs
 
@@ -706,12 +706,12 @@ DECK
 The latest review pass defines the required edits.
 
 DECISIONS
-Leadership needs to close the keynote storyline and IFA demo slate."""),
+Leadership needs to close the keynote storyline and GTC demo slate."""),
         4: ("Inference performance — update required", """Performance to go here - Mike Chen to provide
 
 OWNER
 Mike Chen / Marketing"""),
-        5: ("One claim across every surface", """IFA DECK
+        5: ("One claim across every surface", """GTC DECK
 Agent Messaging • Campaign plan • Creative assets
 
 DECISION GATE
@@ -727,7 +727,7 @@ The assistant summarizes the differences and drafts a customer follow-up.
 
 CUSTOMER VALUE
 The associate reviews the draft before sending. Customer details stay on the device."""),
-        7: ("IFA demos — alignment needed", """DECISION
+        7: ("GTC demos — alignment needed", """DECISION
 Choose demos that show useful assistance with the user in control.
 
 CUSTOMER EXAMPLE
@@ -754,7 +754,7 @@ Priya cannot rebook the venue or protect downstream crew holds until the date is
         10: ("Two decisions to leave with", """1  APPROVE THE PROPOSED KEYNOTE STORYLINE
 Lead with agents; use specifications as evidence.
 
-2  ALIGN ON THE DEMOS FOR IFA
+2  ALIGN ON THE DEMOS FOR GTC
 Confirm the slate and owners that prove the story.
 
 Working files

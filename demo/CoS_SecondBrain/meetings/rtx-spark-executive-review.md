@@ -11,7 +11,7 @@ confidence: high
 
 # RTX Spark Executive Review
 
-This meeting is for two decisions: whether to approve the proposed keynote story and which demos to show at IFA. The intended outcome is a set of choices and confirmed responsibilities.
+This meeting is for two decisions: whether to approve the proposed keynote story and which demos to show at GTC. The intended outcome is a set of choices and confirmed responsibilities.
 
 ## Who is involved
 [[elena-park]] coordinates the review. [[aisha-rahman]] owns the presentation flow. [[mike-chen]] owns the product evidence. These are the roles recorded in this note, not a complete attendee list.
@@ -20,13 +20,13 @@ This meeting is for two decisions: whether to approve the proposed keynote story
 - Update slide 4 with the recorded [[inference-performance-claims|performance evidence]], including its conditions.
 - Move the customer example from slide 6 into slide 7, then remove slide 6.
 - Keep the introduction short so there is time for the decisions on slide 10.
-- Prepare a recommendation for the [[agent-first-storyline|keynote story]] and a comparison of the [[ifa-demo-slate|candidate demos]].
+- Prepare a recommendation for the [[agent-first-storyline|keynote story]] and a comparison of the [[gtc-demo-slate|candidate demos]].
 - Show proposed owners and unresolved setup needs. Do not treat proposed assignments as accepted.
 
 The comparison should explain the customer problem, what each demo shows, and what makes it different from the others. Include source references for existing product claims.
 
 ## Decide during the meeting
-Approve or revise the story. Select the IFA demos and confirm who accepts responsibility for each. The retail assignment is still open; preparing a recommendation does not close it.
+Approve or revise the story. Select the GTC demos and confirm who accepts responsibility for each. The retail assignment is still open; preparing a recommendation does not close it.
 
 ## Issues that could affect the choices
 - Retail demo ownership.

@@ -1,5 +1,6 @@
 import base64
 import importlib.util
+import re
 import sys
 import unittest
 import zipfile
@@ -18,6 +19,28 @@ spec.loader.exec_module(seed)
 from baseline import PRE_EMAIL_ROWS
 
 class WorkspaceSeedTests(unittest.TestCase):
+    def test_seed_and_reset_text_use_gtc_not_previous_event_name(self):
+        for filename in ("seed_workspace.py", "baseline.py"):
+            with self.subTest(filename=filename):
+                text = MODULE.with_name(filename).read_text(encoding="utf-8")
+                self.assertIsNone(re.search(r"\bIFA\b", text, re.IGNORECASE))
+                self.assertIn("GTC", text)
+
+    def test_reset_templates_and_second_brain_archive_use_gtc(self):
+        templates = MODULE.parent / "templates"
+        for filename in ("rtx-spark-campaign-plan.docx", "rtx-spark-campaign-tracker.xlsx",
+                         "rtx-spark-exec-review.pptx", "CoS_SecondBrain.zip"):
+            with self.subTest(filename=filename), zipfile.ZipFile(templates / filename) as archive:
+                self.assertIsNone(archive.testzip())
+                contents = []
+                for entry in archive.infolist():
+                    self.assertIsNone(re.search(r"\bifa\b", entry.filename, re.IGNORECASE))
+                    if Path(entry.filename).suffix in (".xml", ".rels", ".md"):
+                        text = archive.read(entry).decode("utf-8")
+                        self.assertIsNone(re.search(r"\bIFA\b", text, re.IGNORECASE), entry.filename)
+                        contents.append(text)
+                self.assertIn("GTC", "\n".join(contents))
+
     def test_tasks_without_permission_skip_unless_previous_tasks_need_reset(self):
         creds = Mock()
         creds.has_scopes.return_value = False
