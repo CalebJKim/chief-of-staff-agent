@@ -13,7 +13,7 @@ confidence: high
 
 ## Launch team
 - [[elena-park|Elena Park]]: executive program and decision cadence.
-- [[mike-chen|Mike Chen]]: product performance evidence.
+- [[mike-chen|Mike Chen]]: product specifications.
 - [[aisha-rahman|Aisha Rahman]]: partner and executive presentation flow.
 - [[marcus-lee|Marcus Lee]]: agent security engineering.
 - [[daniel-cho|Daniel Cho]]: legal qualifications and claims clearance.

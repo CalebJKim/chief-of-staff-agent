@@ -1,6 +1,6 @@
 # Wiki Index
 
-> Read this first to locate compiled knowledge. Last updated: 2026-09-22 | Total maintained pages: 92
+> Read this first to locate compiled knowledge. Last updated: 2026-09-24 | Total maintained pages: 93
 
 These notes cover projects, people, decisions, and meeting preparation. Use the source dates and recorded status to distinguish background from current evidence.
 
@@ -23,6 +23,7 @@ Start with Home for a guided overview. Detailed briefs cover Meridian's proposed
 - [[global-sales-forecast|Global Sales Forecast]]
 - [[hermes-partner-program|Hermes Partner Program]]
 - [[gtc-demo-slate|GTC Demo Slate]]
+- [[internal-team-training-ai-assistants|Internal team training: Building AI assistants]]
 - [[leadership-succession|Leadership Succession]]
 - [[marketing-claims-rollout|Marketing Claims Rollout]]
 - [[marketing-shoot|Marketing Shoot]]
@@ -79,7 +80,7 @@ Start with Home for a guided overview. Detailed briefs cover Meridian's proposed
 - [[decision-velocity|Decision Velocity]]
 - [[executive-attention-model|Executive Attention Model]]
 - [[executive-sponsorship|Executive Sponsorship]]
-- [[inference-performance-claims|Inference Performance Claims]]
+- [[product-specifications|Product Specifications]]
 - [[launch-critical-path|Launch Critical Path]]
 - [[local-agent-platform|Local Agent Platform]]
 - [[operating-cadence|Operating Cadence]]

@@ -17,7 +17,7 @@ This meeting is for two decisions: whether to approve the proposed keynote story
 [[elena-park]] coordinates the review. [[aisha-rahman]] owns the presentation flow. [[mike-chen]] owns the product evidence. These are the roles recorded in this note, not a complete attendee list.
 
 ## Prepare before the meeting
-- Update slide 4 with the recorded [[inference-performance-claims|performance evidence]], including its conditions.
+- Update slide 4 with the recorded [[product-specifications|product specifications]], keeping “up to” and FP4 intact.
 - Move the customer example from slide 6 into slide 7, then remove slide 6.
 - Keep the introduction short so there is time for the decisions on slide 10.
 - Prepare a recommendation for the [[agent-first-storyline|keynote story]] and a comparison of the [[gtc-demo-slate|candidate demos]].

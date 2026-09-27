@@ -4,7 +4,7 @@ created: 2026-09-09
 updated: 2026-09-22
 type: project
 tags: [project, rtx-spark, launch, strategy]
-sources: [raw/meetings/leadership-staff-2026-09-08.md, raw/updates/product-performance-package.md]
+sources: [raw/meetings/leadership-staff-2026-09-08.md, raw/updates/product-specifications-package.md]
 status: at-risk
 confidence: high
 ---
@@ -14,13 +14,13 @@ confidence: high
 This project brings together the presentation, product evidence, partner demos, retail preparation, and campaign materials for the RTX Spark launch. The immediate goal is to help leadership choose the keynote story and the demos to show at GTC.
 
 ## Where things stand
-The recorded performance evidence is approved for use with its stated conditions. The executive presentation and marketing materials still need updates. The retail demo still needs a confirmed owner, and the marketing shoot needs a replacement date.
+The recorded product specifications are approved for leadership review with “up to” and FP4 intact. The executive presentation and marketing materials still need updates. The retail demo still needs a confirmed owner, and the marketing shoot needs a replacement date.
 
 Approved evidence is ready to use, but the slides still need editing and proposed demo owners still need to accept their assignments.
 
 ## Who is involved
 - [[elena-park]] coordinates the [[rtx-spark-executive-review]].
-- [[mike-chen]] owns the [[inference-performance-claims|product evidence]].
+- [[mike-chen]] owns the [[product-specifications|product evidence]].
 - [[aisha-rahman]] and [[sofia-alvarez]] connect the presentation to the [[hermes-partner-program|partner program]].
 - [[marketing-claims-rollout]] covers updates to campaign materials.
 - [[marketing-shoot]] covers production and the venue decision.
@@ -102,4 +102,4 @@ The [[gtc-demo-slate|GTC demo list]] should give each candidate a distinct purpo
 - What happens if the source is unavailable or its information has changed?
 - Which details belong in the spoken explanation, and which are better left in a supporting note?
 
-The product page is a source for public product positioning. It does not verify our internal launch evidence, approve our deck, or resolve a pending assignment. Existing claim wording still belongs with [[inference-performance-claims|its recorded evidence]] and [[marketing-claims-rollout|the materials review]].
+The product page is a source for public product positioning. It does not verify our internal launch evidence, approve our deck, or resolve a pending assignment. Existing claim wording still belongs with [[product-specifications|its recorded evidence]] and [[marketing-claims-rollout|the materials review]].

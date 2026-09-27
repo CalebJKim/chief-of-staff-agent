@@ -43,7 +43,7 @@ tools and instructions for how I like to do things. Let's get started.
 >
 > - Leadership moved the RTX Spark Exec Review from Thursday to 5:00 p.m.
 >   today. It is a decision meeting, not a working session.
-> - Mike's inference package is approved, and Legal cleared the qualified
+> - Mike's product specifications are approved, and Legal cleared the
 >   wording for leadership review.
 > - The replacement marketing-shoot venue hold expires at 4:30 p.m.
 >
@@ -97,13 +97,13 @@ chief of staff help us.
 
 > **Context**
 >
-> - The review moved to today and needs leadership decisions. Performance
->   evidence is approved, and the latest deck feedback explains the remaining
+> - The review moved to today and needs leadership decisions. Product
+>   specifications are approved, and the latest deck feedback explains the remaining
 >   preparation.
 >
 > **What needs to get done before the meeting**
 >
-> - Incorporate the approved performance evidence and required qualification.
+> - Incorporate the approved product specifications, retaining “up to” and FP4.
 > - Streamline the presentation and prepare the proposed demo choices and owners.
 >
 > **Goals for the meeting**
@@ -135,7 +135,7 @@ to a visible row.*
 
 > **Updated**
 >
-> - Product performance claims — Complete
+> - Product specifications — Complete
 > - Exec Review deck — In progress
 > - Agent Messaging — In progress
 > - Legal intake — Complete

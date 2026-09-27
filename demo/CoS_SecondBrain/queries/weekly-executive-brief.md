@@ -4,7 +4,7 @@ created: 2026-09-09
 updated: 2026-09-22
 type: query
 tags: [priority, operations, strategy]
-sources: [raw/meetings/leadership-staff-2026-09-08.md, raw/updates/product-performance-package.md]
+sources: [raw/meetings/leadership-staff-2026-09-08.md, raw/updates/product-specifications-package.md]
 status: active
 confidence: high
 ---

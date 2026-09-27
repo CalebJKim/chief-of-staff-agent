@@ -22,7 +22,7 @@ The proposed keynote story presents RTX Spark through useful work a person can d
 This is a structure for explaining a candidate workflow, not a promise that every product supports every step.
 
 ## What supports the story
-The [[hermes-partner-program|partner program]] can explain how different parts of a workflow connect. [[openshell|OpenShell]] can explain execution controls. The recorded [[inference-performance-claims|product evidence]] can support specific statements within its approved scope.
+The [[hermes-partner-program|partner program]] can explain how different parts of a workflow connect. [[openshell|OpenShell]] can explain execution controls. The recorded [[product-specifications|product evidence]] can support specific statements within its approved scope.
 
 For each example, answer: What did the person ask? What information was used? What appeared on screen? What remained for the person to review? Those answers are more useful than terms such as orchestration without an explanation.
 

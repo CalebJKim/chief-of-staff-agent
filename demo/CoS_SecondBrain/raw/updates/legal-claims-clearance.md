@@ -5,4 +5,4 @@ ingested: 2026-09-09
 ---
 # Legal Claims Clearance
 
-Legal approves the 1.8x inference claim only when paired with tested-model, batch-size, and power-envelope qualification. Unqualified external usage is not approved.
+Legal cleared Mike Chen's product specification wording for leadership review. Keep “up to” with all four specifications and retain the FP4 precision label. This clearance does not cover final external campaign copy, which needs a separate Legal review.

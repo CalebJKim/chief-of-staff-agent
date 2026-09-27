@@ -39,3 +39,8 @@
 - Linked NVIDIA's RTX Spark page and supporting CUDA and Studio references. Distinguished published product information from interpretation, proposed examples, and existing launch work.
 - Used Humanizer for the prose. Preserved the existing page, metadata, pending decisions, and claim restrictions; added no benchmarks or completed-work claims.
 - Updated the index and the three corresponding entries in the reset ZIP. No demo code, Google Workspace, Hermes settings, or scheduled jobs were changed.
+
+## [2026-09-24] add | Internal team training: Building AI assistants
+- Added the user-approved completed-training page with a present-tense facilitator walkthrough, teammate links, decisions, public references, and change history.
+- Listed the page under Projects and included the page, index, and this log entry in the reset baseline.
+- Left existing people and project pages, Google Workspace data, demo code, skills, and scheduled jobs unchanged.

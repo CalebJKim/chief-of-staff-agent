@@ -17,7 +17,7 @@ confidence: high
 | Finalize GTC demos and owners | Executive sponsor | Open | Executive Review | [[gtc-demo-slate]] |
 | Choose replacement shoot date | Executive sponsor | Open | Before venue holds expire | [[marketing-shoot]] |
 | Approve default-deny egress posture | Security + executive sponsor | Open | Before partner rehearsal | [[openshell]] |
-| Use qualified 1.8x throughput claim | [[daniel-cho]] | Approved | 2026-09-09 | [[inference-performance-claims]] |
+| Use approved product specifications with “up to” and FP4 | [[daniel-cho]] | Approved | 2026-09-09 | [[product-specifications]] |
 
 See [[rtx-spark-executive-review|the RTX Spark Executive Review]] and the [[weekly-executive-brief|weekly executive brief]] for sequencing.
 

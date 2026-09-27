@@ -11,14 +11,14 @@ confidence: high
 
 # Mike Chen
 
-Mike owns product performance evidence for [[inference-performance-claims|inference performance claims]]. His work supplies the evidence used in [[marketing-claims-rollout|the marketing claims rollout]].
+Mike owns the approved [[product-specifications|product specifications]]. His package supplies the wording used in [[marketing-claims-rollout|the marketing claims rollout]].
 
-## Reading a result
-A result needs its comparison baseline, workload, configuration, and measurement method. Those details let another team understand what the figure measures and where it applies.
+## Reading a specification
+Keep the component name, value, unit, and qualifier together. Mike's package covers the Blackwell RTX GPU, Grace CPU, FP4 AI performance, and unified memory. “Up to” belongs with each specification.
 
-Different measures answer different questions. Starting a response sooner does not necessarily mean producing more output over a sustained period. Keep that distinction when shortening a technical explanation for a presentation.
+Core counts, compute specifications, and memory capacity describe different aspects of the product. They do not establish measured response times or energy savings for a workflow. Keep FP4 attached to the AI performance figure when shortening the explanation.
 
 ## Questions and follow-through
-Ask Mike for the scope and conditions alongside the figure. [[daniel-cho|Daniel Cho]] helps with interpretation, while the rollout work tracks use in other materials. Delivery of the evidence does not establish that every deck, script, or campaign asset has been updated.
+Ask Mike for the exact specification wording. [[daniel-cho|Daniel Cho]] helps with Legal review, while the rollout work tracks use in other materials. Delivery of the approved package does not establish that every deck, script, or campaign asset has been updated.
 
 Bring decisions and evidence to [[weekly-leadership-staff|weekly leadership staff]], and record executive commitments in the [[decision-log|decision log]].

@@ -15,7 +15,7 @@ This note tracks the proposed list of demos for GTC. The list should show useful
 
 ## Candidates in the current notes
 - An agent workflow using the [[hermes-partner-program|Hermes partner program]].
-- A local inference example supported by the recorded [[inference-performance-claims|product evidence]].
+- A local inference example supported by the recorded [[product-specifications|product evidence]].
 - A secure-execution example using [[openshell|OpenShell]], subject to the open network-access decision.
 - A retail experience, with the final responsible owner still to be confirmed through [[grant-walker]].
 

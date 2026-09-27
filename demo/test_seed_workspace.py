@@ -19,6 +19,25 @@ spec.loader.exec_module(seed)
 from baseline import PRE_EMAIL_ROWS
 
 class WorkspaceSeedTests(unittest.TestCase):
+    def test_seed_assets_use_specifications_without_old_benchmark_claims(self):
+        retired = re.compile(r"1\.8[x×]|2\.1[x×]|38 tokens/second|22% lower energy|inference-performance-claims|product-performance-package", re.I)
+        for filename in ("seed_workspace.py", "baseline.py"):
+            self.assertIsNone(retired.search(MODULE.with_name(filename).read_text(encoding="utf-8")))
+        for path in (MODULE.parent / "templates").iterdir():
+            if path.suffix not in (".zip", ".docx", ".xlsx", ".pptx"):
+                continue
+            with zipfile.ZipFile(path) as archive:
+                for name in archive.namelist():
+                    self.assertIsNone(retired.search(name), name)
+                    if Path(name).suffix in (".xml", ".md"):
+                        self.assertIsNone(retired.search(archive.read(name).decode("utf-8")), (path.name, name))
+        with zipfile.ZipFile(MODULE.parent / "templates/CoS_SecondBrain.zip") as archive:
+            for name in ("concepts/product-specifications.md", "raw/updates/product-specifications-package.md"):
+                text = archive.read(name).decode("utf-8")
+                self.assertEqual(text.replace("\r\n", "\n"), (MODULE.parent / "CoS_SecondBrain" / name).read_text(encoding="utf-8"))
+                for value in ("Up to 6,144 cores", "Up to 20 cores", "Up to 1 petaflop", "Up to 128 GB", "FP4"):
+                    self.assertIn(value, text)
+
     def test_seed_and_reset_text_use_gtc_not_previous_event_name(self):
         for filename in ("seed_workspace.py", "baseline.py"):
             with self.subTest(filename=filename):
@@ -175,7 +194,9 @@ class WorkspaceSeedTests(unittest.TestCase):
         self.assertIn("You will present", seed.EXEC_REVIEW_ROLES)
         self.assertIn("Planned attendees:", seed.EXEC_REVIEW_ROLES)
         self.assertIn("Mike Chen", MODULE.read_text(encoding="utf-8"))
-        self.assertIn("2.1x faster", MODULE.read_text(encoding="utf-8"))
+        for specification in ("Blackwell RTX GPU: Up to 6,144 cores", "Grace CPU: Up to 20 cores",
+                              "FP4 AI performance: Up to 1 petaflop", "Unified memory: Up to 128 GB"):
+            self.assertIn(specification, MODULE.read_text(encoding="utf-8"))
 
     def test_main_emails_are_preserved_with_diverse_background_mail_and_fixed_times(self):
         gmail = Mock()
@@ -203,7 +224,7 @@ class WorkspaceSeedTests(unittest.TestCase):
         self.assertEqual(
             [
                 "URGENT: RTX Spark Exec Review moved to 5 PM today",
-                "APPROVED: RTX Spark inference numbers for slide 4",
+                "APPROVED: RTX Spark product specifications for slide 4",
                 "Exec Review deck pass: cut slide 6; protect slide 10",
                 "Legal scope: RTX Spark wording cleared for leadership review",
                 "Decision by 4:30 PM today: marketing shoot venue hold",
@@ -395,7 +416,7 @@ class WorkspaceSeedTests(unittest.TestCase):
 
     def test_original_tracker_is_copied_once_and_reset_to_same_baseline(self):
         drive, sheets = Mock(), Mock()
-        drive.files().create.return_value.execute.return_value = {"id": "reference-1", "webViewLink": "reference-url"}
+        drive.files().get.return_value.execute.return_value = {"parents": ["folder-1"]}
         drive.files().copy.return_value.execute.return_value = {"id": "original-1", "webViewLink": "original-url"}
         state = {
             "folder": {"id": "folder-1"},
@@ -414,22 +435,20 @@ class WorkspaceSeedTests(unittest.TestCase):
             self.assertEqual({"id": "sheet-1", "url": "sheet-url"}, state["sheet"])
         drive.files().copy.assert_called_once_with(
             fileId="sheet-1",
-            body={"name": "[ORIGINAL] RTX Spark Campaign Tracker", "parents": ["reference-1"]},
+            body={"name": "Reference Tracker", "parents": ["folder-1"]},
             fields="id,webViewLink",
         )
         self.assertEqual({"id": "original-1", "url": "original-url"}, state["original_sheet"])
-        drive.files().create.assert_called_once_with(
-            body={"name": "Reference Materials - DO NOT MODIFY", "mimeType": "application/vnd.google-apps.folder", "parents": ["folder-1"]},
-            fields="id,webViewLink",
-        )
+        drive.files().create.assert_not_called()
 
-    def test_existing_original_is_moved_into_reference_folder(self):
+    def test_existing_original_is_renamed_and_moved_into_campaign_folder(self):
         drive, sheets = Mock(), Mock()
         drive.files().create.return_value.execute.return_value = {"id": "reference-1", "webViewLink": "reference-url"}
         state = {"folder": {"id": "folder-1"}, "sheet": {"id": "working-1"}, "original_sheet": {"id": "original-1"}}
         with patch.object(seed, "move_to_folder") as move, patch.object(seed, "reset_sheet_baseline") as reset:
             seed.reset_original_sheet(drive, sheets, state, {}, "2026-09-22")
-        move.assert_called_once_with(drive, "original-1", "reference-1")
+        move.assert_called_once_with(drive, "original-1", "folder-1")
+        drive.files().update.assert_called_once_with(fileId="original-1", body={"name": "Reference Tracker"})
         self.assertEqual("original-1", reset.call_args.args[1]["sheet"]["id"])
         drive.files().copy.assert_not_called()
 
@@ -462,7 +481,7 @@ class WorkspaceSeedTests(unittest.TestCase):
         requests = call.kwargs["body"]["requests"]
         inserted = [item["insertText"]["text"] for item in requests if "insertText" in item]
         self.assertEqual(32, len(requests))
-        self.assertTrue(any("Performance to go here" in text for text in inserted))
+        self.assertTrue(any("Product specifications to go here" in text for text in inserted))
         self.assertTrue(any("Two decisions to leave with" in text for text in inserted))
         self.assertFalse(any("Retail demo owner" in text for text in inserted))
 

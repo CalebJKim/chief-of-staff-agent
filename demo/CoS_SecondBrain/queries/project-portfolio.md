@@ -22,7 +22,7 @@ confidence: high
 | [[board-readiness-program]] | At Risk | Owner and milestone confirmation | [[rtx-spark-launch]] / [[finance-operating-plan]] |
 | [[northstar-customer-recovery]] | At Risk | Owner and milestone confirmation | [[openshell]] / [[enterprise-support-model]] |
 | [[meridian-strategic-account]] | Active | Owner and milestone confirmation | [[hermes-partner-program]] / [[global-sales-forecast]] |
-| [[dgx-spark-two-system-story]] | Planned | Owner and milestone confirmation | [[inference-performance-claims]] / [[competitive-response-deepseek]] |
+| [[dgx-spark-two-system-story]] | Planned | Owner and milestone confirmation | [[product-specifications]] / [[competitive-response-deepseek]] |
 | [[competitive-response-deepseek]] | Active | Owner and milestone confirmation | [[dgx-spark-two-system-story]] / [[agent-first-storyline]] |
 | [[enterprise-support-model]] | Active | Owner and milestone confirmation | [[northstar-customer-recovery]] / [[operational-resilience]] |
 | [[q4-operating-plan]] | At Risk | Owner and milestone confirmation | [[finance-operating-plan]] / [[workforce-plan]] |

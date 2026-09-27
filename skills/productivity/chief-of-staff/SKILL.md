@@ -63,7 +63,8 @@ Reuse the excerpts already returned. Only when a focused request needs more cont
 ## Initial Reply
 
 Aim for under 220 words. No greeting, preamble, inbox inventory, generic advice, or extra top-level section. Use the layout below, big-picture outcome titles, and future/action wording for unfinished work.
-Show relevant links inline in the response. Never open or launch a link, browser, or Chrome window unless the user explicitly asks you to.
+In all replies, give inline Markdown links succinct, descriptive labels, usually 2–4 words. If a title is unavailable, derive the label from existing context, such as “Elena’s email” or “Exec review slides.” Keep supplied URLs in link targets only, never as visible labels or bare text. Do not fetch a page solely to obtain its title.
+Never open or launch a link, browser, or Chrome window unless the user explicitly asks you to.
 Use the saved Google connection and the scripts' silent token refresh. If access fails, report the problem briefly; do not launch sign-in or rerun OAuth setup unless the user asks to reconnect.
 Never show raw draft, message, thread, file, event, document, spreadsheet, presentation, or scheduled-job IDs in user-facing replies. Use human-readable names and link labels; IDs are for internal tool calls only.
 

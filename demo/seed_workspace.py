@@ -186,6 +186,8 @@ def execute_batched(api: Any, requests: list[Any], *, ignore_errors: bool = Fals
 
 def move_to_folder(drive, file_id: str, folder_id: str) -> None:
     parents = drive.files().get(fileId=file_id, fields="parents").execute().get("parents", [])
+    if parents == [folder_id]:
+        return
     drive.files().update(
         fileId=file_id,
         addParents=folder_id,
@@ -220,22 +222,16 @@ def reset_original_sheet(drive, sheets, state: dict, evidence: dict, refreshed: 
     """Keep one comparison copy at the seeded baseline, separate from the working tracker."""
     if state.get("original_sheet", {}).get("id") == state["sheet"]["id"]:
         raise ValueError("The original comparison copy must be separate from the working tracker.")
-    if not state.get("reference_folder", {}).get("id"):
-        folder = drive.files().create(
-            body={"name": "Reference Materials - DO NOT MODIFY", "mimeType": "application/vnd.google-apps.folder",
-                  "parents": [state["folder"]["id"]]},
-            fields="id,webViewLink",
-        ).execute()
-        state["reference_folder"] = {"id": folder["id"], "url": folder["webViewLink"]}
-        if state.get("original_sheet", {}).get("id"):
-            move_to_folder(drive, state["original_sheet"]["id"], folder["id"])
     if not state.get("original_sheet", {}).get("id"):
         copied = drive.files().copy(
             fileId=state["sheet"]["id"],
-            body={"name": "[ORIGINAL] RTX Spark Campaign Tracker", "parents": [state["reference_folder"]["id"]]},
+            body={"name": "Reference Tracker", "parents": [state["folder"]["id"]]},
             fields="id,webViewLink",
         ).execute()
         state["original_sheet"] = {"id": copied["id"], "url": copied["webViewLink"]}
+    else:
+        move_to_folder(drive, state["original_sheet"]["id"], state["folder"]["id"])
+        drive.files().update(fileId=state["original_sheet"]["id"], body={"name": "Reference Tracker"}).execute()
     if state["original_sheet"]["id"] == state["sheet"]["id"]:
         raise ValueError("The original comparison copy must be separate from the working tracker.")
     # Keep the same evidence/working-file links; only the write target changes.
@@ -294,16 +290,16 @@ def mail_import_request(
     return gmail.users().messages().import_(userId="me", body={"raw": raw, "labelIds": labels}, internalDateSource="dateHeader", neverMarkSpam=True, processForCalendar=False)
 
 
-EXEC_REVIEW_ROLES = "You will present the storyline and proposed demo slate. Planned attendees: you, Elena Park (chair and your manager), Mike Chen (performance evidence), Aisha Rahman (deck and partner readiness), and Daniel Cho (Legal). Final demo selection and the retail demo owner remain open decisions."
+EXEC_REVIEW_ROLES = "You will present the storyline and proposed demo slate. Planned attendees: you, Elena Park (chair and your manager), Mike Chen (product specifications), Aisha Rahman (deck and partner readiness), and Daniel Cho (Legal). Final demo selection and the retail demo owner remain open decisions."
 
 
 def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str) -> tuple[list[dict], dict[str, str]]:
     account = gmail.users().getProfile(userId="me").execute()["emailAddress"]
     meaningful = [
         ("Elena Park <elena.example@nvidia.com>", "URGENT: RTX Spark Exec Review moved to 5 PM today", f"Hi,\n\nAs your manager, I need your focus on today's leadership decisions. Leadership moved the RTX Spark Exec Review from Thursday to 5:00 PM today. This is a decision meeting, not a working session. We need two outcomes: approval of the agent-first keynote storyline, and alignment on the GTC demo slate and owners.\n\n{EXEC_REVIEW_ROLES}\n\nDeck: {deck_url}\n\n— Elena"),
-        ("Mike Chen <mike.example@nvidia.com>", "APPROVED: RTX Spark inference numbers for slide 4", "The performance package is approved for today's Exec Review. Use exactly: 2.1x faster time-to-first-token versus the prior approved release; 38 tokens/second sustained on the fixed 35B workflow; 22% lower energy per completed workflow. Required footnote: Pre-production measurements on the RTX Spark reference configuration. Results vary by model, quantization, and workload. Daniel cleared this wording for leadership review."),
-        ("Aisha Rahman <aisha.example@nvidia.com>", "Exec Review deck pass: cut slide 6; protect slide 10", f"My review is complete; I have not edited the deck. These edits are still for you to apply: put Mike's approved numbers on slide 4. Summarize the proposed customer-use example from slide 6 in the Customer Example section of slide 7, then remove slide 6 from the live flow. Preserve the local laptop comparison, the draft follow-up reviewed by the associate, and customer details staying on the device. This is a proposed use case, not customer validation or an approved demo selection; the demo slate and owners still need a decision. Move quickly through the opening so there is enough discussion time on slide 10.\n\nDeck: {deck_url}"),
-        ("Daniel Cho <daniel.example@nvidia.com>", "Legal scope: RTX Spark wording cleared for leadership review", "The RTX Spark performance wording and pre-production qualification are cleared for today's leadership review. This is not blanket campaign-wide approval; keep the qualification intact and route final external copy through Legal."),
+        ("Mike Chen <mike.example@nvidia.com>", "APPROVED: RTX Spark product specifications for slide 4", "The product specifications are approved for today's Exec Review. Use the following:\n\nBlackwell RTX GPU: Up to 6,144 cores\nGrace CPU: Up to 20 cores\nFP4 AI performance: Up to 1 petaflop\nUnified memory: Up to 128 GB\n\nKeep 'up to' with each specification and retain the FP4 precision label. Daniel has cleared this wording for leadership review."),
+        ("Aisha Rahman <aisha.example@nvidia.com>", "Exec Review deck pass: cut slide 6; protect slide 10", f"My review is complete; I have not edited the deck. These edits are still for you to apply: put Mike's approved product specifications on slide 4. Summarize the proposed customer-use example from slide 6 in the Customer Example section of slide 7, then remove slide 6 from the live flow. Preserve the local laptop comparison, the draft follow-up reviewed by the associate, and customer details staying on the device. This is a proposed use case, not customer validation or an approved demo selection; the demo slate and owners still need a decision. Move quickly through the opening so there is enough discussion time on slide 10.\n\nDeck: {deck_url}"),
+        ("Daniel Cho <daniel.example@nvidia.com>", "Legal scope: RTX Spark wording cleared for leadership review", "The RTX Spark product specification wording is cleared for today's leadership review. Keep 'up to' with all four specifications and retain the FP4 precision label. This is not blanket campaign-wide approval; route final external copy through Legal."),
         ("Priya Nair <priya.example@nvidia.com>", "Decision by 4:30 PM today: marketing shoot venue hold", f"The planned venue is unavailable. We can hold Studio B Friday or Studio C Tuesday, with the preferred crew, until 4:30 PM today. Choose one before the hold expires or we risk a campaign slip.\n\nTracker: {sheet_url}"),
         ("Elena Park <elena.example@nvidia.com>", "Agent Security PRD needs to reach Engineering today", f"Please finish and send the Agent Security PRD to Engineering today. Protect a focused hour for the final pass. You can skip the optional launch storyboard session; notes will be posted afterward.\n\nCampaign plan: {doc_url}"),
     ]
@@ -350,7 +346,7 @@ def create_tasks(api, state: dict, evidence: dict[str, str]) -> None:
     task_list = api.tasklists().get(tasklist="@default").execute()
     state["task_list"] = {"id": task_list["id"], "title": task_list["title"]}
     specs = [
-        ("Prepare RTX Spark leadership decisions", "Prepare the keynote storyline and proposed GTC demos and owners for today's executive review. Incorporate the approved performance wording, its qualification, and the deck review feedback.", ("elena", "mike", "aisha", "daniel"), "slides", 0),
+        ("Prepare RTX Spark leadership decisions", "Prepare the keynote storyline and proposed GTC demos and owners for today's executive review. Incorporate the approved product specifications, keeping 'up to' and FP4 intact, and the deck review feedback.", ("elena", "mike", "aisha", "daniel"), "slides", 0),
         ("Choose the marketing shoot venue", "Choose Studio B Friday or Studio C Tuesday before the 4:30 PM hold expires so Priya can protect the crew and campaign schedule.", ("priya",), "sheet", 0),
         ("Finish and send the Agent Security PRD", "Complete the final PRD pass and send it to Engineering today. Protect focused time for the handoff.", ("prd",), "doc", 0),
     ]
@@ -414,7 +410,7 @@ WEEKDAY_EVENTS = [
         ("16:30", "17:00", "EMEA handoff", "Share decisions and risks with the regional team."),
     ],
     [
-        ("08:45", "09:15", "Product claims check-in", "Review validation progress and open qualification questions."),
+        ("08:45", "09:15", "Product specifications check-in", "Review specification approval and open wording questions."),
         ("09:30", "10:30", "Resolve RTX Spark creative comments", "Update the hero claim, stage banner, and product UI imagery."),
         ("11:00", "11:45", "Partner enablement review", "Review partner slides and the staged Windows pilot."),
         ("12:30", "13:15", "Lunch with developer relations", "Align launch examples and developer proof points."),
@@ -433,7 +429,7 @@ WEEKDAY_EVENTS = [
     ],
     [
         ("08:30", "09:00", "GTC campaign PMO", "Review critical path, partner commitments, and print readiness."),
-        ("09:30", "10:15", "Performance package review", "Check the latest inference evidence and required footnote."),
+        ("09:30", "10:15", "Product specifications review", "Check the approved product specifications, including 'up to' and FP4."),
         ("10:45", "11:30", "Executive deck working session", "Reconcile review comments before leadership circulation."),
         ("12:00", "13:00", "Working lunch — demo slate", "Narrow the GTC demo options and proposed owners."),
         ("13:30", "14:15", "Launch video agency review", "Resolve venue, crew, and production tradeoffs."),
@@ -490,7 +486,7 @@ WEEKDAY_ADDITIONAL_EVENTS = [
     ],
     [
         ("08:15", "08:45", "Leadership agenda check", "Confirm decisions and presenters for upcoming leadership reviews."),
-        ("09:45", "10:30", "Performance messaging sync", "Align approved evidence with the executive narrative."),
+        ("09:45", "10:30", "Product specifications messaging sync", "Align approved specifications with the executive narrative."),
         ("11:00", "12:00", "Executive communications review", "Polish the decision story while the deck is being updated."),
         ("12:00", "12:30", "Executive sponsor check-in", "Review the decisions that need sponsorship before the working lunch."),
         ("12:30", "13:30", "Demo owner working lunch", "Resolve ownership and readiness questions for the demo slate."),
@@ -518,10 +514,10 @@ WEEKDAY_ADDITIONAL_EVENTS = [
 TODAY_EVENTS = [
     ("08:00", "08:25", "Today's priorities", "Review overnight changes and today's critical decisions."),
     ("09:00", "09:45", "GTC campaign PMO", "Review critical path, partner commitments, and print readiness."),
-    ("10:15", "11:00", "Agent messaging review", "Align campaign wording with the approved performance package."),
+    ("10:15", "11:00", "Agent messaging review", "Align campaign wording with the approved product specifications."),
     ("11:00", "12:00", "Focus block — Agent Security PRD", "Complete the final pass before sending the PRD to Engineering."),
     ("12:30", "13:15", "Partner working lunch", "Review partner proof points and pilot readiness."),
-    ("14:00", "14:30", "Legal qualification check", "Confirm leadership-review wording and the required footnote."),
+    ("14:00", "14:30", "Legal qualification check", "Confirm leadership-review wording keeps 'up to' and FP4 intact."),
     ("15:00", "16:00", "Launch storyboard working session — notes available", "Optional working session; notes will be posted afterward."),
     ("16:00", "17:00", "Executive prep block", "Apply deck feedback and prepare the two leadership decisions."),
     ("17:00", "17:45", "RTX Spark Exec Review — leadership decisions", f"Decision meeting: approve the agent-first keynote storyline and align on GTC demos and owners. {EXEC_REVIEW_ROLES}"),
@@ -707,7 +703,7 @@ The latest review pass defines the required edits.
 
 DECISIONS
 Leadership needs to close the keynote storyline and GTC demo slate."""),
-        4: ("Inference performance — update required", """Performance to go here - Mike Chen to provide
+        4: ("Product specifications: update required", """Product specifications to go here. See Mike Chen's approved package.
 
 OWNER
 Mike Chen / Marketing"""),
@@ -715,10 +711,10 @@ Mike Chen / Marketing"""),
 Agent Messaging • Campaign plan • Creative assets
 
 DECISION GATE
-Approve wording and disclaimer once, then propagate without drift.
+Keep approved specification wording, including 'up to' and FP4, consistent.
 
 CONTROL
-Do not invent, extrapolate, or preserve superseded multipliers."""),
+Do not turn product specifications into measured workflow results."""),
         6: ("Customer use example", """SCENARIO
 A retail associate compares two laptops using a local product catalog.
 
