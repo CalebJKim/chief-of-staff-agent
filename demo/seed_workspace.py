@@ -239,9 +239,11 @@ def reset_original_sheet(drive, sheets, state: dict, evidence: dict, refreshed: 
     reset_sheet_baseline(sheets, comparison_state, evidence, refreshed)
 
 def seeded_email_times(count: int, now: datetime | None = None) -> list[datetime]:
-    """Repeat an irregular local-time schedule relative to each reset date."""
+    """Repeat an irregular schedule, shifting early resets to avoid future mail."""
     current = (now or local_now()).astimezone(ZoneInfo(TZ_NAME))
     cursor = current.replace(hour=EMAIL_REFERENCE_HOUR, minute=EMAIL_REFERENCE_MINUTE, second=0, microsecond=0)
+    if cursor > current:
+        cursor = current.replace(second=0, microsecond=0) - timedelta(minutes=1)
     # A local fixed seed keeps each email's time stable without uniform spacing.
     rng = random.Random("chief-of-staff-email-times")
     times = []

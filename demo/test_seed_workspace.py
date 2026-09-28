@@ -303,21 +303,21 @@ class WorkspaceSeedTests(unittest.TestCase):
         self.assertEqual(seed.BATCH_SIZE, len(batches[0].items))
         self.assertEqual({"value": requests[-1]}, results[-1])
 
-    def test_seeded_email_clock_times_are_independent_of_reset_time(self):
+    def test_seeded_email_clock_times_stay_fixed_after_reference_time(self):
         tz = ZoneInfo(seed.TZ_NAME)
         count = seed.MEANINGFUL_EMAIL_COUNT + seed.BACKGROUND_EMAIL_COUNT + seed.CONTACT_EMAIL_COUNT
-        expected = seed.seeded_email_times(count, datetime(2026, 8, 27, 0, 0, tzinfo=tz))
+        expected = seed.seeded_email_times(count, datetime(2026, 8, 27, 9, 12, tzinfo=tz))
         self.assertEqual((9, 12), (expected[0].hour, expected[0].minute))
         gaps = [a - b for a, b in zip(expected, expected[1:])]
         self.assertTrue(all(gap > timedelta(0) for gap in gaps))
         self.assertGreater(len(set(gaps)), 10)
-        for hour in (6, 8, 12, 16, 23):
+        for hour in (9, 12, 16, 23):
             with self.subTest(hour=hour):
                 self.assertEqual(expected, seed.seeded_email_times(count, datetime(2026, 8, 27, hour, 37, tzinfo=tz)))
 
     def test_seeded_email_date_advances_but_clock_times_stay_fixed(self):
         tz = ZoneInfo(seed.TZ_NAME)
-        today = datetime(2026, 8, 27, 9, 0, tzinfo=tz)
+        today = datetime(2026, 8, 27, 12, 0, tzinfo=tz)
         tomorrow = today + timedelta(days=1)
         count = seed.MEANINGFUL_EMAIL_COUNT + seed.BACKGROUND_EMAIL_COUNT + seed.CONTACT_EMAIL_COUNT
         first = seed.seeded_email_times(count, today)
@@ -325,18 +325,23 @@ class WorkspaceSeedTests(unittest.TestCase):
         self.assertEqual([value.time() for value in first], [value.time() for value in second])
         self.assertEqual([value + timedelta(days=1) for value in first], second)
 
-    def test_seeded_email_times_span_today_and_previous_day_even_after_midnight(self):
-        now = datetime(2026, 8, 27, 0, 0, 10, tzinfo=ZoneInfo("America/Los_Angeles"))
-
-        values = seed.seeded_email_times(
-            seed.MEANINGFUL_EMAIL_COUNT + seed.BACKGROUND_EMAIL_COUNT + seed.CONTACT_EMAIL_COUNT,
-            now,
-        )
-
-        self.assertEqual({now.date(), now.date() - timedelta(days=1)}, {value.date() for value in values})
-        self.assertEqual(len(values), len(set(values)))
-        self.assertTrue(any(value.date() < now.date() and 12 <= value.hour < 18 for value in values))
-        self.assertTrue(any(value.date() < now.date() and value.hour >= 18 for value in values))
+    def test_early_resets_shift_all_email_times_without_changing_gaps(self):
+        tz = ZoneInfo(seed.TZ_NAME)
+        count = seed.MEANINGFUL_EMAIL_COUNT + seed.BACKGROUND_EMAIL_COUNT + seed.CONTACT_EMAIL_COUNT
+        reference = datetime(2026, 8, 27, 9, 12, tzinfo=tz)
+        baseline = seed.seeded_email_times(count, reference)
+        for hour, minute in ((0, 0), (0, 33), (6, 0), (8, 0), (9, 11)):
+            with self.subTest(hour=hour, minute=minute):
+                now = reference.replace(hour=hour, minute=minute, second=10)
+                values = seed.seeded_email_times(count, now)
+                newest = now.replace(second=0, microsecond=0) - timedelta(minutes=1)
+                self.assertEqual(newest, values[0])
+                self.assertTrue(all(value < now for value in values))
+                self.assertEqual(count, len(set(values)))
+                shift = baseline[0] - newest
+                self.assertEqual([value - shift for value in baseline], values)
+                if hour == minute == 0:
+                    self.assertTrue(all(value.date() < now.date() for value in values))
 
     def test_seeded_email_times_handle_empty_and_single_message(self):
         now = datetime(2026, 8, 27, 16, 0, tzinfo=ZoneInfo(seed.TZ_NAME))
