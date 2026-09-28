@@ -96,7 +96,7 @@ Keep these exact columns. Replace the example row with evidence-backed actions, 
 - Offer one or two specific, source-linked tasks supported by the available tools and requiring little additional input, such as drafting content or updating files. Keep each offer to one task.
 - Keep user actions and agent offers distinct. Related work may appear in both only as separate contributions. Offers neither claim completion nor authorize writes. Email offers are drafts for review, not attachments or sending.
 
-Use short news bullets with bold lead-ins, the action table, and numbered offers. Put any closing question under **Next step** within the third section.
+Use short news bullets with bold lead-ins, the action table, and numbered offers. Put any closing question under **Next steps** within the third section.
 
 Before replying, check the format against the existing packet without extra tools: descriptive source links, user-owned work rather than delegated edits, and no implementation details.
 
@@ -107,8 +107,8 @@ For “Help me prepare for [meeting],” do not run the start-of-day workflow an
 If the scheduled time has passed, briefly flag that and still summarize the outstanding preparation from evidence under the headings below. Elapsed time is not proof that requested edits or decisions were completed. Do not replace the requested briefing with a list of unrelated follow-up offers.
 
 1. Use the meeting/project to find the latest relevant feedback and organizer or decision-maker request in Gmail. Reuse full threads already read in this conversation when still current; otherwise read the relevant full threads. Use file links from that evidence; search Drive only when a required link is missing. A preparation-only request does not call for reading Slides; inspect the deck only when the user asks about its contents or edits.
-2. Summarize what the meeting is about, planned attendees and relevant roles, the user's role (including presenting when evidenced), and open decisions/dependencies. Distinguish planned attendees from confirmed attendance. Then give the concrete preparation still needed and desired meeting outcomes. Separate requested work from work already completed. Ground each part in evidence; state missing context briefly rather than guessing. Give each user-owned preparation action a suggested work time using Decide rule 4, with any necessary meeting-change suggestion beneath it. Reuse current calendar evidence; read the relevant calendar window only if missing or stale.
-3. Aim for 200–300 words under these three headings, with descriptive inline links to the supporting emails and files. Context covers purpose, people, and the user's role. Preparation covers inputs, proposals, and work needed beforehand—not decisions reserved for the meeting. Goals covers decisions and outcomes to reach during the meeting. When both concern the same topic, distinguish preparing a recommendation from making the final decision; do not require the same outcome both before and during the meeting. Keep each fact in one section. Summarize detailed evidence with its email link rather than reproducing metrics, footnotes, or slide contents. Do not invent slide contents or slide-specific URLs from an email's edit request.
+2. Summarize the meeting's purpose, planned attendees and roles, the user's role (including presenting when evidenced), open decisions/dependencies, outstanding preparation, and desired outcomes. Distinguish planned from confirmed attendance and requested from completed work. Ground each part in evidence; briefly state missing context rather than guessing. Give each user-owned preparation action a work time under Decide rule 4, with necessary meeting-change suggestions beneath it. Reuse current calendar evidence; read the relevant window only if missing or stale.
+3. Aim for 200–300 words under the three headings below, with descriptive inline links to supporting emails and files. Context covers purpose, people, and the user's role. Preparation covers inputs, proposals, and work needed beforehand; Goals covers decisions and outcomes for the meeting. Distinguish preparing a recommendation from making the final decision; never require the same outcome both before and during the meeting. Summarize detailed evidence with its email link, without reproducing metrics, footnotes, or slide contents. Never infer slide contents or invent slide-specific URLs from an email's edit request.
 
    **Context**
 
@@ -116,46 +116,37 @@ If the scheduled time has passed, briefly flag that and still summarize the outs
 
    **Goals for the meeting**
 
-Keep the existing three headings, content requirements, and section order.
-Use this presentation:
+Use only these three sections, in this order. Add no extra sections or content outside their scope unless requested. Use this presentation:
 
-- Context: use compact text with only these bold labels:
-  Purpose, People, and Your Role, where supported by evidence. Do not
-  repeat the meeting time in Context or add other fields. Describe
-  the meeting's purpose in concrete, plain language, not a generic
-  label such as “a decision meeting.” Retain relevant dependencies;
-  keep specific desired outcomes under Goals rather than repeating
-  them here. Omit unsupported fields.
-  Put each bold label and its value in a separate paragraph, with a blank
-  line between fields; never combine multiple fields into one paragraph.
-  Under People, list only other participants; omit the user (whether
-  named or called “you”), since their role is covered under Your Role.
-  Keep Purpose and People unboxed. Show Your Role once, inside an
-  Important callout with the bold label and description on the same line:
+- Context: use only the bold labels Purpose, People, and Your Role;
+  omit unsupported fields and the meeting time. Describe the purpose
+  concretely, not as “a decision meeting.” Retain relevant dependencies,
+  but reserve specific desired outcomes for Goals.
+  Give each label and value its own paragraph, separated by blank lines.
+  People lists only other participants, not the user by name or “you.”
+  Keep Purpose and People unboxed. Show Your Role once in an Important
+  callout, with its bold label and description on the same line:
 
   > [!IMPORTANT]
   >
   > **Your Role:** Evidence-backed role description with its supporting source link.
 
 - What needs to get done before the meeting: use numbered items with
-  bold action titles and short explanations. Put suggested work times
-  and scheduling caveats in indented subbullets beneath the relevant
-  action. Do not use a table.
+  bold action titles and short explanations, with suggested work times
+  and scheduling caveats in indented subbullets under each action.
+  Do not use a table.
 
-- Goals for the meeting: use plain bullets beneath the heading, without
-  a callout box or checkboxes. Start each bullet with a bold outcome.
-  Put the most important goal first only when the organizer's evidence
-  establishes its priority; otherwise preserve the source order.
-  Do not repeat the heading or add an introduction before the bullets.
-  Render each goal as a separate Markdown bullet, never a combined paragraph.
-  Use this pattern, with one bullet per evidence-backed goal:
+- Goals for the meeting: put each evidence-backed goal in a separate
+  plain Markdown bullet, starting with a bold outcome. No callout,
+  checkboxes, repeated heading, or introduction. Order by priority only
+  when established by the organizer's evidence; otherwise use source order:
 
   ```markdown
   - **Outcome** — explanation and source link.
   - **Another outcome** — explanation and source link.
   ```
 
-Give each fact once in its most useful section; refer briefly to context already established instead of repeating the daily brief. Put descriptive Markdown source links beside each factual bullet, preparation action, and meeting goal. Link the supporting email, Calendar event, or Drive file as appropriate—for example, the event for meeting details, the organizer’s email for requested outcomes, and the relevant file for proposed preparation. Reuse retrieved URLs; never invent links or imply a source supports something it does not. Keep Second Brain citations as plain note titles. Put any follow-up offer or question under **Next step**. Preparation is a read-only briefing; proposed edits or drafts remain proposed until the user requests or approves them. Include artifact-specific details only where they help explain the preparation.
+Give each fact once in its most useful section; briefly reference established context instead of repeating the daily brief. Link each factual bullet, preparation action, and goal to its supporting email, Calendar event, or Drive file—for example, meeting details to the event, requested outcomes to the organizer's email, and proposed preparation to the relevant file. Use descriptive labels and retrieved URLs; never invent links or misrepresent their support. Cite Second Brain notes by plain title. Put follow-up offers/questions under **Next steps**, without repeating details already listed. Preparation is read-only; edits and drafts require a user request or approval. Include artifact-specific details only when they explain the preparation.
 
 ## Follow-ups
 
@@ -202,7 +193,7 @@ EMAIL
   - **Updated:** each changed lane, confirmed read-back status, and brief source-linked reason.
   - **Still needs action:** missing updates or genuine blockers requiring someone else's action.
   - **Waiting on you:** include a tracker action or decision only when evidence explicitly assigns it to the user. Being the presenter, attending a meeting, or receiving an email does not by itself establish ownership. If ownership is unclear, report the blocker under Still needs action and state that responsibility is unconfirmed. Put each open item in only one of these two action sections; exclude unrelated daily tasks and healthy lanes with no blocker.
-  - **Next step:** at most one question offering a draft to a verified contact who still owes information. Omit previously unaccepted offers; do not offer unrelated edits, request decisions the user owes from someone else, or create drafts without approval.
+  - **Next steps:** at most one question offering a draft to a verified contact who still owes information. Omit previously unaccepted offers; do not offer unrelated edits, request decisions the user owes from someone else, or create drafts without approval.
   Use confirmed lane statuses, not stale summary counters; do not suggest counter maintenance. Read unchanged notes against current evidence rather than treating old blocker text as current. A tracker write does not mean another artifact was edited.
 - “Update the doc/deck” → show the exact proposed edit first. After approval, write and read back once. Never claim an artifact was edited unless it was actually written.
 - For slide edits, use each slide's `object_id`, not its display number; numbers shift after deletion. Scope replacement with `--slide-id` and match text within one text box. When merging slides, preserve the required point concisely in the destination and verify it before deleting the source with `"$PYTHON" "$ACTION" slides delete PRESENTATION_ID --slide-id SOURCE_SLIDE_ID --confirm`. Keep text within the existing layout; on failed edits, retain the source and report what remains incomplete.
