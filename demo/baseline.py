@@ -27,7 +27,11 @@ def replace_tokens(text: str, replacements: dict[str, str]) -> str:
 def reset_sheet_baseline(sheets, state: dict, evidence: dict[str, str], refreshed: str) -> None:
     replacements = {"DECK_URL": state["slides"]["url"], "DOC_URL": state["doc"]["url"], "SHEET_URL": state["sheet"]["url"], "EMAIL_PRIYA": evidence["priya"], "EMAIL_AISHA": evidence["aisha"]}
     rows = [[replace_tokens(cell, replacements) for cell in row] for row in PRE_EMAIL_ROWS]
-    summary = [["Awaiting updates", "4", "", "Blocked", "2", "", "Active lanes", "8", "Last refreshed", refreshed]]
+    summary = [[
+        "Awaiting updates", '=COUNTIF(C7:C,"Awaiting update")', "",
+        "Blocked", '=COUNTIF(C7:C,"Blocked")', "",
+        "Active lanes", '=COUNTA(A7:A)', "Last refreshed", refreshed,
+    ]]
     sheets.spreadsheets().values().batchUpdate(
         spreadsheetId=state["sheet"]["id"],
         body={

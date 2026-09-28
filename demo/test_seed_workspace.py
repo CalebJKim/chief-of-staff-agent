@@ -260,7 +260,7 @@ class WorkspaceSeedTests(unittest.TestCase):
         self.assertEqual(seed.CONTACT_EMAIL_COUNT, len(contacts))
         self.assertEqual(
             {
-                "Rafael Costa <rafael.example@nvidia.com>": "REFERENCE CONTACT ONLY - Social rollout",
+                "Rafael Costa <rafael.example@nvidia.com>": "Introduction: RTX Spark social rollout",
             },
             {message["From"]: message["Subject"] for message in contacts},
         )
@@ -413,6 +413,17 @@ class WorkspaceSeedTests(unittest.TestCase):
             ["'Campaign Lanes'!A7:J14", "'Campaign Lanes'!A3:J3", "'Campaign Lanes'!A4"],
             [item["range"] for item in call.kwargs["body"]["data"]],
         )
+        body = call.kwargs["body"]
+        self.assertEqual("USER_ENTERED", body["valueInputOption"])
+        summary = body["data"][1]["values"][0]
+        self.assertEqual('=COUNTIF(C7:C,"Awaiting update")', summary[1])
+        self.assertEqual('=COUNTIF(C7:C,"Blocked")', summary[4])
+        self.assertEqual('=COUNTA(A7:A)', summary[7])
+        self.assertEqual("2026-08-28", summary[9])
+        rows = body["data"][0]["values"]
+        self.assertEqual(5, sum(row[2] == "Awaiting update" for row in rows))
+        self.assertEqual(2, sum(row[2] == "Blocked" for row in rows))
+        self.assertEqual(8, len(rows))
 
     def test_original_tracker_is_copied_once_and_reset_to_same_baseline(self):
         drive, sheets = Mock(), Mock()

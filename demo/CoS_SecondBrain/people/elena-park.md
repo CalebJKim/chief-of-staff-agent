@@ -11,7 +11,7 @@ confidence: high
 
 # Elena Park
 
-Role: Executive program lead.
+Role: Executive program lead and my manager.
 
 Elena coordinates the [[rtx-spark-executive-review]] and connects the work behind [[rtx-spark-launch]]. Her review material should explain how the separate tasks contribute to the launch and which decision is holding up the next step.
 
