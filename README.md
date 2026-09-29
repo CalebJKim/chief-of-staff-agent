@@ -104,6 +104,49 @@ Google Tasks to an existing connection, enable its API in the same OAuth project
 and repeat `--auth-url` / `--auth-code` once to approve the additional Tasks scope.
 The existing Workspace connection remains usable before this extra consent.
 
+## Reset the demo data
+
+Use this before each demo trial, after the workspace has been seeded and Google
+OAuth is connected. Finish any running agent jobs and pause scheduled jobs that
+could modify the same workspace before resetting.
+
+**Warning:** reset permanently deletes the old seeded emails and **all Gmail
+drafts in the connected account**, including non-demo drafts. Use a dedicated
+demo account and save any drafts you need before proceeding.
+
+For the Windows Desktop setup, run these commands from any PowerShell directory:
+
+```powershell
+Set-Location "$env:USERPROFILE\Desktop\ChiefOfStaff"
+$env:HERMES_HOME = Join-Path $env:LOCALAPPDATA 'hermes\profiles\chief-of-staff'
+& '.\.venv\Scripts\python.exe' '.\demo\reset_workspace.py'
+```
+
+Adjust the repository path if you cloned elsewhere. The command assumes the
+repository's `.venv` has the dependencies installed; otherwise use the Python
+executable you used during setup. From the repository root, with `HERMES_HOME`
+already set to the intended profile, the equivalent command is:
+
+```bash
+python demo/reset_workspace.py
+```
+
+The wrapper supplies `--reset --confirm` automatically; it does not ask for
+another confirmation. It replaces seeded emails, calendar events, and seeded
+Google Tasks (when configured), restores the campaign tracker, Reference Tracker,
+and slide deck, and resets the bundled Second Brain as described below. Existing
+Drive file IDs are retained. The campaign Google Doc is **not** restored by the
+current reset, and Hermes sessions and scheduled jobs are not deleted.
+
+Reset reuses the calendar week saved by the previous seed/reset. To choose another
+week, append `--week-of YYYY-MM-DD` using that week's Monday date. If the command
+reports `No workspace state`, first seed the workspace using the instructions in
+[demo/DEMO_SPEC.md](demo/DEMO_SPEC.md).
+
+Wait for the successful JSON result (`"ok": true`, `"status": "reset"`), then start
+a fresh chat in the **chief-of-staff** profile. Do not start a trial after a failed
+or interrupted reset; some data may have already changed.
+
 ## Second Brain
 
 The demo notes are included in `demo/CoS_SecondBrain/`. Open that folder as a
