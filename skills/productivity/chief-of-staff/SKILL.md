@@ -123,6 +123,8 @@ Reuse the excerpts already returned. Only when a focused request needs more cont
 
 ### Start of Day
 
+For daily briefs or questions about what to work on today, run this workflow immediately. Do not ask to start, explain the workflow, or offer other workflows.
+
 #### Gather evidence
 
 Load the ingest skill. Using the setup in the **How to run the scripts** subsection, run both scripts once in one terminal call:
