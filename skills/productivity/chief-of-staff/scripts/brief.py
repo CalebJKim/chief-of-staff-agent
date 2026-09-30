@@ -238,6 +238,8 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
     messages = snapshot.get("messages", [])
     files = snapshot.get("files", [])
     generated = parse_dt(snapshot.get("generated_at", ""), tz) or datetime.now(tz)
+    # Hardcoded demo clock. Keep the snapshot's collection timestamp intact.
+    planning_time = generated.replace(hour=9, minute=30, second=0, microsecond=0)
 
     ranked_events = []
     for event in events:
@@ -245,7 +247,7 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
         context = linked_context(event, messages, files)
         start = parse_dt(event.get("start", ""), tz)
         end = parse_dt(event.get("end", ""), tz)
-        time_status = ("ended" if generated >= end else "upcoming" if generated < start else "in_progress") if start and end else "unknown"
+        time_status = ("ended" if planning_time >= end else "upcoming" if planning_time < start else "in_progress") if start and end else "unknown"
         ranked_events.append({
             "id": event.get("id"),
             "title": event.get("title"),
@@ -292,7 +294,7 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
         {k: item.get(k) for k in ("id", "name", "kind", "modified", "url", "starred", "last_editor")}
         for item in files[: args.max_files]
     ]
-    window_start = snapshot.get("window", {}).get("start") or datetime.now(tz).isoformat()
+    window_start = snapshot.get("window", {}).get("start") or planning_time.isoformat()
     coverage = snapshot.get("coverage", {})
     error_text = " ".join(str(error).casefold() for error in coverage.get("errors", []))
     source_status = {
@@ -303,16 +305,16 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
     packet = {
         "schema": 1,
         "instruction": "Follow the chief-of-staff skill's three-section brief format. Group related evidence into workstreams, keeping distinct deliverables separate. For each, distinguish news, the user's required personal contribution, and agent-executable work. Select agent offers first, then user actions excluding that execution, including from broader tasks containing it. Omit a workstream from the user table if no distinct user contribution remains. Rank across all workstreams, including backlog, by impact and urgency; prefer broader coverage when priorities are comparable. Combine actions that contain or complete one another, not distinct deliverables merely sharing a project or source. Use fewer items rather than duplicate or invent work. Keep the displayed section order unchanged. Calendar conflicts are constraints, not standalone priorities. Offer supported delegated work without executing it. Every substantive bullet needs a descriptive Markdown source link; do not mention slide numbers, cell references, or detailed metrics in the daily brief. stale_timing means relative dates in that mail are historical: call the work unresolved and verify timing; never claim it is due today. ok_empty means success with zero results, not unavailable.",
-        "freshness": {"generated_at": snapshot.get("generated_at"), "local_time": generated.astimezone(tz).isoformat(), "timezone": tz_name, "window": snapshot.get("window")},
+        "freshness": {"generated_at": snapshot.get("generated_at"), "local_time": planning_time.isoformat(), "timezone": tz_name, "window": snapshot.get("window")},
         "coverage": coverage,
         "source_status": source_status,
         "conflicts": conflicts(events, tz),
-        "focus_blocks": focus_blocks(events, tz, window_start, args.work_start, args.work_end, args.min_focus_minutes, generated),
+        "focus_blocks": focus_blocks(events, tz, window_start, args.work_start, args.work_end, args.min_focus_minutes, planning_time),
         "meetings": ranked_events[: args.max_meetings],
         "mail": ranked_mail[: args.max_mail],
         "recent_files": recent_files,
     }
-    packet["instruction"] += " Use the skill's Action | Due | Suggested work time table, with a descriptive source link in every action row. Compare deadlines against freshness.generated_at; mark elapsed deadlines as passed/unverified. Approval of inputs or completed feedback does not mean the requested edits were applied: keep that work pending unless explicit completion evidence exists. Cite Second Brain notes by their supplied title as plain text, without links, URLs, or file paths. Keep Google Workspace source links unchanged."
+    packet["instruction"] += " Use the skill's Action | Due | Suggested work time table, with a descriptive source link in every action row. Use freshness.local_time (the assumed 9:30 AM demo time) for planning and deadline comparisons. freshness.generated_at records the actual collection time. Mark elapsed deadlines as passed/unverified. Approval of inputs or completed feedback does not mean the requested edits were applied: keep that work pending unless explicit completion evidence exists. Cite Second Brain notes by their supplied title as plain text, without links, URLs, or file paths. Keep Google Workspace source links unchanged."
     if "tasks" in snapshot:
         source_status["tasks"] = "error" if "tasks:" in error_text else ("ok" if snapshot["tasks"] else "ok_empty")
         packet["tasks"] = task_context(snapshot["tasks"], packet["mail"], getattr(args, "max_tasks", 8))
