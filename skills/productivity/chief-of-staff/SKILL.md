@@ -1,6 +1,6 @@
 ---
 name: chief-of-staff
-description: Handle "chief of staff" requests using Workspace evidence.
+description: Handle "chief of staff" requests using Google Workspace and Second Brain evidence.
 license: MIT
 metadata:
   version: 0.3.0
