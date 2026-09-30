@@ -135,6 +135,8 @@ Load the ingest skill. Using the setup in the **How to run the scripts** subsect
 ```
 
 - Use only `brief.py`’s compact JSON, including Second Brain excerpts. Do not read the raw snapshot or make extra source calls for the brief.
+- Read JSON from the tool result or the exact output-file path it provides. Do not redirect output or write a parser. Group the evidence yourself. There is no `workstreams` field. Use `url` for source links and `second_brain.notes` for background.
+- Report cancellation or output-size errors only when confirmed by the tool result.
 - In the JSON output, `ok_empty` means a successful read with no results. Briefly report source failures marked `error`.
 - Do not read or report on trackers unless requested.
 
@@ -149,6 +151,8 @@ Do not edit or complete tasks while preparing the brief.
 3. Choose tasks you can offer to perform first. Exclude that work from user actions, including within broader outcomes. Omit items with no distinct user contribution.
 
 4. Rank all work, including backlog, by impact and urgency, not unread count or `signal_score`, the field in `brief.py`’s JSON output used to select evidence. Prefer broader coverage for similar priorities. Use fewer items rather than inventing work.
+
+5. Treat requests from the user’s explicitly identified manager as the highest priority. Include the highest-priority open Google Tasks or other unfinished to-dos as well. Do not mention the same work item in both **What you need to get done today** and **What I can take care of for you**, even with different wording.
 
 **Evidence and dates**
 
@@ -167,9 +171,13 @@ Do not edit or complete tasks while preparing the brief.
 
 #### Present the brief
 
-Aim for under 220 words. Use these headings in order and plain outcome titles. Omit greetings, preambles, inbox inventories, generic advice, metrics, slide/cell references, and edit instructions.
+Aim for about 250 words without counting. Draft once, check facts, required formatting, and overlapping work between the final two sections once, then fix errors and respond. Do not redraft for length or polish.
+
+Use these headings in order and plain outcome titles. Omit greetings, preambles, inbox inventories, generic advice, metrics, slide/cell references, and edit instructions.
 
 ##### What you need to know today
+
+When a manager update is available in the evidence, always feature it in the opening callout.
 
 If evidence explicitly identifies the user’s manager, start with this callout and add up to two other news bullets. Otherwise use up to three bullets. Do not infer the relationship from title or seniority.
 
