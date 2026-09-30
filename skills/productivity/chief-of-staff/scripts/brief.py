@@ -315,6 +315,7 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
         "recent_files": recent_files,
     }
     packet["instruction"] += " Use the skill's Action | Due | Suggested work time table, with a descriptive source link in every action row. Use freshness.local_time (the assumed 9:30 AM demo time) for planning and deadline comparisons. freshness.generated_at records the actual collection time. Mark elapsed deadlines as passed/unverified. Approval of inputs or completed feedback does not mean the requested edits were applied: keep that work pending unless explicit completion evidence exists. Cite Second Brain notes by their supplied title as plain text, without links, URLs, or file paths. Keep Google Workspace source links unchanged."
+    packet["instruction"] += " A meeting’s `related` emails and files are inferred from text matches. Do not assume they belong to that meeting."
     if "tasks" in snapshot:
         source_status["tasks"] = "error" if "tasks:" in error_text else ("ok" if snapshot["tasks"] else "ok_empty")
         packet["tasks"] = task_context(snapshot["tasks"], packet["mail"], getattr(args, "max_tasks", 8))
@@ -330,6 +331,19 @@ def fit_packet(packet: dict[str, Any], max_chars: int) -> str:
         for meeting in packet.get("meetings", []):
             meeting.pop("related", None)
         encoded = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
+    # Fit background notes before dropping live requests and deadlines.
+    context = packet.get("second_brain", {})
+    if len(encoded) > max_chars and context.get("notes"):
+        context["truncated"] = True
+        for note in context["notes"]:
+            excerpt = note.get("excerpt", "")
+            if len(excerpt) > 160:
+                note["excerpt"] = excerpt[:158].rsplit(" ", 1)[0] + " …"
+        encoded = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
+        while len(encoded) > max_chars and context["notes"]:
+            context["notes"].pop()
+            context["omitted_notes"] = context.get("omitted_notes", 0) + 1
+            encoded = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
     # Busy calendars must not crowd out the work evidence in a daily brief.
     while len(encoded) > max_chars and packet.get("conflicts"):
         packet["conflicts"].pop()
@@ -347,6 +361,8 @@ def fit_packet(packet: dict[str, Any], max_chars: int) -> str:
         for mail in packet.get("mail", []):
             mail["snippet"] = (mail.get("snippet") or "")[:160]
         encoded = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
+    if len(encoded) > max_chars:
+        raise ValueError(f"Brief packet exceeds --max-chars ({len(encoded)} > {max_chars})")
     return encoded
 
 
@@ -371,12 +387,12 @@ def main() -> int:
         snapshot = json.loads(args.snapshot.read_text(encoding="utf-8"))
         packet = build_packet(snapshot, args)
         fit_packet(packet, args.max_chars)
-        # Add a small local context allowance without dropping Workspace evidence.
+        # Add background context, then enforce the same total output budget.
         from second_brain import packet_context
         context = packet_context(packet, hermes_home())
         if context is not None:
             packet["second_brain"] = context
-        print(json.dumps(packet, ensure_ascii=False, separators=(",", ":")))
+        print(fit_packet(packet, args.max_chars))
         return 0
     except Exception as exc:
         print(json.dumps({"ok": False, "error": str(exc)}), file=sys.stderr)
