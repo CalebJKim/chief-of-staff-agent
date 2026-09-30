@@ -29,6 +29,92 @@ Help the user focus by prioritizing work, preparing for meetings, and carrying o
 - Use saved Google access and silent token refresh. Report access failures briefly. Do not open links, launch browsers, or reconnect unless the user asks.
 - When passing email addresses or message, thread, file, or slide IDs to scripts/tools, copy them exactly from prior results. Correct rejected inputs using the error and relevant results before trying the script/tool again.
 
+## Available Functionality
+
+Check the **Task Guidance** section first and follow any matching instructions. For work it does not cover, plan using the available scripts. Combine relevant workflows when a request spans multiple tasks.
+
+| Script | Purpose | Usage |
+|---|---|---|
+| `ingest.py` | Saves a bounded snapshot of Gmail, Calendar, Drive, and unfinished Google Tasks. | Follow the ingest skill. |
+| `brief.py` | Prints compact planning JSON from the snapshot and relevant Second Brain context. | Run after ingest. Not an `actions.py` command. |
+| `actions.py` | Searches and reads Gmail, reads and saves drafts, searches Drive, reads and edits Docs/Sheets/Slides, and creates Calendar events. | `actions.py SERVICE COMMAND [arguments]`, e.g. `actions.py gmail thread THREAD_ID`. See command reference below. |
+| `second_brain.py` | Searches or reads notes from the configured Second Brain vault. | `second_brain.py search 'terms' --max 3` or `second_brain.py read 'relative/note.md'`. |
+
+### Command reference
+
+Commands follow `actions.py`. Uppercase placeholders require values. Brackets mark optional arguments. Defaults are shown where applicable.
+
+| Command | Purpose | Optional arguments |
+|---|---|---|
+| `gmail search 'QUERY'` | Find matching messages’ headers, IDs, and links. | `--max 5` (1–10) |
+| `gmail get MESSAGE_ID` | Read one message. | `--max-chars 12000` |
+| `gmail thread THREAD_ID` | Read latest thread messages. | `--max-messages 12`, `--max-chars 8000` per message |
+| `gmail important` | Read recent messages marked Important in Gmail. | `--max 12` (1–20), `--newer-than-days 2` (1–30 days), `--max-chars 8000` per message |
+| `gmail drafts` | Read all saved drafts, including recipients, subjects, threads, and full bodies. | None |
+| `gmail draft --to EMAIL --subject 'SUBJECT' --body-file -` | Save a new draft. | See Supporting notes 1–2. |
+| `gmail draft --reply-to-message MESSAGE_ID --expected-to EMAIL --body-file -` | Save a reply draft. | See Supporting notes 1–2. |
+| `drive search 'QUERY'` | Find files and return names, IDs, and links. | `--max 10`, `--raw-query` for Drive query syntax |
+| `docs get DOCUMENT_ID` | Read document paragraph text. | `--max-chars 30000` |
+| `docs append DOCUMENT_ID --text 'TEXT' --confirm` | Append text to a document. | None |
+| `docs replace-text DOCUMENT_ID --find 'OLD' --replace 'NEW' --confirm` | Replace matching document text. | Case-insensitive unless `--match-case`. |
+| `sheets get SPREADSHEET_ID [RANGE]` | Read cell values. | `RANGE` defaults to `A1:J80` |
+| `sheets update SPREADSHEET_ID RANGE --values 'JSON' --confirm` | Write a JSON array of rows to a range. | None |
+| `sheets update-lanes SPREADSHEET_ID --updates-file - --confirm` | Update demo tracker rows by lane name. See **Task Guidance → Updating Project Tracker** for JSON fields. | `--sheet 'Campaign Lanes'`, `--status-only` (default) or `--include-details`. See Supporting note 1. |
+| `slides get PRESENTATION_ID` | Read slide text and `object_id` values, used as `SLIDE_OBJECT_ID`. | `--max-chars-per-slide 4000` |
+| `slides replace-text PRESENTATION_ID --find 'OLD' --replace 'NEW' --confirm` | Replace matching slide text. | `--slide-id SLIDE_OBJECT_ID` (otherwise the whole deck). Case-insensitive unless `--match-case`. |
+| `slides delete PRESENTATION_ID --slide-id SLIDE_OBJECT_ID --confirm` | Delete one slide. | None |
+| `calendar create --title 'TITLE' --start START --end END --confirm` | Create an event. START and END require timestamps with UTC offsets. Attendees receive invitations. | `--description 'TEXT'`, `--attendees 'EMAIL1,EMAIL2'`, `--calendar primary` |
+
+#### Supporting notes
+
+1. **Draft bodies and tracker updates:** `gmail draft`: choose `--body 'TEXT'` or `--body-file PATH`. `sheets update-lanes`: choose `--updates 'JSON'` or `--updates-file PATH`. Either file argument accepts `-` for terminal input through a quoted heredoc. Draft bodies must be nonempty.
+
+2. **Draft options:** `--cc 'EMAILS'` adds Cc. `--to` and `--subject` override reply defaults. `--expected-to EMAIL` checks recipients before saving. `--thread-id THREAD_ID` sets the thread. `--reply-to-message` also sets reply headers. Explicit To/Cc addresses require Gmail verification. Use `--allow-new-recipient` only for addresses the user supplied or confirmed.
+
+### How to run the scripts
+
+The `terminal` tool runs Bash. Omit `bash -c`/`bash -lc` wrappers. Keep heredoc delimiters on their own lines.
+
+Initial setup for the active profile, Python, and script paths:
+
+```bash
+if [ -n "${HERMES_HOME:-}" ]; then
+  COS_HOME="$HERMES_HOME"
+elif [ -n "${LOCALAPPDATA:-}" ]; then
+  COS_HOME="$LOCALAPPDATA/hermes"
+else
+  COS_HOME="$HOME/.hermes"
+fi
+
+if [ -f "$COS_HOME/hermes-agent/venv/Scripts/python.exe" ]; then
+  PYTHON="$COS_HOME/hermes-agent/venv/Scripts/python.exe"
+elif [ -x "$COS_HOME/hermes-agent/venv/bin/python" ]; then
+  PYTHON="$COS_HOME/hermes-agent/venv/bin/python"
+else
+  PYTHON="$(command -v python3 || command -v python)"
+fi
+
+INGEST="$COS_HOME/skills/productivity/ingest/scripts/ingest.py"
+BRIEF="$COS_HOME/skills/productivity/chief-of-staff/scripts/brief.py"
+ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
+SECOND_BRAIN="$COS_HOME/skills/productivity/chief-of-staff/scripts/second_brain.py"
+```
+
+Reuse the working Python path, including when fixing shell quoting errors. Set needed variables in each terminal call.
+
+Run only the commands needed for the task.
+
+Examples:
+
+```bash
+"$PYTHON" "$ACTION" gmail thread THREAD_ID
+"$PYTHON" "$ACTION" docs get DOCUMENT_ID
+"$PYTHON" "$ACTION" slides get PRESENTATION_ID
+"$PYTHON" "$SECOND_BRAIN" search 'meeting topic' --max 3
+```
+
+Run `ingest.py` only when the task needs a fresh snapshot.
+
 ## Start of Day
 
 The terminal already runs Bash: submit these commands directly, without an outer `bash -c`/`bash -lc` wrapper. Keep heredoc delimiters on their own lines. Reuse the Python executable that already succeeded in this conversation; a shell-quoting error does not require finding another interpreter.
