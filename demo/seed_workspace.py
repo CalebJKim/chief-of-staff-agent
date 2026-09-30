@@ -9,7 +9,9 @@ import json
 import os
 import random
 import sys
+import tempfile
 import uuid
+from contextlib import contextmanager
 from datetime import date, datetime, timedelta
 from email.message import EmailMessage
 from email.utils import format_datetime
@@ -107,6 +109,29 @@ def hermes_home() -> Path:
 
 def state_path() -> Path:
     return hermes_home() / STATE_FILE
+
+
+@contextmanager
+def workspace_write_lock():
+    """Serialize this user's seed/reset/cleanup runs, including other profiles."""
+    # Keep the file: deleting a lock file can let another process lock a new inode.
+    # The OS releases the lock when the handle closes, including after a crash.
+    path = Path(tempfile.gettempdir()) / "chief-of-staff-workspace.lock"
+    with path.open("a+b") as handle:
+        if path.stat().st_size == 0:
+            handle.write(b"0")
+            handle.flush()
+        handle.seek(0)
+        try:
+            if os.name == "nt":
+                import msvcrt
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            raise RuntimeError("Another demo seed/reset/cleanup is running. Wait for it to finish before retrying.") from exc
+        yield
 
 
 def local_now() -> datetime:
@@ -556,20 +581,36 @@ def create_calendar(calendar, start_day: date, deck_url: str, doc_url: str, shee
     ]
 
 
-def seeded_gmail_message_ids(gmail) -> set[str]:
+def seeded_gmail_message_ids(gmail, tracked_ids: set[str] | None = None) -> set[str]:
+    """Find seed mail without relying on Gmail's eventually updated search index."""
+    tracked_ids = tracked_ids or set()
     message_ids = set()
     page_token = None
     while True:
         kwargs = {
             "userId": "me",
-            "q": f'"{MARKER}"',
             "includeSpamTrash": True,
             "maxResults": 500,
         }
         if page_token:
             kwargs["pageToken"] = page_token
         page = gmail.users().messages().list(**kwargs).execute()
-        message_ids.update(item["id"] for item in page.get("messages", []) if item.get("id"))
+        page_ids = {item["id"] for item in page.get("messages", []) if item.get("id")}
+        message_ids.update(page_ids & tracked_ids)
+        unknown_ids = sorted(page_ids - tracked_ids)
+        headers = execute_batched(gmail, [
+            gmail.users().messages().get(
+                userId="me", id=message_id, format="metadata",
+                metadataHeaders=["Message-ID"], fields="payload/headers",
+            )
+            for message_id in unknown_ids
+        ])
+        for message_id, message in zip(unknown_ids, headers):
+            for header in message.get("payload", {}).get("headers", []):
+                value = header.get("value", "").strip()
+                if (header.get("name", "").lower() == "message-id"
+                        and value.startswith(f"<{MARKER}-") and value.endswith("@demo.invalid>")):
+                    message_ids.add(message_id)
         page_token = page.get("nextPageToken")
         if not page_token:
             return message_ids
@@ -596,12 +637,15 @@ def remove_dynamic_items(state: dict, svc: dict, *, clear_drafts: bool = False) 
     if clear_drafts:
         clear_all_drafts(svc["gmail"])
     email_ids = {item.get("id") for item in state.get("emails", []) if item.get("id")}
-    email_ids.update(seeded_gmail_message_ids(svc["gmail"]))
-    if email_ids:
+    email_ids.update(seeded_gmail_message_ids(svc["gmail"], email_ids))
+    sorted_email_ids = sorted(email_ids)
+    for offset in range(0, len(sorted_email_ids), 1000):
         svc["gmail"].users().messages().batchDelete(
             userId="me",
-            body={"ids": sorted(email_ids)},
+            body={"ids": sorted_email_ids[offset:offset + 1000]},
         ).execute()
+    if seeded_gmail_message_ids(svc["gmail"], email_ids):
+        raise RuntimeError("Demo emails remain after cleanup. No replacement emails were created; retry the reset.")
     try:
         start = state.get("week_of") + "T00:00:00" + utc_offset()
         end = (date.fromisoformat(state.get("week_of")) + timedelta(days=5)).isoformat() + "T00:00:00" + utc_offset()
@@ -628,6 +672,8 @@ def cleanup(state: dict) -> None:
 
 def seed(week_of: date) -> dict:
     svc = services()
+    if seeded_gmail_message_ids(svc["gmail"]):
+        raise RuntimeError("Demo emails already exist. Recover the workspace state and reset, or clean up the existing demo before seeding again.")
     state = {"schema": 1, "marker": MARKER, "week_of": week_of.isoformat(), "events": [], "emails": []}
     try:
         state["folder"] = create_folder(svc["drive"])
@@ -772,6 +818,11 @@ Campaign tracker • Campaign plan"""),
     slides.presentations().batchUpdate(presentationId=presentation_id, body={"requests": requests}).execute()
 
 def main() -> int:
+    with workspace_write_lock():
+        return run()
+
+
+def run() -> int:
     parser = argparse.ArgumentParser(description="Seed, reset, or remove the reference Chief of Staff workspace")
     parser.add_argument("--week-of", help="Monday date (YYYY-MM-DD); defaults to the current week")
     parser.add_argument("--reset", action="store_true")

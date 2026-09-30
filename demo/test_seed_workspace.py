@@ -348,14 +348,19 @@ class WorkspaceSeedTests(unittest.TestCase):
         gmail.users().messages().list.return_value.execute.side_effect = [
             {"messages": [{"id": "tracked"}, {"id": "trashed-orphan"}], "nextPageToken": "next"},
             {"messages": [{"id": "older-orphan"}]},
+            {},
         ]
         calendar = Mock()
         calendar.events().list.return_value.execute.return_value = {"items": []}
 
-        seed.remove_dynamic_items(
-            {"week_of": "2026-08-24", "emails": [{"id": "tracked"}], "events": []},
-            {"gmail": gmail, "calendar": calendar},
-        )
+        def metadata(api, requests, **kwargs):
+            return [{"payload": {"headers": [{"name": "Message-ID", "value": f"<{seed.MARKER}-run-1@demo.invalid>"}]}} for _ in requests]
+
+        with patch.object(seed, "execute_batched", side_effect=metadata):
+            seed.remove_dynamic_items(
+                {"week_of": "2026-08-24", "emails": [{"id": "tracked"}], "events": []},
+                {"gmail": gmail, "calendar": calendar},
+            )
 
         self.assertEqual(
             {"ids": ["older-orphan", "tracked", "trashed-orphan"]},
@@ -363,8 +368,9 @@ class WorkspaceSeedTests(unittest.TestCase):
         )
         self.assertEqual(
             [
-                {"userId": "me", "q": f'"{seed.MARKER}"', "includeSpamTrash": True, "maxResults": 500},
-                {"userId": "me", "q": f'"{seed.MARKER}"', "includeSpamTrash": True, "maxResults": 500, "pageToken": "next"},
+                {"userId": "me", "includeSpamTrash": True, "maxResults": 500},
+                {"userId": "me", "includeSpamTrash": True, "maxResults": 500, "pageToken": "next"},
+                {"userId": "me", "includeSpamTrash": True, "maxResults": 500},
             ],
             [call.kwargs for call in gmail.users().messages().list.call_args_list],
         )
