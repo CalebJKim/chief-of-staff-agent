@@ -18,16 +18,23 @@ STOPWORDS = set("the and for from with this that today please update updated rev
 
 
 def home() -> Path:
-    if os.environ.get("HERMES_HOME"):
-        return Path(os.environ["HERMES_HOME"]).expanduser()
-    return Path(os.environ["LOCALAPPDATA"]) / "hermes" if os.name == "nt" and os.environ.get("LOCALAPPDATA") else Path.home() / ".hermes"
+    configured = os.environ.get("COS_STATE_DIR")
+    if not configured:
+        raise RuntimeError("COS_STATE_DIR is missing. Run the Perplexity launcher from the current thread workspace.")
+    state = Path(configured).expanduser()
+    if not state.is_absolute() or not state.is_dir():
+        raise RuntimeError("COS_STATE_DIR must point to an existing absolute workspace directory.")
+    return state
 
 
 def configured_vault(profile: Path) -> Path | None:
     config = profile / "second-brain.json"
     if not config.exists():
         return None
-    root = Path(json.loads(config.read_text(encoding="utf-8"))["vault_path"]).expanduser().resolve()
+    root = Path(json.loads(config.read_text(encoding="utf-8"))["vault_path"]).expanduser()
+    if not root.is_absolute():
+        root = profile / root
+    root = root.resolve()
     if not root.is_dir():
         raise ValueError("Configured Second Brain folder is unavailable")
     return root

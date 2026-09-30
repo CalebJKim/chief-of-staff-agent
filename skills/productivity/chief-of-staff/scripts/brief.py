@@ -37,12 +37,13 @@ STOPWORDS = {
 
 
 def hermes_home() -> Path:
-    override = os.environ.get("HERMES_HOME")
-    if override:
-        return Path(override).expanduser()
-    if os.name == "nt" and os.environ.get("LOCALAPPDATA"):
-        return Path(os.environ["LOCALAPPDATA"]) / "hermes"
-    return Path.home() / ".hermes"
+    configured = os.environ.get("COS_STATE_DIR")
+    if not configured:
+        raise RuntimeError("COS_STATE_DIR is missing. Run the Perplexity launcher from the current thread workspace.")
+    state = Path(configured).expanduser()
+    if not state.is_absolute() or not state.is_dir():
+        raise RuntimeError("COS_STATE_DIR must point to an existing absolute workspace directory.")
+    return state
 
 
 def default_snapshot() -> Path:
@@ -238,6 +239,8 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
     messages = snapshot.get("messages", [])
     files = snapshot.get("files", [])
     generated = parse_dt(snapshot.get("generated_at", ""), tz) or datetime.now(tz)
+    # Hardcoded demo clock. Keep the snapshot's collection timestamp intact.
+    planning_time = generated.replace(hour=9, minute=30, second=0, microsecond=0)
 
     ranked_events = []
     for event in events:
@@ -245,7 +248,7 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
         context = linked_context(event, messages, files)
         start = parse_dt(event.get("start", ""), tz)
         end = parse_dt(event.get("end", ""), tz)
-        time_status = ("ended" if generated >= end else "upcoming" if generated < start else "in_progress") if start and end else "unknown"
+        time_status = ("ended" if planning_time >= end else "upcoming" if planning_time < start else "in_progress") if start and end else "unknown"
         ranked_events.append({
             "id": event.get("id"),
             "title": event.get("title"),
@@ -292,7 +295,7 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
         {k: item.get(k) for k in ("id", "name", "kind", "modified", "url", "starred", "last_editor")}
         for item in files[: args.max_files]
     ]
-    window_start = snapshot.get("window", {}).get("start") or datetime.now(tz).isoformat()
+    window_start = snapshot.get("window", {}).get("start") or planning_time.isoformat()
     coverage = snapshot.get("coverage", {})
     error_text = " ".join(str(error).casefold() for error in coverage.get("errors", []))
     source_status = {
@@ -302,17 +305,18 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
     }
     packet = {
         "schema": 1,
-        "instruction": "Follow the chief-of-staff skill's three-section brief format. Prioritize meaningful outcomes in plain language; merge parent/subtask or overlapping items within each list. Calendar conflicts are constraints, not standalone priorities. Offer supported delegated work without executing it. Every substantive bullet needs a descriptive Markdown source link; do not mention slide numbers, cell references, or detailed metrics in the daily brief. stale_timing means relative dates in that mail are historical: call the work unresolved and verify timing; never claim it is due today. ok_empty means success with zero results, not unavailable.",
-        "freshness": {"generated_at": snapshot.get("generated_at"), "local_time": generated.astimezone(tz).isoformat(), "timezone": tz_name, "window": snapshot.get("window")},
+        "instruction": "Follow the chief-of-staff skill's three-section brief format. Group related evidence into workstreams, keeping distinct deliverables separate. For each, distinguish news, the user's required personal contribution, and agent-executable work. Select agent offers first, then user actions excluding that execution, including from broader tasks containing it. Omit a workstream from the user table if no distinct user contribution remains. Rank across all workstreams, including backlog, by impact and urgency; prefer broader coverage when priorities are comparable. Combine actions that contain or complete one another, not distinct deliverables merely sharing a project or source. Use fewer items rather than duplicate or invent work. Keep the displayed section order unchanged. Calendar conflicts are constraints, not standalone priorities. Offer supported delegated work without executing it. Every substantive bullet needs a descriptive Markdown source link; do not mention slide numbers, cell references, or detailed metrics in the daily brief. stale_timing means relative dates in that mail are historical: call the work unresolved and verify timing; never claim it is due today. ok_empty means success with zero results, not unavailable.",
+        "freshness": {"generated_at": snapshot.get("generated_at"), "local_time": planning_time.isoformat(), "timezone": tz_name, "window": snapshot.get("window")},
         "coverage": coverage,
         "source_status": source_status,
         "conflicts": conflicts(events, tz),
-        "focus_blocks": focus_blocks(events, tz, window_start, args.work_start, args.work_end, args.min_focus_minutes, generated),
+        "focus_blocks": focus_blocks(events, tz, window_start, args.work_start, args.work_end, args.min_focus_minutes, planning_time),
         "meetings": ranked_events[: args.max_meetings],
         "mail": ranked_mail[: args.max_mail],
         "recent_files": recent_files,
     }
-    packet["instruction"] += " Use the skill's Action | Due | Suggested work time table, with a descriptive source link in every action row. Compare deadlines against freshness.generated_at; mark elapsed deadlines as passed/unverified. Approval of inputs or completed feedback does not mean the requested edits were applied: keep that work pending unless explicit completion evidence exists. Cite Second Brain notes by their supplied title as plain text, without links, URLs, or file paths. Keep Google Workspace source links unchanged."
+    packet["instruction"] += " Use the skill's Action | Due | Suggested work time table, with a descriptive source link in every action row. Use freshness.local_time (the assumed 9:30 AM demo time) for planning and deadline comparisons. freshness.generated_at records the actual collection time. Mark elapsed deadlines as passed/unverified. Approval of inputs or completed feedback does not mean the requested edits were applied: keep that work pending unless explicit completion evidence exists. Cite Second Brain notes by their supplied title as plain text, without links, URLs, or file paths. Keep Google Workspace source links unchanged."
+    packet["instruction"] += " A meeting’s `related` emails and files are inferred from text matches. Do not assume they belong to that meeting."
     if "tasks" in snapshot:
         source_status["tasks"] = "error" if "tasks:" in error_text else ("ok" if snapshot["tasks"] else "ok_empty")
         packet["tasks"] = task_context(snapshot["tasks"], packet["mail"], getattr(args, "max_tasks", 8))
@@ -328,6 +332,19 @@ def fit_packet(packet: dict[str, Any], max_chars: int) -> str:
         for meeting in packet.get("meetings", []):
             meeting.pop("related", None)
         encoded = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
+    # Fit background notes before dropping live requests and deadlines.
+    context = packet.get("second_brain", {})
+    if len(encoded) > max_chars and context.get("notes"):
+        context["truncated"] = True
+        for note in context["notes"]:
+            excerpt = note.get("excerpt", "")
+            if len(excerpt) > 160:
+                note["excerpt"] = excerpt[:158].rsplit(" ", 1)[0] + " …"
+        encoded = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
+        while len(encoded) > max_chars and context["notes"]:
+            context["notes"].pop()
+            context["omitted_notes"] = context.get("omitted_notes", 0) + 1
+            encoded = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
     # Busy calendars must not crowd out the work evidence in a daily brief.
     while len(encoded) > max_chars and packet.get("conflicts"):
         packet["conflicts"].pop()
@@ -345,6 +362,8 @@ def fit_packet(packet: dict[str, Any], max_chars: int) -> str:
         for mail in packet.get("mail", []):
             mail["snippet"] = (mail.get("snippet") or "")[:160]
         encoded = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
+    if len(encoded) > max_chars:
+        raise ValueError(f"Brief packet exceeds --max-chars ({len(encoded)} > {max_chars})")
     return encoded
 
 
@@ -369,12 +388,12 @@ def main() -> int:
         snapshot = json.loads(args.snapshot.read_text(encoding="utf-8"))
         packet = build_packet(snapshot, args)
         fit_packet(packet, args.max_chars)
-        # Add a small local context allowance without dropping Workspace evidence.
+        # Add background context, then enforce the same total output budget.
         from second_brain import packet_context
         context = packet_context(packet, hermes_home())
         if context is not None:
             packet["second_brain"] = context
-        print(json.dumps(packet, ensure_ascii=False, separators=(",", ":")))
+        print(fit_packet(packet, args.max_chars))
         return 0
     except Exception as exc:
         print(json.dumps({"ok": False, "error": str(exc)}), file=sys.stderr)

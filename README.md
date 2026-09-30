@@ -1,5 +1,7 @@
 # Hermes Chief of Staff Agent
 
+> Perplexity copy: use [PERPLEXITY_SETUP.md](PERPLEXITY_SETUP.md) for this installed demo. The Hermes installation instructions below are retained from the original; commands are translated to PowerShell.
+
 A portable Hermes Agent configuration for a lightweight Google Workspace chief of staff. It reads bounded Gmail, Calendar, Drive, Docs, Sheets, and Slides evidence; highlights meaningful daily outcomes; accounts for calendar constraints; prepares meeting work; drafts email; and proposes guarded tracker/document updates.
 
 ## Included
@@ -25,15 +27,15 @@ For the shortest installation path, see [QUICKSTART.md](QUICKSTART.md). Every us
 
 Install dependencies:
 
-```bash
-PYTHON="$(command -v python3 || command -v python)"
-"$PYTHON" -m pip install -r requirements.txt
+```powershell
+$Python = (Get-Command python.exe -ErrorAction Stop).Source
+& $Python -m pip install -r requirements.txt
 ```
 
 ## Install into a Hermes profile
 
-```bash
-"$PYTHON" install.py
+```powershell
+& $Python install.py
 hermes -p chief-of-staff tools list --platform cli
 ```
 
@@ -65,12 +67,6 @@ OAuth or seed/reset scripts from a separate terminal, select the same profile:
 $env:HERMES_HOME = Join-Path $env:LOCALAPPDATA 'hermes\profiles\chief-of-staff'
 ```
 
-```bash
-# Windows Git Bash
-export HERMES_HOME="$LOCALAPPDATA/hermes/profiles/chief-of-staff"
-# Linux/macOS
-# export HERMES_HOME="$HOME/.hermes/profiles/chief-of-staff"
-```
 
 Copied credentials still point at the same Google account and existing demo data.
 Use the new profile for future resets; do not run two profiles against that shared
@@ -80,20 +76,20 @@ workspace at the same time. No Google data is reset or changed by installation.
 
 Never commit OAuth files. Create a Desktop OAuth client, then run:
 
-```bash
-"$PYTHON" setup/google-workspace/setup.py --install-deps
-"$PYTHON" setup/google-workspace/setup.py --client-secret /path/to/client-secret.json
-"$PYTHON" setup/google-workspace/setup.py --auth-url
+```powershell
+& $Python setup/google-workspace/setup.py --install-deps
+& $Python setup/google-workspace/setup.py --client-secret /path/to/client-secret.json
+& $Python setup/google-workspace/setup.py --auth-url
 ```
 
 Open the returned URL and approve access. The `http://localhost:1` redirect may
 show a connection error; this is expected. Copy the full URL from the browser
 address bar, then run:
 
-```bash
-"$PYTHON" setup/google-workspace/setup.py --auth-code "FULL_REDIRECT_URL"
-"$PYTHON" setup/google-workspace/setup.py --check-live
-"$PYTHON" skills/productivity/ingest/scripts/verify.py
+```powershell
+& $Python setup/google-workspace/setup.py --auth-code "FULL_REDIRECT_URL"
+& $Python setup/google-workspace/setup.py --check-live
+& $Python skills/productivity/ingest/scripts/verify.py
 ```
 
 The resulting google_token.json and google_client_secret.json live under HERMES_HOME and are ignored by git.
@@ -104,6 +100,49 @@ Google Tasks to an existing connection, enable its API in the same OAuth project
 and repeat `--auth-url` / `--auth-code` once to approve the additional Tasks scope.
 The existing Workspace connection remains usable before this extra consent.
 
+## Reset the demo data
+
+Use this before each demo trial, after the workspace has been seeded and Google
+OAuth is connected. Finish any running agent jobs and pause scheduled jobs that
+could modify the same workspace before resetting.
+
+**Warning:** reset permanently deletes the old seeded emails and **all Gmail
+drafts in the connected account**, including non-demo drafts. Use a dedicated
+demo account and save any drafts you need before proceeding.
+
+For the Windows Desktop setup, run these commands from any PowerShell directory:
+
+```powershell
+Set-Location "$env:USERPROFILE\Desktop\ChiefOfStaff"
+$env:HERMES_HOME = Join-Path $env:LOCALAPPDATA 'hermes\profiles\chief-of-staff'
+& '.\.venv\Scripts\python.exe' '.\demo\reset_workspace.py'
+```
+
+Adjust the repository path if you cloned elsewhere. The command assumes the
+repository's `.venv` has the dependencies installed; otherwise use the Python
+executable you used during setup. From the repository root, with `HERMES_HOME`
+already set to the intended profile, the equivalent command is:
+
+```powershell
+python demo/reset_workspace.py
+```
+
+The wrapper supplies `--reset --confirm` automatically; it does not ask for
+another confirmation. It replaces seeded emails, calendar events, and seeded
+Google Tasks (when configured), restores the campaign tracker, Reference Tracker,
+and slide deck, and resets the bundled Second Brain as described below. Existing
+Drive file IDs are retained. The campaign Google Doc is **not** restored by the
+current reset, and Hermes sessions and scheduled jobs are not deleted.
+
+Reset reuses the calendar week saved by the previous seed/reset. To choose another
+week, append `--week-of YYYY-MM-DD` using that week's Monday date. If the command
+reports `No workspace state`, first seed the workspace using the instructions in
+[demo/DEMO_SPEC.md](demo/DEMO_SPEC.md).
+
+Wait for the successful JSON result (`"ok": true`, `"status": "reset"`), then start
+a fresh chat in the **chief-of-staff** profile. Do not start a trial after a failed
+or interrupted reset; some data may have already changed.
+
 ## Second Brain
 
 The demo notes are included in `demo/CoS_SecondBrain/`. Open that folder as a
@@ -112,7 +151,7 @@ already configured; existing connections and personal notes are preserved.
 
 To explicitly switch an existing demo profile to the bundled vault, run from the repo:
 
-```bash
+```powershell
 python install.py --second-brain "demo/CoS_SecondBrain"
 ```
 
@@ -220,17 +259,17 @@ triggering another or resetting the workspace.
 
 ## Tests
 
-```bash
-"$PYTHON" -m unittest discover -s tests -v
-"$PYTHON" -m unittest discover -s skills/productivity/ingest/tests -v
-"$PYTHON" -m unittest discover -s skills/productivity/chief-of-staff/tests -v
+```powershell
+& $Python -m unittest discover -s tests -v
+& $Python -m unittest discover -s skills/productivity/ingest/tests -v
+& $Python -m unittest discover -s skills/productivity/chief-of-staff/tests -v
 ```
 
 Live smoke test after OAuth:
 
-```bash
-"$PYTHON" skills/productivity/ingest/scripts/ingest.py
-"$PYTHON" skills/productivity/chief-of-staff/scripts/brief.py --max-chars 14000
+```powershell
+& $Python skills/productivity/ingest/scripts/ingest.py
+& $Python skills/productivity/chief-of-staff/scripts/brief.py --max-chars 14000
 ```
 
 ## Portability and demo data

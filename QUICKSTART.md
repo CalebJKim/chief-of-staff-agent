@@ -1,10 +1,12 @@
 # Quick setup
 
+> Perplexity copy: use [PERPLEXITY_SETUP.md](PERPLEXITY_SETUP.md) for this installed demo. The Hermes installation instructions below are retained from the original; commands are translated to PowerShell.
+
 ## 1. Install prerequisites
 
 Install [Hermes Agent](https://hermes-agent.nousresearch.com/docs), Python 3.11+, and clone this repository.
 
-```bash
+```powershell
 git clone YOUR_REPOSITORY_URL
 cd chief-of-staff-agent
 python -m pip install -r requirements.txt
@@ -12,7 +14,7 @@ python -m pip install -r requirements.txt
 
 ## 2. Install the agent
 
-```bash
+```powershell
 python install.py
 ```
 
@@ -29,12 +31,7 @@ Set the target for the OAuth and seed/reset commands below:
 $env:HERMES_HOME = Join-Path $env:LOCALAPPDATA 'hermes\profiles\chief-of-staff'
 ```
 
-```bash
-# Windows Git Bash
-export HERMES_HOME="$LOCALAPPDATA/hermes/profiles/chief-of-staff"
-# Linux/macOS
-# export HERMES_HOME="$HOME/.hermes/profiles/chief-of-staff"
-
+```powershell
 hermes -p chief-of-staff tools list --platform cli
 ```
 
@@ -55,17 +52,17 @@ Otherwise create a **Desktop OAuth client** in Google Cloud and enable the Gmail
 Calendar, Drive, Docs, Sheets, and Slides APIs (and Tasks for the sample checklist).
 Download the client-secret JSON, then run:
 
-```bash
+```powershell
 python setup/google-workspace/setup.py --client-secret /path/to/client-secret.json
 python setup/google-workspace/setup.py --auth-url
 ```
 
 Open the returned URL, approve your own account, and copy the full localhost redirect URL. Finish authorization:
 
-```bash
+```powershell
 python setup/google-workspace/setup.py --auth-code "FULL_REDIRECT_URL"
 python setup/google-workspace/setup.py --check-live
-python "$HERMES_HOME/skills/productivity/ingest/scripts/verify.py"
+python "$env:HERMES_HOME/skills/productivity/ingest/scripts/verify.py"
 ```
 
 Credentials remain under your local `HERMES_HOME`. Never commit them.
@@ -76,13 +73,13 @@ After OAuth is verified, create the realistic reference workspace in your own ac
 if it has not already been seeded. The copied workspace-state file reuses existing
 Google resources; do not seed a second copy merely because the profile is new:
 
-```bash
+```powershell
 python demo/seed_workspace.py --confirm
 ```
 
 Reset Google Workspace and the bundled `demo/CoS_SecondBrain/` notes to their baselines with:
 
-```bash
+```powershell
 python demo/reset_workspace.py
 
 # Or remove the seeded Google Workspace resources only:
@@ -116,7 +113,7 @@ The installer disables unrelated skills automatically. Keep `skills`, `terminal`
 and `cronjob` enabled for interactive Desktop use; scheduled workers need only
 `skills` and `terminal`. Use these commands to review the configuration:
 
-```bash
+```powershell
 hermes -p chief-of-staff tools
 hermes -p chief-of-staff skills config
 ```

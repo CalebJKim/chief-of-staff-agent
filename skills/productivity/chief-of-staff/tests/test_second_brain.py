@@ -83,6 +83,12 @@ def workspace_fixture() -> dict:
 
 
 class SecondBrainTests(unittest.TestCase):
+    def test_relative_vault_is_resolved_from_profile_not_working_directory(self):
+        (self.profile / "second-brain.json").write_text(
+            json.dumps({"vault_path": "../Knowledge Vault"}), encoding="utf-8"
+        )
+        self.assertEqual(second_brain.configured_vault(self.profile), self.vault)
+
     def setUp(self):
         temporary = tempfile.TemporaryDirectory(prefix="cos-vault-test-")
         self.addCleanup(temporary.cleanup)
@@ -114,7 +120,7 @@ class SecondBrainTests(unittest.TestCase):
     def run_brief(self, snapshot: Path, max_chars: int = 5000):
         env = os.environ.copy()
         env.update({
-            "HERMES_HOME": str(self.profile),
+            "COS_STATE_DIR": str(self.profile),
             "PYTHONIOENCODING": "utf-8",
             "PYTHONDONTWRITEBYTECODE": "1",
         })
@@ -338,7 +344,7 @@ class SecondBrainTests(unittest.TestCase):
         self.assertEqual(result.stdout.strip().encode("utf-8"), expected.encode("utf-8"))
         self.assertNotIn("second_brain", json.loads(result.stdout))
 
-    def test_brief_cli_adds_separate_context_without_refitting_workspace(self):
+    def test_brief_cli_includes_context_within_total_budget(self):
         path = self.sandbox / "snapshot.json"
         path.write_text(json.dumps(workspace_fixture()), encoding="utf-8")
         original = self.run_brief(path)
@@ -355,11 +361,14 @@ class SecondBrainTests(unittest.TestCase):
         combined = json.loads(result.stdout)
         context = combined.pop("second_brain")
         self.assertEqual(context["status"], "ok")
-        self.assertIn("Unique bridge dependency", context["notes"][0]["excerpt"])
-        self.assertLessEqual(len(compact(context)), 3000)
-        self.assertEqual(compact(combined), original.stdout.strip())
-        self.assertGreater(len(result.stdout.strip()), len(original.stdout.strip()))
-        self.assertLessEqual(len(result.stdout.strip()), len(original.stdout.strip()) + 3020)
+        self.assertLessEqual(len(result.stdout.strip()), 5000)
+        original_packet = json.loads(original.stdout)
+        self.assertEqual(combined["mail"][0]["id"], original_packet["mail"][0]["id"])
+        self.assertEqual(combined["source_status"], original_packet["source_status"])
+        roomy = self.run_brief(path, max_chars=50000)
+        self.assertEqual(roomy.returncode, 0, roomy.stderr)
+        self.assertLessEqual(len(roomy.stdout.strip()), 50000)
+        self.assertIn("Unique bridge dependency", json.loads(roomy.stdout)["second_brain"]["notes"][0]["excerpt"])
         self.assertEqual(self.fingerprint(), before)
 
 

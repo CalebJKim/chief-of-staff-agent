@@ -1,15 +1,8 @@
 ---
 name: ingest
-description: Pull bounded Gmail, Calendar, Drive, and Google Tasks evidence.
-version: 0.1.0
-author: NVIDIA, Hermes Agent
-license: MIT
-platforms: [linux, macos, windows]
-created_by: agent
-metadata:
-  hermes:
-    tags: [Google, Gmail, Calendar, Drive, Productivity]
+description: 'Pull bounded Gmail, Calendar, Drive, and Google Tasks evidence.'
 ---
+<!-- Original authors: NVIDIA, Hermes Agent. License: MIT. -->
 
 # Ingest Skill
 
@@ -24,45 +17,40 @@ Pull a bounded, metadata-first Workspace snapshot for planning. It deliberately 
 
 ## Prerequisites
 
-- OAuth token at the active Hermes profile's `google_token.json`.
+- The installed Chief of Staff skill includes a saved Google token. Its initialization prepares a writable token copy in the current workspace’s `.chief-of-staff-state` folder for silent refresh. A permission error is not evidence that OAuth is missing; report the exact failed path and operation instead of asking for sign-in.
 - Gmail, Calendar, Drive, Docs, Sheets, and Slides APIs enabled.
 - Google Tasks API and Tasks read access for the optional unfinished-task evidence. A Tasks error is reported separately and does not discard other Workspace evidence.
-- Google Python dependencies installed by the bundled Google Workspace setup.
+- Use Perplexity’s Python, or system Python if absent. The selected Python must have the Google dependencies installed during setup. No Desktop checkout is required.
 
 ## How to Run
 
-Use `terminal` with the active profile root:
+Use Perplexity's `shell` tool with Windows PowerShell 5.1 from the current thread workspace. Load the runtime initialization at the start of each call; `CosRoot` is the read-only installed skill and `CosHome` is writable state in the thread workspace:
 
-```bash
-if [ -n "${HERMES_HOME:-}" ]; then
-  COS_HOME="$HERMES_HOME"
-elif [ -n "${LOCALAPPDATA:-}" ]; then
-  COS_HOME="$LOCALAPPDATA/hermes"
-else
-  COS_HOME="$HOME/.hermes"
-fi
-if [ -f "$COS_HOME/hermes-agent/venv/Scripts/python.exe" ]; then PYTHON="$COS_HOME/hermes-agent/venv/Scripts/python.exe"; elif [ -x "$COS_HOME/hermes-agent/venv/bin/python" ]; then PYTHON="$COS_HOME/hermes-agent/venv/bin/python"; else PYTHON="$(command -v python3 || command -v python)"; fi
-"$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py"
+```powershell
+. (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\runtime.ps1')
+& $Python "$CosRoot/scripts/ingest.py"
+if ($LASTEXITCODE -ne 0) { throw 'Chief of Staff command failed; inspect the error above.' }
 ```
 
-The snapshot is written to `$COS_HOME/chief-of-staff/snapshot.json`. The command prints only counts and connector errors.
+The snapshot is written to `$CosHome/chief-of-staff/snapshot.json`. The command prints only counts and connector errors.
 
 Tasks retrieval reads one page of up to 20 unfinished tasks from My Tasks by default. Use `--task-list LIST_ID` for another list and `--max-tasks N` (1-100) to change the bound. Task titles, date-only due values, short notes, and source links are included; `coverage.tasks_has_more` indicates more tasks remain outside the page. No tasks are changed.
 
 ## Quick Reference
 
-```bash
-if [ -n "${HERMES_HOME:-}" ]; then COS_HOME="$HERMES_HOME"; elif [ -n "${LOCALAPPDATA:-}" ]; then COS_HOME="$LOCALAPPDATA/hermes"; else COS_HOME="$HOME/.hermes"; fi
-if [ -f "$COS_HOME/hermes-agent/venv/Scripts/python.exe" ]; then PYTHON="$COS_HOME/hermes-agent/venv/Scripts/python.exe"; elif [ -x "$COS_HOME/hermes-agent/venv/bin/python" ]; then PYTHON="$COS_HOME/hermes-agent/venv/bin/python"; else PYTHON="$(command -v python3 || command -v python)"; fi
-
+```powershell
+. (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\runtime.ps1')
 # Today plus tomorrow; active inbox and recent Drive files
-"$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py"
+& $Python "$CosRoot/scripts/ingest.py"
+if ($LASTEXITCODE -ne 0) { throw 'Chief of Staff command failed; inspect the error above.' }
 
 # Explicit local day and tighter bounds
-"$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py" --days-ahead 1 --days-back 30 --max-messages 35
+& $Python "$CosRoot/scripts/ingest.py" --days-ahead 1 --days-back 30 --max-messages 35
+if ($LASTEXITCODE -ne 0) { throw 'Chief of Staff command failed; inspect the error above.' }
 
 # Use a focused Gmail query
-"$PYTHON" "$COS_HOME/skills/productivity/ingest/scripts/ingest.py" --gmail-query 'in:inbox (is:unread OR label:important) -category:promotions'
+& $Python "$CosRoot/scripts/ingest.py" --gmail-query 'in:inbox (is:unread OR label:important) -category:promotions'
+if ($LASTEXITCODE -ne 0) { throw 'Chief of Staff command failed; inspect the error above.' }
 ```
 
 ## Procedure

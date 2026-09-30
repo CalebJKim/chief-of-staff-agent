@@ -29,7 +29,7 @@ The seeder creates a self-contained realistic Chief of Staff workspace in the Go
 Generated IDs are stored only in the local file:
 
 ```text
-$HERMES_HOME/chief-of-staff-workspace-state.json
+$env:HERMES_HOME/chief-of-staff-workspace-state.json
 ```
 
 The reset and cleanup commands use this file to delete imported mail/events and move generated Drive files to trash.
@@ -55,19 +55,19 @@ If slides were removed or added during the demo, or the local deck template has 
 
 First connect your own Google account as described in `QUICKSTART.md`. Then:
 
-```bash
+```powershell
 python demo/seed_workspace.py --confirm
 ```
 
 To target a particular Monday:
 
-```bash
+```powershell
 python demo/seed_workspace.py --week-of 2026-08-17 --confirm
 ```
 
 ## Reset and cleanup
 
-```bash
+```powershell
 python demo/reset_workspace.py
 
 # Permanently remove the seeded workspace instead:

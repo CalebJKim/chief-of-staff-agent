@@ -16,12 +16,13 @@ from typing import Any
 
 
 def hermes_home() -> Path:
-    override = os.environ.get("HERMES_HOME")
-    if override:
-        return Path(override).expanduser()
-    if os.name == "nt" and os.environ.get("LOCALAPPDATA"):
-        return Path(os.environ["LOCALAPPDATA"]) / "hermes"
-    return Path.home() / ".hermes"
+    configured = os.environ.get("COS_STATE_DIR")
+    if not configured:
+        raise RuntimeError("COS_STATE_DIR is missing. Run the Perplexity launcher from the current thread workspace.")
+    state = Path(configured).expanduser()
+    if not state.is_absolute() or not state.is_dir():
+        raise RuntimeError("COS_STATE_DIR must point to an existing absolute workspace directory.")
+    return state
 
 
 def credentials() -> Any:

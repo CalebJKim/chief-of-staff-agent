@@ -64,23 +64,57 @@ class BriefTests(unittest.TestCase):
         self.assertEqual([(b["start"][11:16], b["end"][11:16]) for b in blocks], [("09:30", "10:00"), ("12:00", "17:00")])
         self.assertEqual(brief.focus_blocks(events, tz, "2030-07-10T00:00:00Z", 8, 17, 30, datetime(2030, 7, 10, 18, tzinfo=tz)), [])
 
-    def test_local_time_is_converted_from_snapshot_not_assumed(self):
-        snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
-        snapshot["timezone"] = "America/Los_Angeles"
-        snapshot["generated_at"] = "2030-07-10T01:15:00Z"
-        packet = brief.build_packet(snapshot, self.args())
-        self.assertEqual(packet["freshness"]["local_time"], "2030-07-09T18:15:00-07:00")
+    def test_demo_time_uses_local_date_and_preserves_collection_time(self):
+        for generated_at, expected in [
+            ("2030-07-10T01:15:00Z", "2030-07-09T09:30:00-07:00"),
+            ("2030-01-10T01:15:00Z", "2030-01-09T09:30:00-08:00"),
+        ]:
+            with self.subTest(generated_at=generated_at):
+                snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
+                snapshot["timezone"] = "America/Los_Angeles"
+                snapshot["generated_at"] = generated_at
+                packet = brief.build_packet(snapshot, self.args())
+                self.assertEqual(packet["freshness"]["local_time"], expected)
+                self.assertEqual(packet["freshness"]["generated_at"], generated_at)
 
-    def test_meeting_time_status_uses_actual_interval(self):
+    def test_meeting_time_status_uses_demo_time_and_actual_intervals(self):
         snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
-        snapshot["generated_at"] = "2030-07-10T12:00:00Z"
+        snapshot["timezone"] = "UTC"
+        snapshot["generated_at"] = "2030-07-10T20:00:00Z"
         snapshot["events"] = [
-            {"id": "past", "start": "2030-07-10T10:00:00Z", "end": "2030-07-10T12:00:00Z"},
-            {"id": "now", "start": "2030-07-10T12:00:00Z", "end": "2030-07-10T13:00:00Z"},
-            {"id": "future", "start": "2030-07-10T13:00:00Z", "end": "2030-07-10T14:00:00Z"},
+            {"id": "past", "start": "2030-07-10T08:00:00Z", "end": "2030-07-10T09:30:00Z"},
+            {"id": "now", "start": "2030-07-10T09:30:00Z", "end": "2030-07-10T10:00:00Z"},
+            {"id": "future", "start": "2030-07-10T10:00:00Z", "end": "2030-07-10T11:00:00Z"},
         ]
         packet = brief.build_packet(snapshot, self.args())
         self.assertEqual({e["id"]: e["time_status"] for e in packet["meetings"]}, {"past": "ended", "now": "in_progress", "future": "upcoming"})
+        self.assertEqual(
+            {e["id"]: (e["start"], e["end"]) for e in packet["meetings"]},
+            {e["id"]: (e["start"], e["end"]) for e in snapshot["events"]},
+        )
+
+    def test_focus_blocks_use_demo_time_for_early_and_late_snapshots(self):
+        for generated_at in ["2030-07-09T14:00:00Z", "2030-07-10T01:15:00Z"]:
+            for with_window in [True, False]:
+                with self.subTest(generated_at=generated_at, with_window=with_window):
+                    snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
+                    snapshot["timezone"] = "America/Los_Angeles"
+                    snapshot["generated_at"] = generated_at
+                    if with_window:
+                        snapshot["window"] = {"start": "2030-07-09T00:00:00-07:00"}
+                    else:
+                        snapshot.pop("window", None)
+                    snapshot["events"] = [
+                        {"id": "first", "start": "2030-07-09T10:00:00-07:00", "end": "2030-07-09T11:00:00-07:00"},
+                        {"id": "overlap", "start": "2030-07-09T10:30:00-07:00", "end": "2030-07-09T12:00:00-07:00"},
+                    ]
+                    args = self.args()
+                    args.work_end = 17
+                    packet = brief.build_packet(snapshot, args)
+                    self.assertEqual(packet["focus_blocks"], [
+                        {"start": "2030-07-09T09:30:00-07:00", "end": "2030-07-09T10:00:00-07:00", "minutes": 30},
+                        {"start": "2030-07-09T12:00:00-07:00", "end": "2030-07-09T17:00:00-07:00", "minutes": 300},
+                    ])
 
     def test_budget_drops_repeated_meeting_matches_before_primary_mail(self):
         snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
