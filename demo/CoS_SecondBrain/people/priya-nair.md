@@ -13,10 +13,8 @@ confidence: high
 
 Priya leads marketing production for [[marketing-shoot|the marketing shoot]], supporting [[neoagent-v2-launch|the NeoAgent V2 launch]].
 
-## Comparing production options
-Venue, crew, presenters, equipment, script readiness, and editing capacity all affect the shoot. A replacement date can solve a booking problem while leaving less time to prepare or revise the content.
-
-Compare the practical consequences of each option. Include preparation time and the editing work after the shoot, and identify any availability that needs reconfirmation.
+## Production arrangements
+Priya has checked crew availability, equipment, and preparation and editing time for the replacement shoot. Studio B Friday and Studio C Tuesday both meet production needs. She needs only the user's preferred date and will handle booking and production arrangements. She should reconfirm availability before booking.
 
 ## Decisions to keep separate
 Choosing a preferred date does not confirm a booking. A booking also does not approve the script. Track date preference, booking confirmation, and content approval separately so the production plan reflects what is actually ready.

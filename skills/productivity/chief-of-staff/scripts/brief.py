@@ -321,6 +321,10 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
         source_status["tasks"] = "error" if "tasks:" in error_text else ("ok" if snapshot["tasks"] else "ok_empty")
         packet["tasks"] = task_context(snapshot["tasks"], packet["mail"], getattr(args, "max_tasks", 8))
         packet["instruction"] += " Google Tasks are pending work. related_mail_ids link supporting email evidence, not additional to-dos; describe the same work once. Distinct deliverables may share a source. Task dates are date-only planning dates, not proof of hard deadlines."
+    # Scores select and order evidence internally, not business priorities.
+    for item in packet["mail"] + packet["meetings"]:
+        item.pop("signal_score", None)
+        item.pop("signals", None)
     return packet
 
 

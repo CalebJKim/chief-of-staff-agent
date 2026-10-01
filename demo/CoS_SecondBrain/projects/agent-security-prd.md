@@ -11,7 +11,7 @@ confidence: high
 
 # Agent Security PRD
 
-The product requirements document needs to tell Engineering what the system must protect, what it may do, and what happens when a security check fails. [[marcus-lee]] can begin implementation after the open requirements are approved.
+The product requirements document defines what the system must protect, what it may do, and what happens when a security check fails. [[marcus-lee]] leads the engineering work. I need to review the open requirements, decide the fallback policies and audit requirements, and update and finalize the document.
 
 ## Work still to finish
 - Describe the threats and the points where information or actions cross a trust boundary.
@@ -30,7 +30,7 @@ The product requirements document needs to tell Engineering what the system must
 
 These are test cases to specify, not tests already passed.
 
-## Engineering handoff
+## Final document review
 Prepare a data-flow sketch, list of trust boundaries, decision table, audit-event examples, and open choices. Show which controls belong in the runtime and which depend on identity or infrastructure services.
 
-A reviewer should be able to follow a request from identity through the permission check to execution and reporting. Use a protected focus block under the [[executive-attention-model|attention plan]] to finish the document, then hand it to Engineering. More optional review meetings should not crowd out that work.
+A reviewer should be able to follow a request from identity through the permission check to execution and reporting. Use a protected focus block under the [[executive-attention-model|attention plan]] to review, update, and finalize the document, resolving the open security-policy decisions. More optional review meetings should not crowd out that work.

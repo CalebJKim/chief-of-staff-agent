@@ -46,6 +46,21 @@ class BriefTests(unittest.TestCase):
         exec_event = next(event for event in packet["meetings"] if event["id"] == "evt-exec")
         self.assertTrue(any(item["id"] == "deck-1" for item in exec_event["related"]["files"]))
 
+    def test_scores_stay_internal_after_selection_even_with_spare_space(self):
+        snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        args = self.args()
+        args.max_mail = 1
+        args.max_meetings = 1
+        packet = brief.build_packet(snapshot, args)
+        self.assertEqual([item["id"] for item in packet["mail"]], ["msg-urgent"])
+        self.assertEqual([item["id"] for item in packet["meetings"]], ["evt-exec"])
+        for result in (packet, json.loads(brief.fit_packet(packet, 100000))):
+            for item in result["mail"] + result["meetings"]:
+                self.assertNotIn("signal_score", item)
+                self.assertNotIn("signals", item)
+        self.assertTrue(packet["mail"][0]["snippet"])
+        self.assertEqual(packet["mail"][0]["url"], "https://mail.google.com/mail/u/0/#all/thread-urgent")
+
     def test_packet_respects_context_budget(self):
         snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
         encoded = brief.fit_packet(brief.build_packet(snapshot, self.args()), 5000)

@@ -1,7 +1,7 @@
 ---
 title: People Map
 created: 2026-09-09
-updated: 2026-09-22
+updated: 2026-10-01
 type: query
 tags: [person, operations, strategy]
 sources: [raw/meetings/leadership-staff-2026-09-08.md]
@@ -31,3 +31,7 @@ Their work comes together in [[neoagent-v2-launch|the NeoAgent V2 launch]]. The 
 
 ## Reading a role
 Use the map to find expertise and coordination paths. A person may supply evidence, recommend an option, or coordinate contributors without having final decision authority. A role description does not establish acceptance of a new task.
+
+## Product news contacts
+- [[morgan-reeves|Morgan Reeves]]: Engineering readiness updates for [[superbox|SuperBox]].
+- [[samira-noor|Samira Noor]]: [[ai-hr-assistant|AI-HR Assistant]] pilot access and HR support.

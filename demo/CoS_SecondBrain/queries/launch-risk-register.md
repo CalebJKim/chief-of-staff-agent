@@ -14,7 +14,7 @@ confidence: high
 | Risk | Consequence | Owner path | Mitigation |
 |---|---|---|---|
 | Retail DRI unresolved | Demo slate cannot close | [[maya-singh]] | Assign DRI in [[neoagent-v2-executive-review]] |
-| Venue unavailable | Production schedule compresses | [[priya-nair]] | Decide replacement date |
+| Venue unavailable | Production schedule compresses | [[priya-nair]] | Obtain date preference, then Priya confirms booking |
 | Claims diverge | Legal and credibility exposure | [[daniel-cho]] | Use [[qualified-product-claims]] |
 | Supply constrained | Regional commitments slip | [[ethan-brooks]] | Refresh [[supply-allocation-plan]] |
 
