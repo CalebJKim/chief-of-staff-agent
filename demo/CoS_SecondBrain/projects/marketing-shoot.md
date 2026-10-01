@@ -24,7 +24,7 @@ These are recorded planning options, not proof that either hold is still availab
 ## What to check before choosing
 The venue is only one part of the plan. Compare crew and presenter availability, equipment needs, script readiness, and editing capacity. Choosing a date that preserves one step can still create pressure elsewhere.
 
-The script needs the final [[product-specifications|approved product wording]] and should support the [[rtx-spark-launch|launch story]]. A date decision does not approve the script or its claims.
+The script needs the final [[performance-results|approved product wording]] and should support the [[neoagent-v2-launch|launch story]]. A date decision does not approve the script or its claims.
 
 ## Keep the checkpoints separate
 First choose the preferred date. Then confirm the booking and practical arrangements. Review the content through its own approval process.

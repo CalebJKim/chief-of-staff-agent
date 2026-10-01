@@ -1,6 +1,6 @@
 # Wiki Index
 
-> Read this first to locate compiled knowledge. Last updated: 2026-09-24 | Total maintained pages: 93
+> Read this first to locate compiled knowledge. Last updated: 2026-09-30 | Total maintained pages: 96
 
 These notes cover projects, people, decisions, and meeting preparation. Use the source dates and recorded status to distinguish background from current evidence.
 
@@ -36,7 +36,7 @@ Start with Home for a guided overview. Detailed briefs cover Meridian's proposed
 - [[q4-operating-plan|Q4 Operating Plan]]
 - [[regional-launch-readiness|Regional Launch Readiness]]
 - [[retail-experience-refresh|Retail Experience Refresh]]
-- [[rtx-spark-launch|RTX Spark Launch]]
+- [[neoagent-v2-launch|NeoAgent V2 Launch]]
 - [[supply-allocation-plan|Supply Allocation Plan]]
 - [[workforce-plan|Workforce Plan]]
 
@@ -47,10 +47,12 @@ Start with Home for a guided overview. Detailed briefs cover Meridian's proposed
 - [[daniel-cho|Daniel Cho]]
 - [[elena-park|Elena Park]]
 - [[ethan-brooks|Ethan Brooks]]
+- [[evan-mercer|Evan Mercer]]
 - [[grant-walker|Grant Walker]]
 - [[henry-tan|Henry Tan]]
 - [[jonas-reed|Jonas Reed]]
 - [[jordan-kim|Jordan Kim]]
+- [[leah-moreno|Leah Moreno]]
 - [[leila-morgan|Leila Morgan]]
 - [[lena-ortiz|Lena Ortiz]]
 - [[marcus-lee|Marcus Lee]]
@@ -63,6 +65,7 @@ Start with Home for a guided overview. Detailed briefs cover Meridian's proposed
 - [[rafael-costa|Rafael Costa]]
 - [[sarah-bennett|Sarah Bennett]]
 - [[sofia-alvarez|Sofia Alvarez]]
+- [[tessa-ellis|Tessa Ellis]]
 - [[victor-hale|Victor Hale]]
 - [[wei-zhang|Wei Zhang]]
 
@@ -80,7 +83,7 @@ Start with Home for a guided overview. Detailed briefs cover Meridian's proposed
 - [[decision-velocity|Decision Velocity]]
 - [[executive-attention-model|Executive Attention Model]]
 - [[executive-sponsorship|Executive Sponsorship]]
-- [[product-specifications|Product Specifications]]
+- [[performance-results|Performance Results]]
 - [[launch-critical-path|Launch Critical Path]]
 - [[local-agent-platform|Local Agent Platform]]
 - [[operating-cadence|Operating Cadence]]
@@ -96,7 +99,7 @@ Start with Home for a guided overview. Detailed briefs cover Meridian's proposed
 - [[launch-command-center|Launch Command Center]]
 - [[partner-ceo-review|Partner CEO Review]]
 - [[product-engineering-operating-review|Product and Engineering Operating Review]]
-- [[rtx-spark-executive-review|RTX Spark Executive Review]]
+- [[neoagent-v2-executive-review|NeoAgent V2 Executive Review]]
 - [[talent-succession-review|Talent and Succession Review]]
 - [[weekly-leadership-staff|Weekly Leadership Staff]]
 

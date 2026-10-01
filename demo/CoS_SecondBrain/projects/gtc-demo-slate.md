@@ -3,7 +3,7 @@ title: GTC Demo Slate
 created: 2026-09-09
 updated: 2026-09-22
 type: project
-tags: [project, rtx-spark, retail, decision]
+tags: [project, neoagent-v2, retail, decision]
 sources: [raw/meetings/leadership-staff-2026-09-08.md]
 status: blocked
 confidence: high
@@ -11,11 +11,11 @@ confidence: high
 
 # GTC Demo Slate
 
-This note tracks the proposed list of demos for GTC. The list should show useful, different examples of local AI assistance. Final selection belongs in the [[rtx-spark-executive-review|executive review]].
+This note tracks the proposed list of demos for GTC. The list should show useful, different examples of local AI assistance. Final selection belongs in the [[neoagent-v2-executive-review|executive review]].
 
 ## Candidates in the current notes
 - An agent workflow using the [[hermes-partner-program|Hermes partner program]].
-- A local inference example supported by the recorded [[product-specifications|product evidence]].
+- A local inference example supported by the recorded [[performance-results|product evidence]].
 - A secure-execution example using [[openshell|OpenShell]], subject to the open network-access decision.
 - A retail experience, with the final responsible owner still to be confirmed through [[grant-walker]].
 

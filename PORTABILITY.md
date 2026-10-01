@@ -12,13 +12,13 @@
 
 ## What was demo-specific
 
-The RTX Spark emails, events, deck, tracker, and campaign documents were real records in one test Google account. They are not included here and are not required by the agent. The skill mentions generic examples such as an exec review because those are valid workflow triggers, not hidden answers.
+The NeoAgent V2 emails, events, deck, tracker, and campaign documents were real records in one test Google account. They are not included here and are not required by the agent. The skill mentions generic examples such as an exec review because those are valid workflow triggers, not hidden answers.
 
 The only structural specialization is the `Campaign Lanes` tracker schema (A:J). Tracker lane updates use that schema and named lanes. Other tracker layouts require an adapter/configuration layer.
 
 ## What was not cheated
 
-The tested workflow made live Google API calls. The model discovered current messages/events/files, read selected full threads/artifacts, applied evidence-backed tracker changes when explicitly instructed, and read back results. Other guarded writes still require separate approval. The scripts do deterministic retrieval, compression, conflict detection, and validation; they do not contain the expected RTX Spark answer.
+The tested workflow made live Google API calls. The model discovered current messages/events/files, read selected full threads/artifacts, applied evidence-backed tracker changes when explicitly instructed, and read back results. Other guarded writes still require separate approval. The scripts do deterministic retrieval, compression, conflict detection, and validation; they do not contain the expected NeoAgent V2 answer.
 
 The demo account was deliberately seeded with coherent emails, calendar conflicts, and stale tracker/deck state. That is staged test data, equivalent to a demo dataset. It improves reproducibility but does not bypass reasoning or Google writes.
 

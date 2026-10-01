@@ -16,7 +16,7 @@
   "skill_sha256": "e5ecfe61155c6c4e3e75457d2d60cbe1e8ab8b70ce35514bd5ee6e76537bd517",
   "brief_sha256": "e298e7f262564c4f6882f982edfe4864c779f05bca1335e8e50afa944811dae5",
   "refresh_helper_preserves_source_description": true,
-  "updated_at_utc": "2026-10-01T05:29:44.887618+00:00",
+  "updated_at_utc": "2026-10-01T06:03:13.292696+00:00",
   "rollback": {
     "restored": [
       "Earlier coverage guidance",
@@ -352,6 +352,34 @@
         "source_changes_committed": false,
         "approved_text": "In the **What you need to get done today** and **What I can take care of for you** sections, eligible work directly related to the opening blockquote under **What You Need to Know** must appear before other work. Keep the existing eligibility and no-overlap rules. Do not invent work or move it between sections to match the blockquote.",
         "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\explicit-blockquote-priority-20261001T052944Z\\restore-manifest.json"
+      },
+      {
+        "name": "NeoAgent V2 seed scenario and expanded executive deck",
+        "scope": "Perplexity seed data, Google Workspace and Second Brain",
+        "applied_at_utc": "2026-10-01T06:03:13.292696+00:00",
+        "source_changes_committed": false,
+        "backup_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\neoagent-migration-20261001T054552Z\\restore-manifest.json",
+        "benchmarks": {
+          "task_success": "V2 92% vs V1 80% (+12 percentage points)",
+          "median_completion_time": "30% lower than V1",
+          "model_tokens_per_completed_task": "25% fewer than V1",
+          "scope": "Fictional figures; same model, 200 workflows, and environment"
+        },
+        "deck_template_sha256": "b852ec58f342c41d91e405294444d088803b2448f3763e337a614b6d6e7b04d6",
+        "validation": {
+          "seed_tests_passed": 54,
+          "tracker_contract_tests_passed": 2,
+          "old_brand_matches_live": 0,
+          "notes_synced": 109,
+          "native_deck_pages_reviewed": 10,
+          "native_doc_pages_reviewed": 2
+        },
+        "reset_fix": "Restore template text size, font and foreground color after replacing Google Slides text.",
+        "template_sha256": {
+          "neoagent-v2-campaign-plan.docx": "855a754ce6631400cf1e62f3e12a556b6b857fed3684d91c97210fff862e2ea1",
+          "neoagent-v2-campaign-tracker.xlsx": "2683d984e7d7272d0b06ff784e9feddad29c927d5611b2120baf6dc835aca633",
+          "neoagent-v2-exec-review.pptx": "b852ec58f342c41d91e405294444d088803b2448f3763e337a614b6d6e7b04d6"
+        }
       }
     ]
   },
@@ -376,5 +404,32 @@
   "command_reference_sha256": "1a4a38a24cdb8f824d1bd6c3e6db2d6b50c4147ba2945c9d29e59d83139b65ce",
   "command_reference_moved": true,
   "meeting_preparation_sha256": "c3330827cca78e7b7c016ac7f66a8d4ed5f7c9952da614cf6613fb47b26b05d2",
-  "updating_project_tracker_sha256": "6d39a1fa73d390415e8d9d399bc507bb4ab510d2c221bd3e61768078023e13f5"
+  "updating_project_tracker_sha256": "6d39a1fa73d390415e8d9d399bc507bb4ab510d2c221bd3e61768078023e13f5",
+  "notes_design_scenario": {
+    "applied_at_utc": "2026-10-01T06:46:14.196684+00:00",
+    "source_changes_committed": false,
+    "backup": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\notes-design-20261001T064041Z",
+    "task": "Define the Local AI Meeting Notes Assistant\u2019s rough design in the project doc",
+    "document_id": "1EU5xaVY3PpuHa3Nkp9KZrCEEiEbOLUK-LQydWL6gPmc",
+    "template_sha256": "9a5f89771369ab81d280858459563f97101cc324f2e89cfdda0a9732ee3bc426",
+    "other_tasks_unchanged": true,
+    "second_brain_changes": false
+  },
+  "reset_safety_update": {
+    "reset_succeeded": true,
+    "rate_limit_errors_during_reset": 0,
+    "emails": 80,
+    "events": 89,
+    "tasks": 3,
+    "neoagent_emails_verified": true,
+    "design_outline_verified": true,
+    "runtime_states_synced": 3,
+    "shared_tests_passed": 68,
+    "perplexity_tests_passed": 61,
+    "batch_size": 5,
+    "retry_limit": 5,
+    "backup": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff\\.tmp\\reset-rate-limit-20261001T070703Z",
+    "updated_at_utc": "2026-10-01T07:13:28.396463+00:00",
+    "source_changes_committed": false
+  }
 }

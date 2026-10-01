@@ -11,7 +11,7 @@ confidence: medium
 
 # Vector Labs
 
-Vector is a strategic software partner for the Hermes and RTX Spark launch. The engagement runs through [[hermes-partner-program|the Hermes partner program]] and affects [[partner-certification|partner certification]].
+Vector is a strategic software partner for the Hermes and NeoAgent V2 launch. The engagement runs through [[hermes-partner-program|the Hermes partner program]] and affects [[partner-certification|partner certification]].
 
 ## Defining the contribution
 Both organizations should be able to explain which customer workflow improves and what each contributes. A clear outcome and operating model can be more useful than a long list of integrations.

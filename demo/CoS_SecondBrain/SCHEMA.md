@@ -1,7 +1,7 @@
 # Second Brain Schema
 
 ## Domain
-Executive operating system for RTX Spark, Hermes, agent security, partner programs, launch execution, decisions, people, and meeting preparation.
+Executive operating system for NeoAgent V2, Hermes, agent security, partner programs, launch execution, decisions, people, and meeting preparation.
 
 ## Architecture
 - `raw/` contains immutable source notes and meeting records.
@@ -26,7 +26,7 @@ Executive operating system for RTX Spark, Hermes, agent security, partner progra
 
 ## Tag Taxonomy
 - Work: `project`, `person`, `organization`, `meeting`, `decision`, `priority`
-- Product: `rtx-spark`, `hermes`, `openshell`, `agent-security`, `inference`
+- Product: `neoagent-v2`, `hermes`, `openshell`, `agent-security`, `inference`
 - Functions: `engineering`, `marketing`, `legal`, `partners`, `retail`, `communications`
 - Meta: `strategy`, `launch`, `risk`, `research`, `operations`
 

@@ -5,7 +5,7 @@ RESOURCES = {
     "finance_overview": ("AI for Financial Analysis Assistant — Project Overview", "financial-analysis-overview.docx"),
     "finance_progress": ("AI for Financial Analysis Assistant — Progress and Findings", "financial-analysis-progress.pptx"),
     "finance_next_steps": ("AI for Financial Analysis Assistant — Next Steps", "financial-analysis-next-steps.docx"),
-    "notes_overview": ("Local AI Meeting Notes Assistant — Project Overview", "local-meeting-notes-overview.docx"),
+    "notes_overview": ("Local AI Meeting Notes Assistant — Design Outline", "local-meeting-notes-overview.docx"),
 }
 
 TASKS = [
@@ -22,9 +22,9 @@ TASKS = [
         "resources": (),
     },
     {
-        "key": "notes_eta",
-        "title": "Update the Local AI Meeting Notes Assistant’s prototype ETA in the project overview",
-        "notes": "Evan sent over the prototype ETA for the Local AI Meeting Notes Assistant. Update the placeholder in the project overview so the team has the latest date.",
+        "key": "notes_design",
+        "title": "Define the Local AI Meeting Notes Assistant’s rough design in the project doc",
+        "notes": "Evan is waiting on my proposed design. Work through the user experience, choose what belongs in the first prototype, and explain the approach and tradeoffs in the doc.",
         "resources": ("notes_overview",),
     },
 ]
@@ -32,6 +32,7 @@ TASKS = [
 LEGACY_SUBJECTS = {
     "Publish a customer demo FAQ", "Share the pilot-program lessons learned",
     "Finalize the developer workshop budget",
+    "Prototype ETA for the Local AI Meeting Notes Assistant",
 }
 
 
@@ -47,8 +48,8 @@ def email_specs(resources, today):
          f"Hi,\n\nI’m taking over the AI for Financial Analysis assistant and would love a quick steer on where to start. Could you send me a short rundown of the project resources today, including what each one covers and what I should read first?\n\nI found these in Drive, but a bit of context would help me get up to speed before I sit down with Engineering.\n\nProject Overview: {url('finance_overview')}\nProgress and Findings: {url('finance_progress')}\nNext Steps: {url('finance_next_steps')}\n\nThanks,\nLeah"),
         ("Tessa Ellis <tessa.ellis@example.com>", "Following up: demo presenter for GTC 2027",
          f"Hi,\n\nCircling back on our conversation on {date_label(today - timedelta(days=7))} about having you present a demo at GTC 2027. You mentioned needing a week to decide whether you’d be available.\n\nWould you be able to let me know today? A yes or no is enough for now so I can update the presenter list. We can work through the demo details afterward if you’re able to join.\n\nThanks,\nTessa\nGTC demo program coordinator"),
-        ("Evan Mercer <evan.mercer@example.com>", "Prototype ETA for the Local AI Meeting Notes Assistant",
-         f"Hi,\n\nWe’re targeting {date_label(today + timedelta(days=7))} to have the Local AI Meeting Notes Assistant prototype ready for internal testing. That should include local transcription and a first pass at the meeting summary and action items.\n\nCould you update the ETA in the project overview today? It still has the placeholder.\n\nProject Overview: {url('notes_overview')}\n\nThanks,\nEvan"),
+        ("Evan Mercer <evan.mercer@example.com>", "Following up on the Local AI Meeting Notes Assistant design",
+         f"Hi,\n\nHave you had a chance to update the Local AI Meeting Notes Assistant doc with your proposed design? Your take on the user experience and what we should include in the first prototype would help us plan the engineering work.\n\nCould you add your outline today? It doesn’t need to be polished, just enough to explain the approach and the main tradeoffs.\n\nProject doc: {url('notes_overview')}\n\nThanks,\nEvan"),
     ]
 
 
@@ -81,7 +82,7 @@ def ensure_resources(seed, svc, state, *, checkpoint=lambda: None, restore=False
             resources[key] = seed.upload_template(svc["drive"], state["folder"]["id"], filename, title, native)
             checkpoint()
         elif restore:
-            svc["drive"].files().update(fileId=resources[key]["id"], body={"mimeType": native},
+            svc["drive"].files().update(fileId=resources[key]["id"], body={"mimeType": native, "name": title},
                 media_body=MediaFileUpload(str(seed.ROOT / "demo" / "templates" / filename), mimetype=office, resumable=False), fields="id").execute()
 
 

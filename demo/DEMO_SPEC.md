@@ -12,16 +12,16 @@ The seeder creates a self-contained realistic Chief of Staff workspace in the Go
   - Marketing shoot venue deadline
   - Agent Security PRD deadline
 - **70 low-priority background messages** and **1 contact message** so the inbox is realistic without hiding the important work. Synthetic senders use the visibly fake local-part pattern `name.example@nvidia.com`.
-- **3 task-supporting emails** from Leah Moreno, Tessa Ellis and Evan Mercer, dated the seed/reset morning. They support a financial-analysis project ramp-up email, a GTC 2027 presenter reply awaiting the user's decision, and a meeting-notes prototype ETA update. The new fictional contacts use `example.com` addresses. These replace the old FAQ, pilot-lessons and workshop-budget requests. The original 77 emails keep their repeatable, irregular timestamps, which normally run backward from 9:12 AM today into the previous afternoon/evening, in the configured workspace time zone. Before 9:12 AM, reset shifts this schedule so the newest message is one minute before the current minute, avoiding future timestamps while preserving gaps and ordering. Near midnight, some or all important messages may therefore be dated yesterday. Resets at or after 9:12 AM preserve the fixed clock times, with all six important messages dated today.
+- **3 task-supporting emails** from Leah Moreno, Tessa Ellis and Evan Mercer, dated the seed/reset morning. They support a financial-analysis project ramp-up email, a GTC 2027 presenter reply awaiting the user's decision, and a request for the user’s proposed meeting-notes assistant design. The new fictional contacts use `example.com` addresses. These replace the old FAQ, pilot-lessons and workshop-budget requests. The original 77 emails keep their repeatable, irregular timestamps, which normally run backward from 9:12 AM today into the previous afternoon/evening, in the configured workspace time zone. Before 9:12 AM, reset shifts this schedule so the newest message is one minute before the current minute, avoiding future timestamps while preserving gaps and ordering. Near midnight, some or all important messages may therefore be dated yesterday. Resets at or after 9:12 AM preserve the fixed clock times, with all six important messages dated today.
 - **89–90 Calendar events** across the workweek. Each day has a distinct, busy schedule with overlaps; the current workday also contains the 5 PM Exec Review.
-- **3 unfinished Google Tasks in the default list (My Tasks)**, all due on the seed/reset date: draft Leah Moreno’s ramp-up email for the AI for Financial Analysis assistant, respond to the GTC 2027 presenter invitation, and update the Local AI Meeting Notes Assistant’s prototype ETA. Notes link to the source email and relevant files. They replace all six former demo tasks. Personal tasks are preserved.
-- **3 additional Google Docs and a four-slide deck**: AI for Financial Analysis Assistant — Project Overview, Progress and Findings, and Next Steps, plus Local AI Meeting Notes Assistant — Project Overview. The latter retains the unique `<ETA goes here>` placeholder. Evan's email supplies an internal-testing date seven days after seeding. Tessa's email references the conversation seven days before seeding without deciding the user's availability. Resources are imported from editable Office templates and restored at the same Drive IDs on reset.
-- **1 Google Sheet**: `RTX Spark Campaign Tracker`
+- **3 unfinished Google Tasks in the default list (My Tasks)**, all due on the seed/reset date: draft Leah Moreno’s ramp-up email for the AI for Financial Analysis assistant, respond to the GTC 2027 presenter invitation, and define the Local AI Meeting Notes Assistant’s rough design in the project doc. Notes link to the source email and relevant files. They replace all six former demo tasks. Personal tasks are preserved.
+- **3 additional Google Docs and a four-slide deck**: AI for Financial Analysis Assistant — Project Overview, Progress and Findings, and Next Steps, plus Local AI Meeting Notes Assistant — Design Outline. The latter contains the project’s purpose and four unfilled TODOs for the user experience diagram, local processing approach, review flow, and first-prototype scope and tradeoffs. Evan’s email follows up on the user’s proposed design and asks for a rough outline today. Tessa's email references the conversation seven days before seeding without deciding the user's availability. Resources are imported from editable Office templates and restored at the same Drive IDs on reset.
+- **1 Google Sheet**: `NeoAgent V2 Campaign Tracker`
   - Tab: `Campaign Lanes`
   - Columns A:J: Lane, PIC, Status, Latest update, Next action, Due, Dependency/blocker, Evidence, Artifact, Notes
   - Status dropdown: On track, In progress, Awaiting update, Blocked, Complete
-- **1 Google Doc**: `RTX Spark Campaign Plan`
-- **1 Google Slides deck**: `RTX Spark Exec Review`
+- **1 Google Doc**: `NeoAgent V2 Campaign Plan`
+- **1 Google Slides deck**: `NeoAgent V2 Exec Review`
   - 10 slides
   - Slide 4 intentionally waits for Mike’s performance figures
   - Slide 6 intentionally needs to move out of the live flow
@@ -83,11 +83,25 @@ jobs are untouched. `--cleanup` removes Google Workspace seed data only.
 
 If OAuth scopes or organization policy prevent the script from creating a resource, create the components manually:
 
-1. **Sheet** — Create `RTX Spark Campaign Tracker`, tab `Campaign Lanes`, with the A:J columns listed above. Add at least these lanes: Product performance claims (Awaiting update), Exec Review deck (Awaiting update), Agent Messaging (Awaiting update), Marketing shoot (Blocked), Partner enablement (On track), Social rollout (Awaiting update), Retail demo readiness (Blocked), Legal intake (Awaiting update).
-2. **Slides** — Create a 10-slide `RTX Spark Exec Review`. Put `Performance to go here - Mike Chen to provide` on slide 4, a proposed retail customer-use example on slide 6 (local laptop comparison, an associate-reviewed follow-up draft, and customer details staying on the device), a pending Customer Example section on slide 7, and two decision asks on slide 10. Aisha's feedback asks to summarize that example in slide 7 before removing slide 6. The example is not customer validation or approval of the demo slate or owners.
-3. **Doc** — Create `RTX Spark Campaign Plan` with an agent-first narrative and open work for claims, retail demo ownership, shoot date, and Exec Review preparation.
-4. **Calendar** — Add a varied schedule across the workweek rather than repeating the same meetings every day. On the current workday, include the RTX Spark Exec Review at 5 PM and an overlapping decision-triage event.
+1. **Sheet** — Create `NeoAgent V2 Campaign Tracker`, tab `Campaign Lanes`, with the A:J columns listed above. Add at least these lanes: Product performance claims (Awaiting update), Exec Review deck (Awaiting update), Agent Messaging (Awaiting update), Marketing shoot (Blocked), Partner enablement (On track), Social rollout (Awaiting update), Retail demo readiness (Blocked), Legal intake (Awaiting update).
+2. **Slides** — Create a 10-slide `NeoAgent V2 Exec Review`. Put `Performance to go here - Mike Chen to provide` on slide 4, a proposed retail customer-use example on slide 6 (local laptop comparison, an associate-reviewed follow-up draft, and customer details staying on the device), a pending Customer Example section on slide 7, and two decision asks on slide 10. Aisha's feedback asks to summarize that example in slide 7 before removing slide 6. The example is not customer validation or approval of the demo slate or owners.
+3. **Doc** — Create `NeoAgent V2 Campaign Plan` with an agent-first narrative and open work for claims, retail demo ownership, shoot date, and Exec Review preparation.
+4. **Calendar** — Add a varied schedule across the workweek rather than repeating the same meetings every day. On the current workday, include the NeoAgent V2 Exec Review at 5 PM and an overlapping decision-triage event.
 5. **Gmail** — Send or import messages to yourself containing the six topics above. Mark them unread/important. Include the generated Sheet/Slides/Doc links where relevant. Use clearly synthetic addresses such as `elena.example@nvidia.com`.
+
+## Fictional NeoAgent benchmark package
+
+NeoAgent is an agent harness around an existing model. V2 is compared with NeoAgent V1 using the same 200 internal document, email, and scheduling workflows, model, and execution environment.
+
+| Measure | NeoAgent V1 | NeoAgent V2 | V2 change versus V1 |
+| --- | --- | --- | --- |
+| Task success | 80% (160/200) | 92% (184/200) | +12 percentage points |
+| Median completion time, normalized | 100 | 70 | 30% lower |
+| Model tokens per completed task, normalized | 100 | 75 | 25% fewer |
+
+These are fictional demo figures. Success requires the expected end state without an incorrect write. Time compares tasks completed by both versions. Tokens include input, output, and retries per completed task. Approval is for leadership review only. The evidence arrives in Mike's email and Second Brain, while slide 4 remains pending to support the deck-editing task.
+
+`demo/neoagent_deck.json` is the shared content baseline for the richer 10-slide deck and the reset helper. `demo/build_neoagent_deck.mjs` builds its editable PPTX with the bundled artifact runtime. Preserve slide 6's example, slide 7's pending summary, and slide 10's open decisions when updating it.
 
 The exact names are helpful for artifact matching, but the Chief of Staff logic still reasons from the actual evidence rather than fixture IDs.
 

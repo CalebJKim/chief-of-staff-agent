@@ -4,7 +4,7 @@
 
 Many of us start the day with a crowded inbox and a packed calendar, making it really hard to focus.
 
-Having a Chief of Staff would give us some much-needed clarity. Today, I’ll show you how an AI agent running locally on this NVIDIA RTX Spark laptop can fill that role.
+Having a Chief of Staff would give us some much-needed clarity. Today, I’ll show you how an AI agent running locally on this NVIDIA NeoAgent V2 laptop can fill that role.
 
 Let’s start with a question we ask ourselves every morning: what should we work on today?
 
@@ -86,8 +86,8 @@ One way to do it is to use a recurring agent job. Here’s an example of a recur
 
 It’s set up to run daily.
 
-## Bring it back to RTX Spark
+## Bring it back to NeoAgent V2
 
 So we’ve gone from an overwhelming workday to a clearer plan, better preparation, and busy work taken off our plate—with context we can keep building over time.
 
-With an RTX Spark at our fingertips, we can run a variety of AI agents locally. Our Chief of Staff is just one example, and the tip of the iceberg. There is so much more we can do with an RTX Spark.
+With an NeoAgent V2 at our fingertips, we can run a variety of AI agents locally. Our Chief of Staff is just one example, and the tip of the iceberg. There is so much more we can do with an NeoAgent V2.

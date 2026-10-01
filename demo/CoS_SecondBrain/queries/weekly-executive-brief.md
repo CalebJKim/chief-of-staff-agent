@@ -4,7 +4,7 @@ created: 2026-09-09
 updated: 2026-09-22
 type: query
 tags: [priority, operations, strategy]
-sources: [raw/meetings/leadership-staff-2026-09-08.md, raw/updates/product-specifications-package.md]
+sources: [raw/meetings/leadership-staff-2026-09-08.md, raw/updates/performance-results-package.md]
 status: active
 confidence: high
 ---
@@ -12,7 +12,7 @@ confidence: high
 # Weekly Executive Brief
 
 ## Top outcomes
-1. Prepare and close decisions at [[rtx-spark-executive-review|the RTX Spark Executive Review]].
+1. Prepare and close decisions at [[neoagent-v2-executive-review|the NeoAgent V2 Executive Review]].
 2. Finish [[agent-security-prd|the Agent Security PRD]] for Engineering.
 3. Update [[marketing-claims-rollout|the marketing claims rollout]] with approved evidence.
 

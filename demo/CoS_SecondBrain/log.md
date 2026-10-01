@@ -34,13 +34,22 @@
 - Updated the index and reset ZIP to retain the revised prose. The starting vault and ZIP are backed up under demo/.second-brain-backups/before-readability-20260922-124450.
 - Added no new product claims or scheduled-job updates. This editorial pass did not change Google Workspace, demo code, Hermes skills, model settings, or scheduled jobs.
 
-## [2026-09-22] enrich | RTX Spark product-learning notes
+## [2026-09-22] enrich | NeoAgent V2 product-learning notes
 - Expanded the existing launch page with a short product overview, plain-language terminology, audience questions, and reflections on how the Chief of Staff example explains the positioning.
-- Linked NVIDIA's RTX Spark page and supporting CUDA and Studio references. Distinguished published product information from interpretation, proposed examples, and existing launch work.
-- Used Humanizer for the prose. Preserved the existing page, metadata, pending decisions, and claim restrictions; added no benchmarks or completed-work claims.
+- Added product-learning context. The active notes now describe the fictional NeoAgent harness and its internal evaluation, with proposed examples separated from approved launch work.
+- Preserved pending decisions and approval boundaries. The later NeoAgent scenario update adds explicitly fictional V2-versus-V1 benchmarks.
 - Updated the index and the three corresponding entries in the reset ZIP. No demo code, Google Workspace, Hermes settings, or scheduled jobs were changed.
 
 ## [2026-09-24] add | Internal team training: Building AI assistants
 - Added the user-approved completed-training page with a present-tense facilitator walkthrough, teammate links, decisions, public references, and change history.
 - Listed the page under Projects and included the page, index, and this log entry in the reset baseline.
 - Left existing people and project pages, Google Workspace data, demo code, skills, and scheduled jobs unchanged.
+
+## [2026-09-30] update | NeoAgent V2 demo scenario
+- Replaced the launch scenario with an agent harness and fictional V2-versus-V1 performance evidence.
+- Refreshed product, Legal, people, project, meeting, and index notes while preserving pending edits and leadership decisions.
+- All result comparisons use the same model, 200 internal workflows, and environment. External-copy review remains separate.
+
+## [2026-09-30] add | Contacts for the Google Tasks scenarios
+- Added brief person notes for Leah Moreno, Tessa Ellis, and Evan Mercer, grounded in their seeded emails and supporting project resources.
+- Added all three names to the People index and synced the demo vault copies and reset baselines.

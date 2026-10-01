@@ -21,7 +21,7 @@ Keep information supplied for oversight separate from an explicit request for ap
 ## Operating-plan comparison
 The proposed background packet compares customer onboarding, developer education, and internal documentation. Show the outcome each seeks, the specialist time required, and the ongoing maintenance work.
 
-[[finance-operating-plan]] describes resource assumptions without assigning new budgets. The launch context remains in [[rtx-spark-launch]]. A staged approach can reduce competing demands; parallel preparation may reveal gaps sooner but needs credible reviewer availability.
+[[finance-operating-plan]] describes resource assumptions without assigning new budgets. The launch context remains in [[neoagent-v2-launch]]. A staged approach can reduce competing demands; parallel preparation may reveal gaps sooner but needs credible reviewer availability.
 
 ## Before distribution
 Check for conflicting definitions, reporting periods, and financial assumptions. Keep unanswered questions visible rather than making the package look more certain than the evidence allows.

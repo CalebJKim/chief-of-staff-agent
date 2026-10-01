@@ -12,9 +12,9 @@ confidence: high
 # Executive Second Brain
 
 ## Current priorities
-1. Settle the [[rtx-spark-launch|RTX Spark launch]] storyline and final [[gtc-demo-slate|GTC demo slate]] at the [[rtx-spark-executive-review|Executive Review]].
+1. Settle the [[neoagent-v2-launch|NeoAgent V2 launch]] storyline and final [[gtc-demo-slate|GTC demo slate]] at the [[neoagent-v2-executive-review|Executive Review]].
 2. Send the [[agent-security-prd|Agent Security PRD]] to Engineering with fallback policies and audit requirements resolved.
-3. Carry [[product-specifications|the approved product specifications]] into the executive deck and [[marketing-claims-rollout|marketing materials]].
+3. Carry [[performance-results|the approved performance results]] into the executive deck and [[marketing-claims-rollout|marketing materials]].
 
 ## Decisions requiring attention
 - Select a replacement date for the [[marketing-shoot|marketing shoot]].

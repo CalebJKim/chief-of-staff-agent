@@ -1,0 +1,52 @@
+[
+  {
+    "title": "NeoAgent V2 · Exec Review",
+    "body": "FROM REQUEST TO FINISHED WORK\nAn agent harness for planning, tool use, and verified outcomes.\n\nLEADERSHIP DECISIONS\nApprove the proposed keynote story and choose the GTC demo slate.\n\nDISCUSSION\nProduct evidence, demo readiness, and the owners needed to deliver the launch.",
+    "note": "Internal working deck. NeoAgent is fictional. Benchmark figures in the supporting package are illustrative demo data. The keynote storyline and GTC demo slate are proposals awaiting leadership approval."
+  },
+  {
+    "title": "Lead with the work the agent finishes",
+    "body": "THE CUSTOMER PROBLEM\nUseful context sits across email, calendars, and files. People still connect it, choose the next step, and check whether work actually landed.\n\nTHE PROPOSED STORY\nNeoAgent V2 wraps an existing model with planning, context selection, tool execution, and completion checks. The user stays in control of decisions and changes.\n\nTHE PROOF\nCompare NeoAgent V2 with NeoAgent V1 under the same model and evaluation conditions. Show a recognizable workflow, its sources, and the saved result.",
+    "note": "Introduce the harness before benchmark results. A harness is the software that coordinates the model and tools. Do not imply that V2 is a newly trained foundation model."
+  },
+  {
+    "title": "Campaign readiness",
+    "body": "EVIDENCE READY\nMike’s benchmark package is approved for leadership review. Slide 4 and dependent messaging still need the approved V2-versus-V1 comparison.\n\nDECK EDITS OPEN\nAisha’s review is complete. Consolidate the customer example, keep the opening focused, and reserve discussion for the decisions on slide 10.\n\nLEADERSHIP INPUT NEEDED\nThe proposed keynote story and GTC demo slate remain open. Partner inclusion and the final retail demo assignment are not yet approved.",
+    "note": "Approval of evidence is distinct from applying edits. Aisha reviewed the deck but did not change it. Do not report the entire campaign as approved."
+  },
+  {
+    "title": "Performance results: update required",
+    "body": "APPROVED COMPARISON TO INSERT\nPerformance results to go here. See Mike Chen’s approved package for NeoAgent V2 versus NeoAgent V1.\n\nEVALUATION BASIS\nThe same 200 internal document, email, and scheduling workflows, underlying model, and execution environment.\n\nMEASURES\nTask success · Median completion time · Model tokens per completed task\n\nSCOPE\nRetain the V1 baseline and metric definitions. Leadership-review clearance does not approve final external copy.",
+    "note": "Intentional seed placeholder for the deck-editing task. Mike’s email provides the approved figures. Keep this slide pending at reset. The final comparison must identify V1 beside every V2 result."
+  },
+  {
+    "title": "Keep the comparison intact across every surface",
+    "body": "CONSISTENT CLAIM\nThe deck, campaign plan, partner materials, and social copy must use the same NeoAgent V2-versus-V1 baseline and internal evaluation scope.\n\nMETRICS MEAN DIFFERENT THINGS\nTask success describes correct completion. Median time describes typical duration. Model tokens per completed task describe usage, including retries.\n\nAPPROVAL BOUNDARY\nDaniel cleared the wording for leadership review. External assets need a separate review. Internal workflow results are not universal customer outcomes or model-inference benchmarks.",
+    "note": "Retain “median” and “per completed task.” Express the task-success difference in percentage points. Do not add energy, hardware, or customer-deployment claims."
+  },
+  {
+    "title": "Customer use example",
+    "body": "SCENARIO\nA retail associate compares two laptops using a local product catalog. A customer needs help weighing portability, battery life, and the applications they use.\n\nASSISTANCE\nNeoAgent V2 retrieves the relevant catalog entries, summarizes the tradeoffs, and drafts a customer follow-up that the associate can check.\n\nCUSTOMER VALUE\nThe associate reviews the draft before sending. Customer details stay on the device in this proposed workflow. This is an illustrative use case, not customer validation or an approved demo selection.",
+    "note": "Aisha’s requested edit is to summarize this slide in slide 7’s Customer Example section and remove slide 6 from the live flow. Preserve the local comparison, associate review, and handling of customer details."
+  },
+  {
+    "title": "GTC demos — alignment needed",
+    "body": "WORKPLACE ASSISTANCE\nA daily brief and a saved email draft show context gathering, useful prioritization, and a result the user can review.\n\nPARTNER WORKFLOW\nThe staged Windows pilot passed its smoke check. Confirm launch relevance and an accountable presenter before including it.\n\nCUSTOMER EXAMPLE\nCandidate use case still to be summarized for the review. Final retail ownership remains open.\n\nSELECTION CRITERIA\nChoose distinct audience value, credible live readiness, and a clear user decision. No selection is approved yet.",
+    "note": "Do not promote the retail example or Windows pilot into the approved slate. Leadership must decide inclusion and owners. Grant Walker is a retail-readiness contact, not an assigned final owner."
+  },
+  {
+    "title": "Execution dependencies",
+    "body": "PRODUCT AND LEGAL · MIKE / DANIEL\nCarry the approved comparison into slide 4, then review external adaptations with their baseline and evaluation conditions intact.\n\nPRESENTATION AND PARTNERS · AISHA\nComplete the deck pass and resolve partner inclusion against the proposed story. Confirm presenters and a fallback for each selected demo.\n\nPRODUCTION · PRIYA\nThe venue choice determines the shoot date and crew booking. Dependent assets cannot be treated as scheduled until the replacement is confirmed.\n\nSOCIAL · RAFAEL\nObtain the latest asset readiness, timing, and blockers before promising rollout dates.",
+    "note": "Each lane has its own completion criteria. Benchmark approval can be complete while deck updates and external messaging remain pending."
+  },
+  {
+    "title": "Marketing shoot — decision required",
+    "body": "CURRENT BLOCKER\nThe planned venue is unavailable. Priya can hold Studio B on Friday or Studio C on Tuesday with the preferred crew until 4:30 PM today.\n\nTRADEOFF TO RESOLVE\nChoose the date that fits launch readiness and downstream production. Confirm availability before making new commitments to partners or the crew.\n\nNEXT ACTION\nOnce the date is chosen, Priya can confirm the venue and rebuild the production schedule. Missing the hold risks a campaign slip.",
+    "note": "The venue choice is a separate production decision. Do not invent cost or availability differences beyond the two offers. This deadline is not an additional goal of the executive meeting."
+  },
+  {
+    "title": "Two decisions to leave with",
+    "body": "1  APPROVE THE PROPOSED KEYNOTE STORYLINE\nLead with useful agent work, explain the harness, and support the story with the scoped V2-versus-V1 comparison. Resolve the audience, emphasis, and talking points.\n\n2  ALIGN ON THE DEMOS FOR GTC\nSelect the slate and confirm owners. Decide partner-pilot inclusion and the final retail assignment. Each chosen demo needs a presenter, a readiness check, and a fallback.\n\nCAPTURE BEFORE CLOSING\nRecord the decision, accountable owner, and next checkpoint in the campaign tracker and plan.",
+    "note": "Elena chairs the review. The user presents the proposed story and slate. Mike, Aisha, and Daniel provide product, presentation/partner, and Legal context. Decisions remain open in the seed."
+  }
+]

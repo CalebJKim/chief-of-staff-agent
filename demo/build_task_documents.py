@@ -88,24 +88,34 @@ def build():
     section(doc, "Expected handoff from Leah", "A short review plan with agreed checks, named owners and a proposed review date. No review date or release commitment has been agreed yet.")
     doc.save(OUT / "financial-analysis-next-steps.docx")
 
-    doc = document("Local AI Meeting Notes Assistant", "Project Overview")
-    doc.add_paragraph("Engineering lead: Evan Mercer  |  Stage: prototype development")
-    p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(10)
-    p.paragraph_format.space_after = Pt(14)
-    r = p.add_run("Prototype ETA: <ETA goes here>")
-    r.bold = True
-    r.font.size = Pt(16)
-    section(doc, "Why we’re building it", "Meeting recordings can contain sensitive internal information. We want useful notes without sending the audio or transcript to a cloud model, and without someone having to capture every decision and follow-up by hand.")
-    section(doc, "How it works", "A local speech-to-text model transcribes the meeting audio. A language model running on the same device turns that transcript into concise, editable notes. Audio, transcripts and model processing stay on the device.")
-    section(doc, "What the notes should include", bullets=(
-        "A short summary of the topics discussed and the key points.",
-        "Decisions that were explicitly agreed during the meeting.",
-        "Action items, with an owner or point of contact only when someone is named. Otherwise, leave the item unassigned.",
-        "Upcoming deadlines that were mentioned and questions still unresolved.",
-    ))
-    section(doc, "First prototype", "Demonstrate the full flow from a meeting recording to a transcript and structured notes. The user should be able to review and correct the notes before sharing them. The assistant must not invent decisions, owners or deadlines.")
-    section(doc, "Internal testing", "Check transcription accuracy, whether the summary captures the important points, and whether action items and deadlines faithfully reflect the discussion. Test meetings with unnamed owners and no stated deadline as well as straightforward examples.")
+    build_notes()
+
+
+def build_notes():
+    """Build the open design outline without regenerating unrelated templates."""
+    OUT.mkdir(exist_ok=True)
+    doc = document("Local AI Meeting Notes Assistant", "Design Outline")
+    for name in ("Title", "Subtitle", "Heading 1", "Heading 2"):
+        doc.styles[name].font.color.rgb = RGBColor(0, 0, 0)
+    title_properties = doc.styles["Title"].element.find(qn("w:pPr"))
+    if title_properties is not None:
+        for border in list(title_properties.findall(qn("w:pBdr"))):
+            title_properties.remove(border)
+    for run in doc.sections[0].header.paragraphs[0].runs:
+        run.font.color.rgb = RGBColor(0, 0, 0)
+    doc.add_paragraph("Engineering lead: Evan Mercer  |  Stage: design definition")
+    section(doc, "Purpose", "Help people capture useful meeting notes without sending meeting recordings or transcripts to a cloud model.")
+    section(doc, "Proposed design")
+    for text in (
+        "Diagram of the user experience before, during, and after a meeting. Decide whether notes appear live or after the meeting.",
+        "Outline how the assistant turns meeting audio into useful notes while keeping processing on the device.",
+        "Decide how users review and correct summaries, action items, and deadlines before sharing.",
+        "Choose what the first prototype should include, what can wait, and explain the main tradeoffs.",
+    ):
+        p = doc.add_paragraph()
+        p.paragraph_format.space_after = Pt(14)
+        p.add_run("TODO: ").bold = True
+        p.add_run(text)
     doc.save(OUT / "local-meeting-notes-overview.docx")
 
 

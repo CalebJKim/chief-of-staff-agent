@@ -14,7 +14,7 @@ confidence: high
 This review brings teams together to resolve launch dependencies, blockers, and owner commitments.
 
 ## Preparation
-Bring changes from [[rtx-spark-launch|the RTX Spark launch]], their effect on the [[launch-critical-path|launch critical path]], and open commitments from the [[decision-log|decision log]].
+Bring changes from [[neoagent-v2-launch|the NeoAgent V2 launch]], their effect on the [[launch-critical-path|launch critical path]], and open commitments from the [[decision-log|decision log]].
 
 Show work waiting for a decision and the consequence of delay. Keep stable status available as background. Distinguish a finished component from one the next team has accepted and can use.
 

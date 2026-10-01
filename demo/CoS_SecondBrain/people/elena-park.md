@@ -13,7 +13,7 @@ confidence: high
 
 Role: Executive program lead and my manager.
 
-Elena coordinates the [[rtx-spark-executive-review]] and connects the work behind [[rtx-spark-launch]]. Her review material should explain how the separate tasks contribute to the launch and which decision is holding up the next step.
+Elena coordinates the [[neoagent-v2-executive-review]] and connects the work behind [[neoagent-v2-launch]]. Her review material should explain how the separate tasks contribute to the launch and which decision is holding up the next step.
 
 ## What to bring to a discussion
 Explain the consequence, options, recommendation, and decision needed. Make unclear ownership visible rather than assuming the coordinator will absorb it.

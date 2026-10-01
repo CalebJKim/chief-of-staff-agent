@@ -14,7 +14,7 @@ from baseline import PRE_EMAIL_ROWS, STATUS_GUIDE, reset_sheet_baseline
 class SeedWorkspaceTests(unittest.TestCase):
     def test_template_status_dropdown_and_colours_use_current_labels(self) -> None:
         ns = {"s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
-        with ZipFile(ROOT / "demo/templates/rtx-spark-campaign-tracker.xlsx") as template:
+        with ZipFile(ROOT / "demo/templates/neoagent-v2-campaign-tracker.xlsx") as template:
             sheet = ElementTree.fromstring(template.read("xl/worksheets/sheet1.xml"))
             options = sheet.find(".//s:dataValidation/s:formula1", ns).text.strip('"').split(',')
             self.assertEqual(set(options), {"On track", "In progress", "Awaiting update", "Blocked", "Complete"})

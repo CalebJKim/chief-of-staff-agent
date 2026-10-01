@@ -26,7 +26,7 @@ print(json.dumps({'executable': sys.executable, 'paths': sys.path, 'isolated': s
 '@ | & $Python -
 if ($LASTEXITCODE -ne 0) { throw 'Python dependency check failed' }
 $Info = $PythonInfo | ConvertFrom-Json
-$Notes = & $Python (Join-Path $CosRoot 'scripts\second_brain.py') search 'RTX Spark' --max 1
+$Notes = & $Python (Join-Path $CosRoot 'scripts\second_brain.py') search 'NeoAgent V2' --max 1
 if ($LASTEXITCODE -ne 0 -or -not ($Notes | ConvertFrom-Json).notes.Count) { throw 'Bundled notes check failed' }
 $Brief = & $Python (Join-Path $CosRoot 'scripts\brief.py') --max-chars 14000
 if ($LASTEXITCODE -ne 0) { throw 'Cached briefing check failed' }

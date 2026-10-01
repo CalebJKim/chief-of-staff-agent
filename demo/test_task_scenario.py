@@ -29,19 +29,25 @@ class TaskScenarioTests(unittest.TestCase):
             self.assertTrue(all(len(t["notes"]) <= 240 for t in scenario.TASKS))
             self.assertIn("whether you’d be available", mail[1][2])
             self.assertIn("A yes or no", mail[1][2])
-            self.assertIn("internal testing", mail[2][2])
-        self.assertIn("Wednesday, October 7, 2026", scenario.email_specs(resources, date(2026, 9, 30))[2][2])
+            self.assertIn("your proposed design", mail[2][2])
+            self.assertIn("outline today", mail[2][2])
+            self.assertNotIn("ETA", mail[2][2])
+            self.assertIn("rough design", bodies[2]["title"])
+            self.assertIn("tradeoffs", bodies[2]["notes"])
         self.assertIn("Wednesday, September 23, 2026", scenario.email_specs(resources, date(2026, 9, 30))[1][2])
-        self.assertIn("Tuesday, January 5, 2027", scenario.email_specs(resources, date(2026, 12, 29))[2][2])
 
-    def test_placeholder_is_unique_and_in_a_top_level_paragraph(self):
+    def test_design_outline_leaves_decisions_open(self):
         with ZipFile(Path(__file__).parent / "templates/local-meeting-notes-overview.docx") as doc:
             root = ElementTree.fromstring(doc.read("word/document.xml"))
         ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
         text = "\n".join("".join(p.itertext()) for p in root.findall("w:body/w:p", ns))
-        self.assertEqual(1, text.count("<ETA goes here>"))
-        self.assertIn("speech-to-text", text)
-        self.assertIn("leave the item unassigned", text)
+        self.assertNotIn("ETA", text)
+        self.assertNotIn("How it works", text)
+        self.assertIn("Design Outline", text)
+        self.assertEqual(4, text.count("TODO:"))
+        self.assertIn("TODO: Diagram of the user experience", text)
+        self.assertIn("keeping processing on the device", text)
+        self.assertIn("main tradeoffs", text)
 
     def test_refresh_deletes_only_marked_task_mail_and_preserves_other_state(self):
         state = {"folder": {"id": "folder"}, "slides": {"id": "deck"}, "sheet": {"id": "sheet"},
@@ -52,7 +58,7 @@ class TaskScenarioTests(unittest.TestCase):
         gmail.users().getProfile.return_value.execute.return_value = {"emailAddress": "user@example.com"}
         def meta(subject, marker=True):
             return {"payload": {"headers": [{"name": "Subject", "value": subject}, {"name": "Message-ID", "value": f"<{seed.MARKER}-run-1@demo.invalid>" if marker else "<personal@example.com>"}]}}
-        metadata = [meta("Publish a customer demo FAQ"), meta("RTX Spark Exec Review"), meta("Publish a customer demo FAQ", False), None]
+        metadata = [meta("Publish a customer demo FAQ"), meta("NeoAgent V2 Exec Review"), meta("Publish a customer demo FAQ", False), None]
         with tempfile.TemporaryDirectory() as temp, \
              patch.object(seed, "state_path", return_value=Path(temp) / "state.json"), \
              patch.object(seed, "services", return_value={"gmail": gmail, "drive": drive, "tasks": tasks}), \

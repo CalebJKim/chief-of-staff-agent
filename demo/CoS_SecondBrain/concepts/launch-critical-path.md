@@ -21,4 +21,4 @@ For each dependency, identify what releases the next team to proceed and what ha
 ## Keeping the plan current
 Ask what changed, who owns the affected outcome, and what decision is needed next. Recheck the chain when scope or sequencing changes. A dependency that previously had spare time can become the one that controls delivery.
 
-Use this approach for [[rtx-spark-launch|the RTX Spark launch]] and [[regional-launch-readiness|regional launch readiness]], with current evidence from the teams involved.
+Use this approach for [[neoagent-v2-launch|the NeoAgent V2 launch]] and [[regional-launch-readiness|regional launch readiness]], with current evidence from the teams involved.
