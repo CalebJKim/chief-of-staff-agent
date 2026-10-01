@@ -40,10 +40,13 @@ class RuntimeTests(unittest.TestCase):
             'python_selection': 'perplexity-then-system'}), encoding='utf-8')
         self.workspace = self.root / 'workspace'
         self.workspace.mkdir()
+        self.vault = self.workspace / 'CoS_SecondBrain'
+        self.vault.mkdir()
+        (self.vault / 'index.md').write_text('# Second Brain\nNeoAgent V2 review context\n', encoding='utf-8')
         self.env = os.environ.copy()
         self.env.pop('COS_STATE_DIR', None)
         self.env.pop('HERMES_HOME', None)
-        self.env['COS_WORKSPACE_ROOT'] = str(self.workspace)
+        self.env.pop('COS_WORKSPACE_ROOT', None)
         self.env['PPLX_SKILLS_DIR'] = str(SKILLS)
 
     def ps(self, command):
@@ -51,8 +54,9 @@ class RuntimeTests(unittest.TestCase):
         return subprocess.run([str(POWERSHELL), '-NoProfile', '-NonInteractive', '-EncodedCommand', encoded],
                               env=self.env, cwd=self.workspace, capture_output=True, encoding='utf-8', timeout=45)
 
-    def initialize(self):
+    def initialize(self, workspace=None):
         return self.ps('. ' + quoted(self.chief / 'scripts/runtime.ps1') +
+                       ' -WorkspaceRoot ' + quoted(workspace or self.workspace) +
                        '\n[PSCustomObject]@{python=$Python;source=$CosPythonSource;state=$env:COS_STATE_DIR} | ConvertTo-Json -Compress')
 
     def test_prefers_perplexity_python_and_uses_workspace_state(self):
@@ -62,6 +66,22 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(Path(info['python']), MANAGED)
         self.assertEqual(info['source'], 'perplexity')
         self.assertEqual(Path(info['state']), self.workspace / '.chief-of-staff-state')
+
+    def test_extended_workspace_path_initializes_and_update_launcher_runs_once(self):
+        extended = '\\\\?\\' + str(self.workspace)
+        before = (self.vault / 'index.md').read_bytes()
+        result = self.ps('& ' + quoted(self.chief / 'scripts/daily_brief.ps1') +
+                         ' -WorkspaceRoot ' + quoted(extended) + ' -Mode second-brain-update -Fixture')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        receipt, encoded = result.stdout.splitlines()
+        packet = json.loads(encoded)
+        self.assertEqual(packet['mode'], 'second-brain-update')
+        self.assertNotIn('three-section', packet['instruction'])
+        self.assertLessEqual(len(encoded), 14000)
+        self.assertTrue(Path(json.loads(receipt)['packet_path']).is_relative_to(self.workspace))
+        self.assertEqual(len(list(self.workspace.rglob('snapshot.json'))), 1)
+        self.assertEqual(len(list(self.workspace.rglob('packet.json'))), 1)
+        self.assertEqual((self.vault / 'index.md').read_bytes(), before)
 
     def test_absent_perplexity_python_uses_system_python(self):
         self.env['PPLX_SKILLS_DIR'] = str(self.root / 'empty-profile/skills')
@@ -76,7 +96,7 @@ class RuntimeTests(unittest.TestCase):
     def test_no_interpreter_fails_before_state_or_brief(self):
         self.env['PPLX_SKILLS_DIR'] = str(self.root / 'empty-profile/skills')
         self.env['PATH'] = ''
-        result = self.ps('& ' + quoted(self.chief / 'scripts/daily_brief.ps1') + ' -Fixture')
+        result = self.ps('& ' + quoted(self.chief / 'scripts/daily_brief.ps1') + ' -WorkspaceRoot ' + quoted(self.workspace) + ' -Fixture')
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('No Perplexity or system Python', result.stderr)
         self.assertFalse((self.workspace / '.chief-of-staff-state').exists())
@@ -86,13 +106,13 @@ class RuntimeTests(unittest.TestCase):
         subprocess.run([str(MANAGED), '-B', '-m', 'venv', '--without-pip', str(profile / 'template/venv')],
                        check=True, capture_output=True, timeout=30)
         self.env['PPLX_SKILLS_DIR'] = str(profile / 'skills')
-        result = self.ps('& ' + quoted(self.chief / 'scripts/daily_brief.ps1') + ' -Fixture')
+        result = self.ps('& ' + quoted(self.chief / 'scripts/daily_brief.ps1') + ' -WorkspaceRoot ' + quoted(self.workspace) + ' -Fixture')
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('Cannot use perplexity Python', result.stderr)
         self.assertFalse((self.workspace / '.chief-of-staff-state').exists())
 
     def test_launcher_runs_fixture_once_and_saves_complete_bounded_packet(self):
-        result = self.ps('& ' + quoted(self.chief / 'scripts/daily_brief.ps1') + ' -Fixture')
+        result = self.ps('& ' + quoted(self.chief / 'scripts/daily_brief.ps1') + ' -WorkspaceRoot ' + quoted(self.workspace) + ' -Fixture')
         self.assertEqual(result.returncode, 0, result.stderr)
         receipt, packet = result.stdout.splitlines()
         saved = Path(json.loads(receipt)['packet_path'])
@@ -113,23 +133,60 @@ class RuntimeTests(unittest.TestCase):
         self.assertIn('COS_STATE_DIR is missing', result.stderr)
         self.assertFalse((self.root / 'must-not-use-hermes').exists())
 
-    def test_workspace_is_derived_from_current_session_subdirectory(self):
-        profile = self.root / 'profile'
-        session = profile / 'workspaces/session'
-        self.workspace = session / 'outputs'
-        self.workspace.mkdir(parents=True)
-        self.env.pop('COS_WORKSPACE_ROOT')
-        self.env['PPLX_SKILLS_DIR'] = str(profile / 'skills')
-        result = self.initialize()
+    def test_explicit_root_works_from_a_subdirectory_and_ignores_stale_settings(self):
+        selected_root = self.workspace
+        self.workspace = selected_root / 'outputs'
+        self.workspace.mkdir()
+        self.env['COS_WORKSPACE_ROOT'] = str(self.root / 'obsolete-workspace')
+        (self.chief / 'runtime/state/second-brain.json').write_text(
+            json.dumps({'vault_path': str(self.root / 'obsolete-vault')}), encoding='utf-8')
+        result = self.initialize(selected_root)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(Path(json.loads(result.stdout)['state']), session / '.chief-of-staff-state')
+        state = selected_root / '.chief-of-staff-state'
+        self.assertEqual(Path(json.loads(result.stdout)['state']), state)
+        connection = json.loads((state / 'second-brain.json').read_text(encoding='utf-8'))
+        self.assertEqual(Path(connection['vault_path']), self.vault)
+        self.assertFalse((self.workspace / '.chief-of-staff-state').exists())
 
-    def test_outside_session_stops_before_running_brief(self):
-        self.env.pop('COS_WORKSPACE_ROOT')
+    def test_missing_argument_stops_without_guessing_workspace(self):
         result = self.ps('& ' + quoted(self.chief / 'scripts/daily_brief.ps1') + ' -Fixture')
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn('Run the skill from the current Perplexity thread workspace', result.stderr)
+        self.assertIn('Pass -WorkspaceRoot', result.stderr)
         self.assertEqual(list(self.root.rglob('packet.json')), [])
+        self.assertFalse((self.workspace / '.chief-of-staff-state').exists())
+
+    def test_missing_direct_child_vault_stops_before_writes(self):
+        self.vault.rename(self.workspace / 'DifferentVault')
+        result = self.initialize()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Second Brain folder is missing or inaccessible', result.stderr)
+        self.assertFalse((self.workspace / '.chief-of-staff-state').exists())
+        self.assertFalse(self.vault.exists())
+
+    def test_relative_workspace_is_rejected(self):
+        result = self.initialize('relative-workspace')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('absolute path', result.stderr)
+        self.assertFalse((self.workspace / '.chief-of-staff-state').exists())
+
+    def test_legacy_environment_override_uses_new_vault_convention(self):
+        self.env['COS_WORKSPACE_ROOT'] = str(self.workspace)
+        result = self.ps('. ' + quoted(self.chief / 'scripts/runtime.ps1') +
+                         '\nWrite-Output $env:COS_STATE_DIR')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        state = self.workspace / '.chief-of-staff-state'
+        self.assertEqual(Path(result.stdout.strip()), state)
+        self.assertEqual(json.loads((state / 'second-brain.json').read_text())['vault_path'], str(self.vault))
+
+    def test_existing_workspace_credentials_are_preserved(self):
+        state = self.workspace / '.chief-of-staff-state'
+        state.mkdir()
+        token = state / 'google_token.json'
+        token.write_text('existing refreshed credential', encoding='utf-8')
+        (self.chief / 'runtime/state/google_token.json').write_text('older seed', encoding='utf-8')
+        result = self.initialize()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(token.read_text(), 'existing refreshed credential')
 
 
 if __name__ == '__main__':

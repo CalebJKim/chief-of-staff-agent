@@ -1,5 +1,7 @@
 """Local reset tests: temporary vaults only; no live Google requests."""
 import json
+import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -19,10 +21,10 @@ class SecondBrainResetTests(unittest.TestCase):
         self.root = Path(temp.name)
         self.profile = self.root / "profile"
         self.profile.mkdir()
-        self.vault = self.root / "demo" / "CoS_SecondBrain"
+        self.vault = self.root / "CoS_Workspace" / "CoS_SecondBrain"
         self.vault.mkdir(parents=True)
         self.archive = self.root / "demo" / "templates" / "CoS_SecondBrain.zip"
-        self.archive.parent.mkdir()
+        self.archive.parent.mkdir(parents=True)
         self.baseline = {"index.md": b"# Index\n", "projects/project.md": b"Original facts\n"}
         with ZipFile(self.archive, "w") as archive:
             for name, content in self.baseline.items():
@@ -68,6 +70,86 @@ class SecondBrainResetTests(unittest.TestCase):
         self.assertIsNone(result["backup"])
         self.assert_baseline()
 
+    def test_reset_preserves_sibling_runtime_state(self):
+        state = self.vault.parent / ".chief-of-staff-state"
+        state.mkdir()
+        (state / "google_token.json").write_text("refreshed token")
+        reset_second_brain(self.root, self.profile)
+        self.assert_baseline()
+        self.assertEqual((state / "google_token.json").read_text(), "refreshed token")
+
+    @unittest.skipUnless(os.name == "nt", "Windows permission inheritance")
+    def test_restored_notes_inherit_workspace_access_after_repeated_resets(self):
+        shell = Path(os.environ["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
+        environment = dict(os.environ, COS_TEST_WORKSPACE=str(self.vault.parent))
+        # Do not pass PowerShell 7's module paths into Windows PowerShell 5.1.
+        environment.pop("PSModulePath", None)
+
+        def powershell(script):
+            result = subprocess.run([str(shell), "-NoProfile", "-NonInteractive", "-Command",
+                                     "$ErrorActionPreference = 'Stop'\n" + script],
+                                    env=environment, capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            return result.stdout
+
+        # A workspace-specific grant, like the one made by the folder picker.
+        # Use this test process's own identity, not a machine-specific sandbox SID.
+        powershell("""
+$acl = [System.IO.Directory]::GetAccessControl($env:COS_TEST_WORKSPACE)
+$identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+$rule = [System.Security.AccessControl.FileSystemAccessRule]::new(
+    $identity, 'Modify', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
+$acl.AddAccessRule($rule)
+[System.IO.Directory]::SetAccessControl($env:COS_TEST_WORKSPACE, $acl)
+""")
+        for _ in range(2):
+            reset_second_brain(self.root, self.profile)
+            records = json.loads(powershell("""
+$identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+$rows = foreach ($relative in @('CoS_SecondBrain', 'CoS_SecondBrain/index.md',
+                               'CoS_SecondBrain/projects', 'CoS_SecondBrain/projects/project.md')) {
+    $path = Join-Path $env:COS_TEST_WORKSPACE $relative
+    if ([System.IO.Directory]::Exists($path)) { $acl = [System.IO.Directory]::GetAccessControl($path) }
+    else { $acl = [System.IO.File]::GetAccessControl($path) }
+    $grant = @($acl.Access | Where-Object {
+        $_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value -eq $identity -and
+        $_.IsInherited -and $_.AccessControlType -eq 'Allow' -and
+        ($_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::Modify) -eq
+            [System.Security.AccessControl.FileSystemRights]::Modify
+    })
+    [PSCustomObject]@{Path=$relative;Protected=$acl.AreAccessRulesProtected;InheritedGrant=($grant.Count -gt 0)}
+}
+$rows | ConvertTo-Json -Compress
+"""))
+            for record in records:
+                self.assertFalse(record["Protected"], record)
+                self.assertTrue(record["InheritedGrant"], record)
+            self.assert_baseline()
+
+    def test_failed_install_restores_previous_vault_and_cleans_stage(self):
+        (self.vault / "index.md").write_text("Keep current notes")
+        original = Path.rename
+
+        def rename(path, target):
+            if path.parent == self.vault.parent and path.name.startswith(".second-brain-reset-"):
+                raise OSError("Simulated install failure")
+            return original(path, target)
+
+        with patch.object(Path, "rename", rename):
+            with self.assertRaisesRegex(OSError, "Simulated install failure"):
+                reset_second_brain(self.root, self.profile)
+        self.assertEqual("Keep current notes", (self.vault / "index.md").read_text())
+        self.assertEqual([], list(self.vault.parent.glob(".second-brain-reset-*")))
+
+    def test_failed_extract_leaves_notes_and_cleans_stage(self):
+        (self.vault / "index.md").write_text("Keep current notes")
+        with patch.object(ZipFile, "extractall", side_effect=OSError("Simulated extract failure")):
+            with self.assertRaisesRegex(OSError, "Simulated extract failure"):
+                reset_second_brain(self.root, self.profile)
+        self.assertEqual("Keep current notes", (self.vault / "index.md").read_text())
+        self.assertEqual([], list(self.vault.parent.glob(".second-brain-reset-*")))
+        self.assertFalse((self.root / "demo/.second-brain-backups").exists())
+
     def test_rejects_unsafe_or_nonportable_baselines_without_changing_notes(self):
         for name in ("../escape.md", "/absolute.md", "C:/escape.md", "..\\escape.md", ".obsidian/workspace.json"):
             with self.subTest(name=name):
@@ -88,7 +170,7 @@ class SecondBrainResetTests(unittest.TestCase):
                 check_reset(self.root, self.profile)
 
     def run_reset(self, arguments=None, failure=None):
-        with patch.object(seed, "ROOT", self.root), patch.object(seed, "hermes_home", return_value=self.profile), \
+        with patch.object(seed, "ROOT", self.root), patch.object(seed, "state_root", return_value=self.profile), \
              patch.object(seed, "state_path", return_value=self.state_path), \
              patch.object(seed, "reset_in_place", return_value=self.state, side_effect=failure) as google_reset, \
              patch.object(sys, "argv", ["seed_workspace.py", *(arguments or ["--reset", "--confirm"])]), \

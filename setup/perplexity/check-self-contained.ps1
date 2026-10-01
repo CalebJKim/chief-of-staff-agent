@@ -1,7 +1,7 @@
-param([Parameter(Mandatory = $true)][string]$SkillsDir)
+param([Parameter(Mandatory = $true)][string]$SkillsDir, [Parameter(Mandatory = $true)][string]$WorkspaceRoot)
 $ErrorActionPreference = 'Stop'
 $env:PPLX_SKILLS_DIR = $SkillsDir
-. (Join-Path $SkillsDir 'productivity\chief-of-staff\scripts\runtime.ps1')
+. (Join-Path $SkillsDir 'productivity\chief-of-staff\scripts\runtime.ps1') -WorkspaceRoot $WorkspaceRoot
 if ($PSVersionTable.PSVersion.Major -ne 5) { throw 'Run this check in Windows PowerShell 5.1.' }
 $ParsedBlocks = 0
 foreach ($SkillName in @('chief-of-staff', 'ingest')) {
@@ -27,9 +27,8 @@ print(json.dumps({'executable': sys.executable, 'paths': sys.path, 'isolated': s
 if ($LASTEXITCODE -ne 0) { throw 'Python dependency check failed' }
 $Info = $PythonInfo | ConvertFrom-Json
 $Notes = & $Python (Join-Path $CosRoot 'scripts\second_brain.py') search 'NeoAgent V2' --max 1
-if ($LASTEXITCODE -ne 0 -or -not ($Notes | ConvertFrom-Json).notes.Count) { throw 'Bundled notes check failed' }
+if ($LASTEXITCODE -ne 0 -or -not ($Notes | ConvertFrom-Json).notes.Count) { throw 'Workspace notes check failed' }
 $Brief = & $Python (Join-Path $CosRoot 'scripts\brief.py') --max-chars 14000
 if ($LASTEXITCODE -ne 0) { throw 'Cached briefing check failed' }
 $null = $Brief | ConvertFrom-Json
-if ($Brief -match 'Desktop[/\\]+ChiefOfStaff_PPLX') { throw 'Cached briefing contains an old Desktop path' }
 [PSCustomObject]@{Shell=$PSVersionTable.PSVersion.ToString(); ParsedBlocks=$ParsedBlocks; Helpers=4; Python=$Info.executable; PythonSource=$CosPythonSource; StateDirectory=$env:COS_STATE_DIR; Notes=$true; CachedBrief=$true} | ConvertTo-Json

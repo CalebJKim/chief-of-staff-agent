@@ -1,7 +1,7 @@
 """Install the private Windows demo bundle without a Desktop runtime dependency.
 
-Code/config are refreshed. Existing installed runtime, credentials, state, and
-notes are preserved. Initial runtime inputs come from the prepared PPLX copy.
+Code/config are refreshed. Existing installed credentials and state are
+preserved. The task workspace supplies the Second Brain; no notes are bundled.
 No network, Google API calls, package installs, or app setting changes.
 """
 from __future__ import annotations
@@ -40,13 +40,8 @@ def install(source: Path, skills: Path) -> dict:
             shutil.copy2(source / '.pplx-state' / name, target)
     if initial_state and (source / '.pplx-state/chief-of-staff').exists():
         shutil.copytree(source / '.pplx-state/chief-of-staff', state / 'chief-of-staff')
-    if not (chief / 'notes').exists():
-        shutil.copytree(source / 'demo/CoS_SecondBrain', chief / 'notes',
-                        ignore=shutil.ignore_patterns('.obsidian'))
-    # Relative to runtime/state, resolved by the bundled Second Brain reader.
-    if not (state / 'second-brain.json').exists():
-        (state / 'second-brain.json').write_text(
-            json.dumps({'vault_path': '../../notes'}, indent=2) + '\n', encoding='utf-8')
+    # runtime.ps1 generates second-brain.json from <workspace>/CoS_SecondBrain.
+    # Preserve any legacy installed connection, but never use it as a fallback.
     config = {'format_version': 4, 'seed_state_root': 'runtime/state', 'python_selection': 'perplexity-then-system'}
     (chief / 'runtime-local.json').write_text(json.dumps(config, indent=2) + '\n', encoding='utf-8')
     return {'skill_root': str(chief), 'python_selection': 'perplexity-then-system',

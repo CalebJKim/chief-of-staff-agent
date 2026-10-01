@@ -8,6 +8,8 @@ description: 'Pull bounded Gmail, Calendar, Drive, and Google Tasks evidence.'
 
 Pull a bounded, metadata-first Workspace snapshot for planning. It deliberately avoids full email bodies and document contents; retrieve those only after relevance is established.
 
+For Second Brain updates, follow the chief-of-staff skill's [Updating Second Brain](../chief-of-staff/references/updating-second-brain.md) reference instead. Its helper performs ingestion.
+
 ## When to Use
 
 - Refresh the chief-of-staff brief.
@@ -24,10 +26,12 @@ Pull a bounded, metadata-first Workspace snapshot for planning. It deliberately 
 
 ## How to Run
 
-Use Perplexity's `shell` tool with Windows PowerShell 5.1 from the current thread workspace. Load the runtime initialization at the start of each call; `CosRoot` is the read-only installed skill and `CosHome` is writable state in the thread workspace:
+Replace `WORKSPACE_ROOT` in each command with the absolute path of the folder selected for this task, not a working subfolder. It must contain `CoS_SecondBrain` directly. Initialization generates `.chief-of-staff-state/second-brain.json` from that location.
+
+Use Perplexity's `shell` tool with Windows PowerShell 5.1 in the selected workspace. Load the runtime initialization at the start of each call; `CosRoot` is the read-only installed skill and `CosHome` is writable state in the thread workspace:
 
 ```powershell
-. (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\runtime.ps1')
+. (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\runtime.ps1') -WorkspaceRoot 'WORKSPACE_ROOT'
 & $Python "$CosRoot/scripts/ingest.py"
 if ($LASTEXITCODE -ne 0) { throw 'Chief of Staff command failed; inspect the error above.' }
 ```
@@ -39,7 +43,7 @@ Tasks retrieval reads one page of up to 20 unfinished tasks from My Tasks by def
 ## Quick Reference
 
 ```powershell
-. (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\runtime.ps1')
+. (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\runtime.ps1') -WorkspaceRoot 'WORKSPACE_ROOT'
 # Today plus tomorrow; active inbox and recent Drive files
 & $Python "$CosRoot/scripts/ingest.py"
 if ($LASTEXITCODE -ne 0) { throw 'Chief of Staff command failed; inspect the error above.' }

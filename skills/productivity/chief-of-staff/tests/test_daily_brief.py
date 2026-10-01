@@ -21,10 +21,10 @@ FIXTURE = ROOT / "tests/fixtures/workspace.json"
 
 
 class DailyBriefTests(unittest.TestCase):
-    def invoke(self, home):
+    def invoke(self, home, *extra):
         stdout, stderr = io.StringIO(), io.StringIO()
         with patch.dict(os.environ, {"COS_STATE_DIR": str(home)}), patch.object(
-            sys, "argv", ["daily_brief.py", "--fixture", str(FIXTURE)]
+            sys, "argv", ["daily_brief.py", "--fixture", str(FIXTURE), *extra]
         ), contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
             code = daily_brief.main()
         return code, stdout.getvalue(), stderr.getvalue()
@@ -42,6 +42,30 @@ class DailyBriefTests(unittest.TestCase):
             self.assertEqual(saved.read_bytes(), (encoded + "\n").encode("utf-8"))
             self.assertLessEqual(len(encoded), 14000)
             self.assertIn("source_status", json.loads(encoded))
+
+    def test_update_mode_collects_once_and_emits_update_instructions_without_editing_notes(self):
+        with tempfile.TemporaryDirectory() as home, patch.object(daily_brief, 'run', wraps=daily_brief.run) as run:
+            vault = Path(home) / 'CoS_SecondBrain'
+            vault.mkdir()
+            note = vault / 'index.md'
+            note.write_text('# Existing notes\nNeoAgent V2 review\n', encoding='utf-8')
+            before = note.read_bytes()
+            (Path(home) / 'second-brain.json').write_text(json.dumps({'vault_path': str(vault)}), encoding='utf-8')
+            code, output, error = self.invoke(home, '--mode', 'second-brain-update')
+            self.assertEqual(code, 0, error)
+            self.assertEqual([call.args[0].name for call in run.call_args_list], ['ingest.py', 'brief.py'])
+            receipt, encoded = output.splitlines()
+            packet = json.loads(encoded)
+            self.assertEqual(packet['mode'], 'second-brain-update')
+            self.assertNotIn('three-section', packet['instruction'])
+            self.assertNotIn('Make no other tool calls', packet['instruction'])
+            self.assertNotIn('Do not edit Google Workspace or Second Brain', packet['instruction'])
+            self.assertIn('Updating Second Brain', packet['instruction'])
+            self.assertIn('Do not modify Google Workspace', packet['instruction'])
+            self.assertLessEqual(len(encoded), daily_brief.MAX_CHARS)
+            self.assertEqual(Path(json.loads(receipt)['packet_path']).read_text(encoding='utf-8'), encoded + '\n')
+            self.assertEqual(note.read_bytes(), before)
+            self.assertEqual(list(vault.iterdir()), [note])
 
     def test_failed_ingest_does_not_run_brief_retry_or_return_old_packet(self):
         with tempfile.TemporaryDirectory() as home, patch.object(

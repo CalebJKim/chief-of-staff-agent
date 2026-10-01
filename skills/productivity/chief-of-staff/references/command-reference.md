@@ -31,10 +31,10 @@ Commands follow `actions.py`. Uppercase placeholders require values. Brackets ma
 
 ## Examples
 
-Use the setup in the skill’s **How to run the scripts** subsection. Run only commands needed for the task.
+Use the setup and `WORKSPACE_ROOT` substitution in the skill’s **How to run the scripts** subsection. Run only commands needed for the task.
 
 ```powershell
-. (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\runtime.ps1')
+. (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\runtime.ps1') -WorkspaceRoot 'WORKSPACE_ROOT'
 & $Python $Action gmail thread THREAD_ID
 if ($LASTEXITCODE -ne 0) { throw 'Chief of Staff command failed; inspect the error above.' }
 & $Python $Action docs get DOCUMENT_ID

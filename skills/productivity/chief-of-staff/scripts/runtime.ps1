@@ -1,10 +1,31 @@
 # Dot-source at the start of each Perplexity shell call.
+param([string]$WorkspaceRoot)
 $ErrorActionPreference = 'Stop'
 $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 [Console]::OutputEncoding = $OutputEncoding
 $env:PYTHONUTF8 = '1'
 $env:PYTHONIOENCODING = 'utf-8'
 $env:PYTHONDONTWRITEBYTECODE = '1'
+# Explicit task workspace; keep the environment override for existing callers.
+if (-not $WorkspaceRoot) { $WorkspaceRoot = $env:COS_WORKSPACE_ROOT }
+# PowerShell 5.1 Resolve-Path may return no ProviderPath for extended paths.
+# Convert the app's drive/UNC prefix before resolving the selected workspace.
+if ($WorkspaceRoot -match '^\\\\\?\\[A-Za-z]:\\') {
+    $WorkspaceRoot = $WorkspaceRoot.Substring(4)
+} elseif ($WorkspaceRoot -and $WorkspaceRoot.StartsWith('\\?\UNC\', [System.StringComparison]::OrdinalIgnoreCase)) {
+    $WorkspaceRoot = '\\' + $WorkspaceRoot.Substring(8)
+}
+if (-not $WorkspaceRoot -or $WorkspaceRoot -notmatch '^(?:[A-Za-z]:[\\/]|\\\\)') {
+    throw 'Pass -WorkspaceRoot with the absolute path of the folder selected for this Perplexity task.'
+}
+if (-not (Test-Path -LiteralPath $WorkspaceRoot -PathType Container)) {
+    throw "Workspace folder does not exist or is inaccessible: $WorkspaceRoot"
+}
+$CosWorkspace = (Resolve-Path -LiteralPath $WorkspaceRoot).ProviderPath
+$NotesPath = Join-Path $CosWorkspace 'CoS_SecondBrain'
+if (-not (Test-Path -LiteralPath $NotesPath -PathType Container)) {
+    throw "Second Brain folder is missing or inaccessible: $NotesPath. Select its parent as the workspace."
+}
 $CosRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $Runtime = Get-Content -LiteralPath (Join-Path $CosRoot 'runtime-local.json') -Raw | ConvertFrom-Json
 function Resolve-CosRuntimePath([string]$RelativePath) {
@@ -55,20 +76,7 @@ foreach ($RequiredPath in @($CosSeedHome, $Python, $Action)) {
     }
 }
 # Perplexity mounts installed skills read-only. Refreshing OAuth tokens and
-# writing snapshots must use the current thread's writable workspace.
-if ($env:COS_WORKSPACE_ROOT) {
-    # Explicit existing workspace for standalone diagnostics.
-    $CosWorkspace = (Resolve-Path -LiteralPath $env:COS_WORKSPACE_ROOT).ProviderPath
-} else {
-    $CosWorkspacesRoot = [IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $env:PPLX_SKILLS_DIR) 'workspaces'))
-    $CosWorkspace = (Get-Location).ProviderPath
-    while ($CosWorkspace -and (Split-Path -Parent $CosWorkspace) -ine $CosWorkspacesRoot) {
-        $CosWorkspace = Split-Path -Parent $CosWorkspace
-    }
-    if (-not $CosWorkspace) {
-        throw 'Run the skill from the current Perplexity thread workspace. For standalone diagnostics, set COS_WORKSPACE_ROOT to an existing writable directory. Google sign-in is not required.'
-    }
-}
+# writing snapshots must use the explicitly selected writable workspace.
 $CosHome = Join-Path $CosWorkspace '.chief-of-staff-state'
 New-Item -ItemType Directory -Path $CosHome -Force | Out-Null
 foreach ($StateName in @('google_token.json', 'google_client_secret.json', 'chief-of-staff-workspace-state.json')) {
@@ -78,17 +86,9 @@ foreach ($StateName in @('google_token.json', 'google_client_secret.json', 'chie
         [IO.File]::WriteAllBytes($LiveFile, [IO.File]::ReadAllBytes($SeedFile))
     }
 }
-# Resolve bundled notes from the seed config; do not carry a relative path into
-# a different parent directory. Existing refreshed tokens are never overwritten.
-$SeedBrain = Join-Path $CosSeedHome 'second-brain.json'
-if (Test-Path -LiteralPath $SeedBrain) {
-    $NotesPath = [string](Get-Content -LiteralPath $SeedBrain -Raw | ConvertFrom-Json).vault_path
-    if (-not [IO.Path]::IsPathRooted($NotesPath)) {
-        $NotesPath = [IO.Path]::GetFullPath((Join-Path $CosSeedHome $NotesPath))
-    }
-    $BrainJson = @{ vault_path = $NotesPath } | ConvertTo-Json
-    [IO.File]::WriteAllText((Join-Path $CosHome 'second-brain.json'), $BrainJson, [Text.UTF8Encoding]::new($false))
-}
+# The selected workspace determines the vault. Ignore old installed connections.
+$BrainJson = @{ vault_path = $NotesPath } | ConvertTo-Json
+[IO.File]::WriteAllText((Join-Path $CosHome 'second-brain.json'), $BrainJson, [Text.UTF8Encoding]::new($false))
 $SeedSnapshot = Join-Path $CosSeedHome 'chief-of-staff\snapshot.json'
 $LiveSnapshot = Join-Path $CosHome 'chief-of-staff\snapshot.json'
 if (-not (Test-Path -LiteralPath $LiveSnapshot) -and (Test-Path -LiteralPath $SeedSnapshot)) {

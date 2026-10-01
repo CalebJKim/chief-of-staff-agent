@@ -12,7 +12,7 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-INIT = ". (Join-Path $env:PPLX_SKILLS_DIR 'productivity\\chief-of-staff\\scripts\\runtime.ps1')"
+INIT = ". (Join-Path $env:PPLX_SKILLS_DIR 'productivity\\chief-of-staff\\scripts\\runtime.ps1') -WorkspaceRoot 'WORKSPACE_ROOT'"
 GUARD = "if ($LASTEXITCODE -ne 0) { throw 'Chief of Staff command failed; inspect the error above.' }"
 
 
@@ -34,15 +34,15 @@ def adapt_body(text: str) -> str:
     """Convert platform instructions in a skill or a supporting reference."""
     text = text.replace(
         'The terminal already runs Bash: submit these commands directly, without an outer `bash -c`/`bash -lc` wrapper. Keep heredoc delimiters on their own lines.',
-        "Perplexity's `shell` tool runs Windows PowerShell 5.1. Submit commands directly, without an outer shell wrapper. Load the runtime initialization shown below at the start of each shell call; variables do not persist between calls. Keep single-quoted here-string delimiters on their own lines. `CosRoot` is the installed Chief of Staff skill folder; scripts, Python, notes, and private state are bundled there. `CosHome` and `COS_STATE_DIR` point to its state directory. Do not use the old Desktop copy. If access is denied, use Perplexity's normal folder-access permission flow.")
+        "Perplexity's `shell` tool runs Windows PowerShell 5.1. Submit commands directly, without an outer shell wrapper. Load the runtime initialization shown below at the start of each shell call; variables do not persist between calls. Keep single-quoted here-string delimiters on their own lines. `CosRoot` is the installed Chief of Staff skill folder; scripts and seed credentials are installed there. `CosHome` and `COS_STATE_DIR` point to the selected workspace’s `.chief-of-staff-state` directory. Do not use the old Desktop copy. If access is denied, use Perplexity's normal folder-access permission flow.")
     text = text.replace(
         'The `terminal` tool runs Bash. Omit `bash -c`/`bash -lc` wrappers. Keep heredoc delimiters on their own lines.',
-        "Perplexity's `shell` tool runs Windows PowerShell 5.1. Submit commands directly, without an outer wrapper. For Start of Day, use its launcher, which initializes everything. For other scripts, load the initialization below in each shell call from the current thread workspace. It selects Perplexity’s Python, or system Python if absent, and prepares writable credentials and snapshots in the workspace's `.chief-of-staff-state` folder; installed skills are read-only. No Desktop checkout is needed. Keep single-quoted PowerShell here-string delimiters on their own lines.")
+        "Perplexity's `shell` tool runs Windows PowerShell 5.1. Submit commands directly, without an outer wrapper. For Start of Day, use its launcher, which initializes everything. For other scripts, load the initialization below in each shell call. It selects Perplexity’s Python, or system Python if absent, and prepares writable credentials and snapshots in the workspace's `.chief-of-staff-state` folder; installed skills are read-only. No Desktop checkout is needed. Keep single-quoted PowerShell here-string delimiters on their own lines.")
 
     def block(match: re.Match) -> str:
         body = match[1]
         if body.strip() == '"$PYTHON" "$DAILY_BRIEF"':
-            return "```powershell\n& (Join-Path $env:PPLX_SKILLS_DIR 'productivity\\chief-of-staff\\scripts\\daily_brief.ps1')\n```"
+            return "```powershell\n& (Join-Path $env:PPLX_SKILLS_DIR 'productivity\\chief-of-staff\\scripts\\daily_brief.ps1') -WorkspaceRoot 'WORKSPACE_ROOT'\n```"
         lines = body.splitlines()
         python_line = next((i for i, line in enumerate(lines) if line.startswith('if [ -f "$COS_HOME/hermes-agent/')), None)
         if python_line is not None:
@@ -68,6 +68,10 @@ def adapt_body(text: str) -> str:
         return '```powershell\n' + '\n'.join(output) + '\n```'
 
     text = re.sub(r'```bash\n(.*?)\n```', block, text, flags=re.S)
+    workspace_guidance = 'Replace `WORKSPACE_ROOT` in each command with the absolute path of the folder selected for this task, not a working subfolder. It must contain `CoS_SecondBrain` directly. Initialization generates `.chief-of-staff-state/second-brain.json` from that location.'
+    for heading in ('### How to run the scripts\n', '## How to Run\n'):
+        if heading in text and workspace_guidance not in text:
+            text = text.replace(heading, heading + '\n' + workspace_guidance + '\n', 1)
     text = text.replace('| `daily_brief.py` |', '| `daily_brief.ps1` |')
     text = text.replace('"$PYTHON" "$ACTION"', '& $Python $Action')
     for skill in ('ingest', 'chief-of-staff'):
@@ -90,7 +94,7 @@ def adapt_body(text: str) -> str:
     text = text.replace('Google Python dependencies installed by the bundled Google Workspace setup.',
                         'Use Perplexity’s Python, or system Python if absent. The selected Python must have the Google dependencies installed during setup. No Desktop checkout is required.')
     text = text.replace('Use `terminal` with the active profile root:',
-                        "Use Perplexity's `shell` tool with Windows PowerShell 5.1 from the current thread workspace. Load the runtime initialization at the start of each call; `CosRoot` is the read-only installed skill and `CosHome` is writable state in the thread workspace:")
+                        "Use Perplexity's `shell` tool with Windows PowerShell 5.1 in the selected workspace. Load the runtime initialization at the start of each call; `CosRoot` is the read-only installed skill and `CosHome` is writable state in the thread workspace:")
     text = text.replace('`$COS_HOME/chief-of-staff/snapshot.json`', '`$CosHome/chief-of-staff/snapshot.json`')
     # Use standard Markdown blockquotes; the desktop renderer has no confirmed
     # GitHub alert extension, so do not emit a literal alert marker.

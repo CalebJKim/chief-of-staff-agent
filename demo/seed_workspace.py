@@ -81,16 +81,17 @@ BACKGROUND_AUDIENCES = ["Americas", "EMEA", "APAC", "Remote", "Santa Clara", "Au
 
 
 
-def hermes_home() -> Path:
-    if os.environ.get("HERMES_HOME"):
-        return Path(os.environ["HERMES_HOME"]).expanduser()
-    if os.name == "nt" and os.environ.get("LOCALAPPDATA"):
-        return Path(os.environ["LOCALAPPDATA"]) / "hermes"
-    return Path.home() / ".hermes"
+def state_root() -> Path:
+    state = Path(os.environ.get("COS_STATE_DIR") or ROOT / "CoS_Workspace" / ".chief-of-staff-state").expanduser()
+    if not state.is_absolute() or not state.is_dir():
+        raise RuntimeError(f"Demo state directory is missing or not absolute: {state}")
+    # Resource IDs and Google credentials must use the same directory.
+    os.environ["COS_STATE_DIR"] = str(state)
+    return state
 
 
 def state_path() -> Path:
-    return hermes_home() / STATE_FILE
+    return state_root() / STATE_FILE
 
 
 def local_now() -> datetime:
@@ -807,9 +808,9 @@ def main() -> int:
         if not path.exists(): raise SystemExit(f"No workspace state at {path}")
         previous = json.loads(path.read_text(encoding="utf-8"))
         chosen_week = date.fromisoformat(args.week_of or previous["week_of"])
-        check_reset(ROOT, hermes_home())
+        check_reset(ROOT, state_root())
         state = reset_in_place(previous, chosen_week)
-        second_brain = reset_second_brain(ROOT, hermes_home())
+        second_brain = reset_second_brain(ROOT, state_root())
         print(json.dumps({"ok": True, "status": "reset", "state": str(path), "week_of": state["week_of"], "folder": state["folder"], "sheet": state["sheet"], "doc": state["doc"], "slides": state["slides"], "emails": len(state["emails"]), "events": len(state["events"]), "tasks": len(state.get("tasks", [])), "second_brain": second_brain}, indent=2))
         return 0
     elif path.exists():

@@ -31,7 +31,7 @@ For each request, match the user’s requested outcome to **Task Guidance**. Rea
 | Script | Purpose | Usage |
 |---|---|---|
 | `ingest.py` | Saves a bounded snapshot of Gmail, Calendar, Drive, and unfinished Google Tasks. | Follow the ingest skill. |
-| `daily_brief.ps1` | Runs ingest and builds, saves, and prints the brief packet. | Use for Start of Day. |
+| `daily_brief.ps1` | Runs ingest and builds, saves, and prints a bounded evidence packet. | Use for Start of Day or Updating Second Brain, following that task's guidance. |
 | `brief.py` | Prints compact planning JSON from the snapshot and relevant Second Brain context. | Called by `daily_brief.py`, or run after ingest. Not an `actions.py` command. |
 | `actions.py` | Searches and reads Gmail, reads and saves drafts, searches Drive, reads and edits Docs/Sheets/Slides, and creates Calendar events. | `actions.py SERVICE COMMAND [arguments]`, e.g. `actions.py gmail thread THREAD_ID`. Before use, read [Command reference](references/command-reference.md) unless its contents are already available in context. |
 | `second_brain.py` | Searches or reads notes from the configured Second Brain vault. | `second_brain.py search 'terms' --max 3` or `second_brain.py read 'relative/note.md'`. |
@@ -40,12 +40,14 @@ Do not load the command reference for Start of Day.
 
 ### How to run the scripts
 
-Perplexity's `shell` tool runs Windows PowerShell 5.1. Submit commands directly, without an outer wrapper. For Start of Day, use its launcher, which initializes everything. For other scripts, load the initialization below in each shell call from the current thread workspace. It selects Perplexity’s Python, or system Python if absent, and prepares writable credentials and snapshots in the workspace's `.chief-of-staff-state` folder; installed skills are read-only. No Desktop checkout is needed. Keep single-quoted PowerShell here-string delimiters on their own lines.
+Replace `WORKSPACE_ROOT` in each command with the absolute path of the folder selected for this task, not a working subfolder. It must contain `CoS_SecondBrain` directly. Initialization generates `.chief-of-staff-state/second-brain.json` from that location.
+
+Perplexity's `shell` tool runs Windows PowerShell 5.1. Submit commands directly, without an outer wrapper. For Start of Day, use its launcher, which initializes everything. For other scripts, load the initialization below in each shell call. It selects Perplexity’s Python, or system Python if absent, and prepares writable credentials and snapshots in the workspace's `.chief-of-staff-state` folder; installed skills are read-only. No Desktop checkout is needed. Keep single-quoted PowerShell here-string delimiters on their own lines.
 
 Initial setup for the active profile, Python, and script paths:
 
 ```powershell
-. (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\runtime.ps1')
+. (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\runtime.ps1') -WorkspaceRoot 'WORKSPACE_ROOT'
 ```
 
 Reuse the working Python path, including when fixing shell quoting errors. Set needed variables in each terminal call.
@@ -55,7 +57,7 @@ Run only the commands needed for the task.
 Example:
 
 ```powershell
-. (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\runtime.ps1')
+. (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\runtime.ps1') -WorkspaceRoot 'WORKSPACE_ROOT'
 & $Python "$CosRoot/scripts/second_brain.py" search 'meeting topic' --max 3
 if ($LASTEXITCODE -ne 0) { throw 'Chief of Staff command failed; inspect the error above.' }
 ```
@@ -64,7 +66,7 @@ Run `ingest.py` only when the task needs a fresh snapshot.
 
 ### Second Brain
 
-Reuse the excerpts already returned. Only when a focused request needs more context, search or read a relevant note alongside the existing evidence calls: `& $Python "$CosRoot/scripts/second_brain.py" search 'topic terms' --max 3` or `& $Python "$CosRoot/scripts/second_brain.py" read 'relative/note.md'`. Do not scan the vault with terminal commands, reload it on every turn, or edit it.
+Reuse the excerpts already returned. Only when a focused request needs more context, search or read a relevant note alongside the existing evidence calls: `& $Python "$CosRoot/scripts/second_brain.py" search 'topic terms' --max 3` or `& $Python "$CosRoot/scripts/second_brain.py" read 'relative/note.md'`. Do not scan the vault with terminal commands or reload it on every turn. Do not edit notes for briefing requests. For requested note updates, follow [Updating Second Brain](references/updating-second-brain.md).
 
 Use Start of Day only for daily briefs or broad prioritization. For other tasks, follow any matching guidance, reuse relevant evidence, and gather only missing or stale task-specific information. Do not rerun the daily brief or broad ingest for focused follow-ups.
 
@@ -81,7 +83,7 @@ Start of Day is a read-only briefing. Gather evidence and return the brief. Do n
 Run this command exactly once, and only when the current request asks for a daily brief or broad prioritization. Do not run it for focused tasks or follow-ups. Use this skill’s **How to run the scripts** subsection:
 
 ```powershell
-& (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\daily_brief.ps1')
+& (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\daily_brief.ps1') -WorkspaceRoot 'WORKSPACE_ROOT'
 ```
 
 Wait for completion. Use the returned JSON. If truncated, read only the file at `packet_path`, following the tool’s offsets. Never rerun the command or run `ingest.py` or `brief.py` separately.
@@ -177,6 +179,9 @@ Match the user’s intent, including requests worded differently from the exampl
 |---|---|---|
 | Meeting Preparation | **Example cues:** “Help me prepare for the exec review” or “Brief me before my meeting.” **Result:** Read-only meeting briefing in the reference’s format. | [Meeting preparation](references/meeting-preparation.md) |
 | Updating Project Tracker | **Example cues:** “Update the project tracker” or “Bring the tracker up to date.” **Result:** Reconcile the requested entries with current evidence. | [Updating project tracker](references/updating-project-tracker.md) |
+| Updating Second Brain | **Example cues:** “Update my Second Brain” or “Update the notes in my Second Brain”. **Result:** Reconcile notes with current Google Workspace evidence. | [Updating Second Brain](references/updating-second-brain.md) |
+
+For immediate or scheduled Second Brain updates, read **Updating Second Brain** before choosing commands. Do not route directly to ingest.
 
 ## Update Conventions
 

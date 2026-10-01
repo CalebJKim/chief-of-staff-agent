@@ -38,6 +38,7 @@ Thumbs.db
 # Perplexity demo credentials, generated state, and machine-specific paths
 /.pplx-state/
 /.pplx-runtime/
+/CoS_Workspace/
 runtime-local.json
 
 # Private self-contained skill runtime (never commit credentials or cached mail)

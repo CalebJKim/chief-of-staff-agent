@@ -110,66 +110,62 @@ could modify the same workspace before resetting.
 drafts in the connected account**, including non-demo drafts. Use a dedicated
 demo account and save any drafts you need before proceeding.
 
-For the Windows Desktop setup, run these commands from any PowerShell directory:
+For the Perplexity demo, run these commands from any PowerShell directory:
 
 ```powershell
-Set-Location "$env:USERPROFILE\Desktop\ChiefOfStaff"
-$env:HERMES_HOME = Join-Path $env:LOCALAPPDATA 'hermes\profiles\chief-of-staff'
-& '.\.venv\Scripts\python.exe' '.\demo\reset_workspace.py'
+Set-Location "$env:USERPROFILE\Desktop\ChiefOfStaff_PPLX"
+.\demo\reset_workspace.ps1
 ```
 
-Adjust the repository path if you cloned elsewhere. The command assumes the
-repository's `.venv` has the dependencies installed; otherwise use the Python
-executable you used during setup. From the repository root, with `HERMES_HOME`
-already set to the intended profile, the equivalent command is:
-
-```powershell
-python demo/reset_workspace.py
-```
+Adjust the repository path if you cloned elsewhere. The launcher finds the installed
+Perplexity account and uses its Python, falling back to system Python only if absent.
+It uses `CoS_Workspace/.chief-of-staff-state` for Google credentials and resource IDs.
+No environment setup is required. Append `-Check` to validate local setup without
+resetting or calling Google. If multiple accounts have the skill installed, pass
+`-SkillsDir` with the demo account's skills folder.
 
 The wrapper supplies `--reset --confirm` automatically; it does not ask for
 another confirmation. It replaces seeded emails, calendar events, and seeded
 Google Tasks (when configured), restores the campaign tracker, Reference Tracker,
-and slide deck, and resets the bundled Second Brain as described below. Existing
+and slide deck, and resets the workspace's Second Brain as described below. Existing
 Drive file IDs are retained. The campaign Google Doc is **not** restored by the
-current reset, and Hermes sessions and scheduled jobs are not deleted.
+current reset. Chats and scheduled jobs are not deleted.
 
 Reset reuses the calendar week saved by the previous seed/reset. To choose another
-week, append `--week-of YYYY-MM-DD` using that week's Monday date. If the command
-reports `No workspace state`, first seed the workspace using the instructions in
-[demo/DEMO_SPEC.md](demo/DEMO_SPEC.md).
+week, append `-WeekOf YYYY-MM-DD` using that week's Monday date. If a required state
+file is missing, restore the demo state before resetting. Do not seed duplicates.
 
 Wait for the successful JSON result (`"ok": true`, `"status": "reset"`), then start
-a fresh chat in the **chief-of-staff** profile. Do not start a trial after a failed
+a fresh Perplexity chat with `CoS_Workspace` selected. Do not start a trial after a failed
 or interrupted reset; some data may have already changed.
 
 ## Second Brain
 
-The demo notes are included in `demo/CoS_SecondBrain/`. Open that folder as a
-separate vault in Obsidian. The installer connects it by default when no vault is
-already configured; existing connections and personal notes are preserved.
+For Perplexity, select `CoS_Workspace/` from the chat's folder picker. Its direct
+`CoS_SecondBrain/` subfolder is the active vault. Open that subfolder in Obsidian.
+The skills pass the selected workspace root to `runtime.ps1` (or `daily_brief.ps1`)
+with `-WorkspaceRoot`. Initialization derives the vault path and writes
+`CoS_Workspace/.chief-of-staff-state/second-brain.json`; no manual vault setting is
+needed. Runtime state stays alongside the vault. The entire working workspace is
+Git-ignored; source changes remain in `skills/`, `setup/`, and `demo/`.
 
-To explicitly switch an existing demo profile to the bundled vault, run from the repo:
+The installer copies skills and seed credentials into Perplexity's skill directory,
+without bundling notes. Select the workspace again after moving it. Existing
+scheduled jobs must use the new workspace path as well.
 
-```powershell
-python install.py --second-brain "demo/CoS_SecondBrain"
-```
-
-The folder path is saved in the profile's local `second-brain.json`, not in Git.
-You can still use `--second-brain "/path/to/your/Second Brain"` to connect another
-vault without copying or overwriting it. Reading context does not edit notes;
-a separately configured scheduled job can update them when authorized.
-
-`python demo/reset_workspace.py` (or `python demo/seed_workspace.py --reset --confirm`)
-resets Google Workspace and restores **only** `demo/CoS_SecondBrain/` from
+`.\demo\reset_workspace.ps1`
+resets Google Workspace and restores **only** `CoS_Workspace/CoS_SecondBrain/` from
 `demo/templates/CoS_SecondBrain.zip`. Existing demo notes, including job-created
 files, are first moved into the Git-ignored `demo/.second-brain-backups/` folder.
-Local `.obsidian` settings are preserved. Other vaults are never reset, even if
-connected to the profile. Finish running profile jobs before resetting and do not
-start new jobs during a reset. No jobs are removed by reset.
+Local `.obsidian` settings and sibling runtime state are preserved. Other vaults
+are never reset. Finish running jobs before resetting and do not start new jobs
+during a reset. No jobs are removed by reset.
 
-The baseline excludes machine-specific Obsidian settings. Note edits appear as
-Git changes; review them before committing, especially after ingesting real data.
+Restored notes inherit the selected workspace's Windows permissions. Reset stages
+them directly inside that workspace so replacing the vault retains sandbox access.
+
+The baseline excludes machine-specific Obsidian settings. The active vault and generated state stay local; the checked-in baseline ZIP
+and `demo/CoS_SecondBrain/` remain seed resources, not the active Perplexity vault.
 
 The existing daily-brief call adds up to five relevant note excerpts in a separate
 3,000-character allowance, without removing any of the existing bounded Google

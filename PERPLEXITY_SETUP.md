@@ -12,18 +12,35 @@ The current manual test is the first prompt only. This branch deliberately uses 
 - Select **Computer**, then the **Custom** local model for a new conversation.
 - The existing local model server must be running. This setup does not start or replace that server.
 - Native skills are installed under `C:\Users\testuser\.pplx\users\e2e7d85487ed9501\skills\productivity`. Perplexity discovered and loaded `chief-of-staff` in a real local conversation.
-- Perplexity's terminal is Windows PowerShell 5.1. Start of Day invokes `chief-of-staff\scripts\daily_brief.ps1`, which initializes the workspace and runs the brief in one call. Add `-Fixture` for an offline test. Other commands load `runtime.ps1` within their shell call.
+- Perplexity's terminal is Windows PowerShell 5.1. Start of Day invokes `chief-of-staff\scripts\daily_brief.ps1`, which initializes the workspace and runs the brief in one call. Pass `-WorkspaceRoot` with the selected folder's absolute path. Add `-Fixture` for an offline test. Other commands load `runtime.ps1` with the same workspace argument within their shell call.
 - Python selection: use the account's `template\venv\Scripts\python.exe`, or system `python.exe`/`python3.exe` from PATH only if Perplexity's interpreter is absent. Windows Store aliases are excluded. There is no Python bundle in the skill. The selected interpreter must pass startup, Google dependency, and time-zone checks before the brief runs.
-- Install the Google dependencies once into the selected interpreter with `uv pip install --link-mode copy --python <selected-python> -r setup/perplexity/requirements.txt`. Use copy mode so files inherit the destination folder permissions instead of retaining shared-cache permissions. Never install packages or switch interpreters in response to a failed brief. The installed `scripts` hold the helpers, `notes` holds Second Brain, and `runtime\state` holds seed credentials, workspace references, and a cached snapshot.
-- Perplexity grants read access to installed skills and write access to the thread workspace. `runtime.ps1` therefore prepares `.chief-of-staff-state` under the current thread's workspace, copying seed credentials only when absent. OAuth refresh and snapshot writes use this writable copy. Run initialization from the thread workspace or its subdirectories; it anchors state at the workspace root. Existing refreshed tokens are preserved.
-- `runtime-local.json` version 4 uses relative `seed_state_root` and the `perplexity-then-system` Python selection policy. `COS_STATE_DIR` is the workspace data directory. All Perplexity helpers require it and have no Hermes-directory fallback. Workspace `second-brain.json` points to the bundled notes. No runtime paths point to Desktop. Standalone diagnostics must run from a Perplexity workspace or set `COS_WORKSPACE_ROOT` to an existing writable directory.
-- The Desktop copy is now a source/backup, not the running demo's state. Its old credentials and snapshots are not automatically kept in sync. `.pplx-runtime\skills` is a code-only staging copy, not a complete runtime. Packaged Perplexity uses the account-specific skill folder above.
+- Install the Google dependencies once into the selected interpreter with `uv pip install --link-mode copy --python <selected-python> -r setup/perplexity/requirements.txt`. Use copy mode so files inherit the destination folder permissions instead of retaining shared-cache permissions. Never install packages or switch interpreters in response to a failed brief. Installed `scripts` hold the helpers, and `runtime\state` holds initial credentials, workspace references, and a cached snapshot. No Second Brain is bundled with the skill.
+- Select `Desktop\ChiefOfStaff_PPLX\CoS_Workspace` with Perplexity's folder picker. Its direct `CoS_SecondBrain` subfolder is the demo vault. `runtime.ps1` prepares sibling `.chief-of-staff-state`, copying seed credentials only when absent. OAuth refresh and snapshot writes use this writable copy. Existing refreshed tokens are preserved.
+- `runtime-local.json` version 4 uses relative `seed_state_root` and the `perplexity-then-system` Python selection policy. `COS_STATE_DIR` is the workspace data directory. Runtime initialization generates `second-brain.json` from `<WorkspaceRoot>\CoS_SecondBrain`, without reading a legacy installed vault setting. The working directory may differ from the selected workspace, so pass `-WorkspaceRoot` explicitly.
+- `Desktop\ChiefOfStaff_PPLX` holds source code and the selected `CoS_Workspace`. `.pplx-runtime\skills` is a code-only staging copy. Packaged Perplexity loads skills from the account-specific folder above, while reset and runtime share the state under `CoS_Workspace`.
 
 Start Perplexity normally from Windows. The optional `Launch Perplexity Demo.cmd` no longer supplies ignored development environment overrides. Model selection is saved through the app's settings. The launcher has not been retested; app launching was previously rejected by Codex's automatic approval review, and the user launched it manually.
 
 Start a fresh local Computer conversation after this update so it loads the installed instructions. If an old conversation tries to use Desktop paths, tell it to reload the installed Chief of Staff skill and its runtime initialization. Perplexity may still request permission for execution or writes inside the installed runtime; moving the dependencies does not change its sandbox policy. Use the app's normal approval flow if prompted.
 
 The installed runtime contains private Google credentials and cached mailbox data. Do not upload, publish, or share the entire installed folder. Source code and skill instructions can be shared without `runtime`.
+
+## Reset the demo
+
+From PowerShell:
+
+```powershell
+Set-Location "$env:USERPROFILE\Desktop\ChiefOfStaff_PPLX"
+.\demo\reset_workspace.ps1
+```
+
+The launcher selects Perplexity's Python, using system Python only if it is absent.
+Credentials and resource IDs come from `CoS_Workspace/.chief-of-staff-state`.
+No environment setup is required. It resets Google Workspace and restores
+`CoS_Workspace/CoS_SecondBrain`, backing up the previous notes. Append `-Check` to
+validate the local setup without resetting or calling Google, or `-WeekOf YYYY-MM-DD`
+to change the saved demo week. See [reset details](README.md#reset-the-demo-data)
+for what is replaced. Finish running jobs and pause scheduled jobs before resetting.
 
 ## Verification
 
@@ -49,7 +66,7 @@ See `DEMO_SCRIPT_PERPLEXITY.md` for the current first-prompt manual test. No tra
 
 To refresh skill code from a named local Git branch or commit, use `setup\perplexity\refresh-from-git.py --repository <original-repository> --ref <commit-or-branch> --skills-dir <account-skills-directory>`. This prepares an adaptation diff and proposed files without deploying. Add `--deploy` to update the PPLX source, staging, and installed skills after reviewing the diff. The refresh reads committed Git files, preserves the installed private runtime and notes, and records the resolved commit. It never checks out or edits the original repository. The converter fails if unsupported Bash/Hermes instructions remain; review new source syntax before proceeding.
 
-Refresh this duplicate from the chosen source version and translate the original command examples to PowerShell. Retain the relative runtime initialization and relative-vault support. Run `setup\perplexity\install-self-contained.py --skills-dir <account-skills-directory>` using the existing Python runtime. The installer updates code and relative configuration while preserving existing credentials, state, and notes. It never copies Python. On first installation it copies the prepared PPLX state and notes. Python dependencies must be installed separately into the selected interpreter using the requirements file above. Do not use the older refresh scripts to deploy, because they restore Desktop runtime paths.
+Refresh this duplicate from the chosen source version and translate the original command examples to PowerShell. Retain the explicit workspace argument and direct `CoS_SecondBrain` subfolder convention. Run `setup\perplexity\install-self-contained.py --skills-dir <account-skills-directory>` using the existing Python runtime. The installer updates code and relative configuration while preserving existing credentials and state. It never copies Python or notes. On first installation it copies the prepared PPLX seed state. Python dependencies must be installed separately into the selected interpreter using the requirements file above. Do not use the older refresh scripts to deploy, because they restore obsolete runtime paths.
 
 Do not place custom skills inside app-owned `skills\builtin`. Start a new conversation to load updated instructions. A different Perplexity account has its own skill directory; installation is not automatically shared between accounts. This demo is for Windows. The current Perplexity-managed Python is x64 3.12.12 on this ARM64 machine.
 

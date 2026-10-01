@@ -1,11 +1,16 @@
-param([switch]$Fixture)
+param(
+    [string]$WorkspaceRoot,
+    [switch]$Fixture,
+    [ValidateSet('daily-brief', 'second-brain-update')]
+    [string]$Mode = 'daily-brief'
+)
 $ErrorActionPreference = 'Stop'
 # Setup and execution always run in the same shell call.
-. (Join-Path $PSScriptRoot 'runtime.ps1')
+. (Join-Path $PSScriptRoot 'runtime.ps1') -WorkspaceRoot $WorkspaceRoot
 if ($env:COS_STATE_DIR -ne $CosHome -or -not (Test-Path -LiteralPath $CosHome -PathType Container)) {
     throw 'Chief of Staff workspace initialization failed. The brief was not started.'
 }
-$BriefArguments = @('-X', 'utf8', '-B', (Join-Path $CosRoot 'scripts\daily_brief.py'))
+$BriefArguments = @('-X', 'utf8', '-B', (Join-Path $CosRoot 'scripts\daily_brief.py'), '--mode', $Mode)
 if ($Fixture) {
     $BriefArguments += @('--fixture', (Join-Path $CosRoot 'tests\fixtures\workspace.json'))
 }

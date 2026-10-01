@@ -77,21 +77,20 @@ Google resources; do not seed a second copy merely because the profile is new:
 python demo/seed_workspace.py --confirm
 ```
 
-Reset Google Workspace and the bundled `demo/CoS_SecondBrain/` notes to their baselines with:
+For this Perplexity copy, reset Google Workspace and `CoS_Workspace/CoS_SecondBrain/` with:
 
 ```powershell
-python demo/reset_workspace.py
+.\demo\reset_workspace.ps1
 
 # Or remove the seeded Google Workspace resources only:
 python demo/seed_workspace.py --cleanup --confirm
 ```
 
-Keep `HERMES_HOME` set to the new profile for resets. Do not use both profiles to
-reset or edit the same Google workspace concurrently.
+This launcher selects Perplexity's Python and `CoS_Workspace/.chief-of-staff-state`
+automatically. No environment setup is needed. Append `-Check` for a read-only
+local check. Do not reset or edit the same Google workspace concurrently.
 
-Open `demo/CoS_SecondBrain/` as a separate Obsidian vault. The installer connects
-it when no vault is configured; existing connections are preserved. To switch an
-existing profile explicitly, run `python install.py --second-brain "demo/CoS_SecondBrain"`.
+Select `CoS_Workspace/` in Perplexity and open its `CoS_SecondBrain/` subfolder in Obsidian.
 Reset restores this repo vault only, preserves its `.obsidian` settings, and backs
 up its previous contents under `demo/.second-brain-backups/`. Personal vaults are
 untouched. Pause scheduled jobs before resetting; reset does not remove them.

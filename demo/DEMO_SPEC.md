@@ -32,10 +32,10 @@ The seeder creates a self-contained realistic Chief of Staff workspace in the Go
 Generated IDs are stored only in the local file:
 
 ```text
-$env:HERMES_HOME/chief-of-staff-workspace-state.json
+CoS_Workspace/.chief-of-staff-state/chief-of-staff-workspace-state.json
 ```
 
-The reset and cleanup commands use this file to delete imported mail/events and move generated Drive files to trash.
+The reset and cleanup commands use this file to delete imported mail/events and move generated Drive files to trash. Google credentials live alongside it. Direct seed commands default to this directory, or use an explicit `COS_STATE_DIR`.
 
 Google Tasks uses the account's default list, resolved through the API and saved in
 the same state file. Reset replaces
@@ -71,13 +71,13 @@ python demo/seed_workspace.py --week-of 2026-08-17 --confirm
 ## Reset and cleanup
 
 ```powershell
-python demo/reset_workspace.py
+.\demo\reset_workspace.ps1
 
 # Permanently remove the seeded workspace instead:
 python demo/seed_workspace.py --cleanup --confirm
 ```
 
-Reset also restores `demo/CoS_SecondBrain/` from the bundled baseline ZIP, saving
+Reset also restores `CoS_Workspace/CoS_SecondBrain/` from the bundled baseline ZIP, saving
 the previous demo vault under `demo/.second-brain-backups/`. Other vaults and cron
 jobs are untouched. `--cleanup` removes Google Workspace seed data only.
 
@@ -117,7 +117,7 @@ The exact names are helpful for artifact matching, but the Chief of Staff logic 
 
 ## Refresh only the task scenario
 
-With `HERMES_HOME` pointing to the active demo profile, run:
+Using Python with the Google dependencies installed, run from this repository:
 
 ```text
 python demo/seed_workspace.py --refresh-task-scenario --confirm
