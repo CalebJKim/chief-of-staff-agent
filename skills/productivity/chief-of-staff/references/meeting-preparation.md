@@ -13,30 +13,37 @@ Use [Command reference](command-reference.md) for `actions.py` commands and argu
 
 ## 2. Write the briefing
 
-Aim for 200–300 words in this order. Assume preparation starts now. Suggest work times or meeting changes only when requested.
+Aim for 200–300 words. Fill this template in your reply with evidence-backed content. Preserve headings, labels, list styles, and order. Add list entries as needed. Omit unsupported fields, meeting time, and an unnecessary **Next step**. Render Markdown without code fences. Add no sections, tables, timelines, or outside commentary.
 
+Assume preparation starts now. Suggest work times or meeting changes only when requested.
+
+**Preparation:** Include only outstanding tasks directly related to this meeting. Exclude unrelated work even if due earlier, meeting-conduct advice, and decisions reserved for the meeting.
+
+**Goals:** Exclude completed approvals, status updates, and meeting-conduct advice. No introduction, callout, or checkboxes. Follow source order unless organizer evidence establishes priority.
+
+```markdown
 ### Context
 
-Use only these bold labels in separate paragraphs. Omit unsupported fields and meeting time.
+**Purpose:** [Concrete purpose and relevant dependencies. Put desired outcomes under Goals.]
 
-**Purpose:** Concrete purpose and relevant dependencies. Put desired outcomes under Goals.
+**People:** [Other participants and roles, excluding the user.]
 
-**People:** Other participants and roles. Exclude the user.
-
-Show this role callout once:
-
-> **Your Role:** Evidence-backed role, including presenting when supported, with a source link.
+> **Your Role:** [Source-linked role, including presenting when supported.]
 
 ### What needs to get done before the meeting
 
-Number concrete, outstanding tasks directly related to preparing for this meeting, with bold action titles and short explanations. Exclude unrelated work even if due before the meeting, meeting-conduct advice, and decisions reserved for the meeting.
+1. **[Concrete preparation action](SOURCE_URL)** — [Short explanation.]
 
 ### Goals for the meeting
 
-Use separate bullets with bold outcomes. No introduction, callout, or checkboxes. Follow source order unless organizer evidence establishes priority.
+- **[Outcome still to achieve](SOURCE_URL)** — [What must be decided or accomplished.]
+
+**Next step:** [Relevant offer or question, if needed.]
+```
 
 ## 3. Check and respond
 
+- Check headings, labels, list styles, and order against the template. Remove extra content.
 - State each fact once. Distinguish preparing recommendations beforehand from making decisions during the meeting.
 - Source-link facts, preparation, and goals. Summarize detailed evidence instead of reproducing metrics, footnotes, or slide contents. Never invent slide contents or slide-specific URLs.
-- Exclude unrelated work. Refer briefly to established context instead of repeating the daily brief. Put relevant offers or questions under **Next step**.
+- Exclude unrelated work. Refer briefly to established context instead of repeating the daily brief.

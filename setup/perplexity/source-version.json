@@ -13,10 +13,10 @@
   ],
   "runtime_notes_state_preserved": true,
   "protected_file_count": 6006,
-  "skill_sha256": "62b616edc1c5a6b6660425b8d33f3e2ede4baa85864b7cdf77d16641343c77bd",
+  "skill_sha256": "64cfa9dbe0acf7b27920d6e1556516713390eac8acf5b1fab010a264b1cca85a",
   "brief_sha256": "59175a722bd800a08ed4f708badf3a607d3bfc5d6e8857400f7d608b08ff9b2f",
   "refresh_helper_preserves_source_description": true,
-  "updated_at_utc": "2026-09-30T23:54:00.753654+00:00",
+  "updated_at_utc": "2026-10-01T02:28:10.204934+00:00",
   "rollback": {
     "restored": [
       "Earlier coverage guidance",
@@ -43,7 +43,7 @@
     "description_matches_source_commit": true,
     "refresh_helper_preserves_source_description": true,
     "restore_manifest": "C:\\Users\\testuser\\Documents\\ChatGPT\\Demo Setup\\out\\manager-priority-open-tasks-20260930T075336Z\\restore-manifest.json",
-    "updated_at_utc": "2026-09-30T23:54:00.753654+00:00",
+    "updated_at_utc": "2026-10-01T02:28:10.204934+00:00",
     "followup_changes": [
       {
         "name": "Name both action sections in the duplication rule",
@@ -253,6 +253,37 @@
         "applied_at_utc": "2026-09-30T23:54:00.753654+00:00",
         "source_changes_committed": false,
         "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\meeting-prep-relevance-20260930T235400Z\\restore-manifest.json"
+      },
+      {
+        "name": "Define meeting goals as outcomes still to achieve and explain decisions or accomplishments, excluding completed approvals, status updates, and conduct advice",
+        "applied_at_utc": "2026-10-01T00:08:30.233572+00:00",
+        "source_changes_committed": false,
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\meeting-goals-outcomes-20261001T000830Z\\restore-manifest.json"
+      },
+      {
+        "name": "Replace meeting preparation formatting prose with approved concise inline template and output-format check",
+        "applied_at_utc": "2026-10-01T00:25:48.751726+00:00",
+        "source_changes_committed": false,
+        "shared_reference_words": 391,
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\meeting-prep-inline-template-20261001T002548Z\\restore-manifest.json"
+      },
+      {
+        "name": "Add approved Start of Day example triggers and instruction to run without asking whether a daily brief is wanted",
+        "applied_at_utc": "2026-10-01T01:50:34.893715+00:00",
+        "source_changes_committed": false,
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\start-of-day-example-triggers-20261001T015034Z\\restore-manifest.json"
+      },
+      {
+        "name": "Require What You Need to Know above the callout and news bullets, prohibit What Changed subheading, and clarify news placeholder",
+        "applied_at_utc": "2026-10-01T02:05:15.586860+00:00",
+        "source_changes_committed": false,
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\daily-brief-news-heading-20261001T020515Z\\restore-manifest.json"
+      },
+      {
+        "name": "Allow three agent tasks, assign explicit to-dos by user involvement, and keep brief-answer prerequisites within agent tasks",
+        "applied_at_utc": "2026-10-01T02:28:10.204934+00:00",
+        "source_changes_committed": false,
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\brief-task-ownership-20261001T022810Z\\restore-manifest.json"
       }
     ]
   },
@@ -276,6 +307,6 @@
   },
   "command_reference_sha256": "1a4a38a24cdb8f824d1bd6c3e6db2d6b50c4147ba2945c9d29e59d83139b65ce",
   "command_reference_moved": true,
-  "meeting_preparation_sha256": "c5605d9e55b3bbc88c2ebb4487b6838cf74dcc667b8ea05faa741b4fd05404cd",
+  "meeting_preparation_sha256": "c3330827cca78e7b7c016ac7f66a8d4ed5f7c9952da614cf6613fb47b26b05d2",
   "updating_project_tracker_sha256": "6d39a1fa73d390415e8d9d399bc507bb4ab510d2c221bd3e61768078023e13f5"
 }
