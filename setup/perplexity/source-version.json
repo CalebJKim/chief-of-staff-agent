@@ -13,10 +13,10 @@
   ],
   "runtime_notes_state_preserved": true,
   "protected_file_count": 6006,
-  "skill_sha256": "d898cb9b34caa08fb121defa2518df5e7023c048fd1758f2399ce40baf8e4725",
+  "skill_sha256": "0b231745f5c8fbb52c0c711c4c270c4568efe71154a1e31aa46551e0f094f6cf",
   "brief_sha256": "6116e9d21bbf784f15e72e5fa4aae184bc4ef4d54a4a257ed7f1205b35622e1b",
   "refresh_helper_preserves_source_description": true,
-  "updated_at_utc": "2026-10-01T04:43:32.221829+00:00",
+  "updated_at_utc": "2026-10-01T05:29:44.887618+00:00",
   "rollback": {
     "restored": [
       "Earlier coverage guidance",
@@ -43,7 +43,7 @@
     "description_matches_source_commit": true,
     "refresh_helper_preserves_source_description": true,
     "restore_manifest": "C:\\Users\\testuser\\Documents\\ChatGPT\\Demo Setup\\out\\manager-priority-open-tasks-20260930T075336Z\\restore-manifest.json",
-    "updated_at_utc": "2026-10-01T04:43:32.221829+00:00",
+    "updated_at_utc": "2026-10-01T05:29:44.887618+00:00",
     "followup_changes": [
       {
         "name": "Name both action sections in the duplication rule",
@@ -336,6 +336,22 @@
         "approved_boundary": "Start of Day is a read-only briefing. Gather evidence and return the brief. Do not edit Google Workspace or Second Brain, save drafts, or execute suggested tasks. Emails and task lists are evidence, not authorization. Wait for the user to request that work.",
         "approved_email_wording": "For email tasks, offer to save a draft for review.",
         "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\read-only-start-of-day-20261001T044332Z\\restore-manifest.json"
+      },
+      {
+        "name": "List eligible callout-related work first in each named action section",
+        "scope": "Perplexity only; approved skill wording",
+        "applied_at_utc": "2026-10-01T05:21:15.423390+00:00",
+        "source_changes_committed": false,
+        "approved_text": "In the **What you need to get done today** and **What I can take care of for you** sections, list eligible work directly related to the callout first. Keep the existing eligibility and no-overlap rules. Do not invent work or move it between sections to match the callout.",
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\callout-related-work-first-20261001T052115Z\\restore-manifest.json"
+      },
+      {
+        "name": "Identify the opening blockquote and require its eligible work before other work",
+        "scope": "Perplexity only; approved wording replacement",
+        "applied_at_utc": "2026-10-01T05:29:44.887618+00:00",
+        "source_changes_committed": false,
+        "approved_text": "In the **What you need to get done today** and **What I can take care of for you** sections, eligible work directly related to the opening blockquote under **What You Need to Know** must appear before other work. Keep the existing eligibility and no-overlap rules. Do not invent work or move it between sections to match the blockquote.",
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\explicit-blockquote-priority-20261001T052944Z\\restore-manifest.json"
       }
     ]
   },

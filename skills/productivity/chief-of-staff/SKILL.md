@@ -96,6 +96,8 @@ Report command or packet retrieval failures without retries or repairs. Briefly 
 
 Prioritize work requested by or involving the explicitly identified manager. Never infer this relationship from title or seniority. Rank other work, including open Google Tasks and to-dos, by impact and urgency, not unread count or `signal_score` (JSON evidence-selection score).
 
+In the **What you need to get done today** and **What I can take care of for you** sections, eligible work directly related to the opening blockquote under **What You Need to Know** must appear before other work. Keep the existing eligibility and no-overlap rules. Do not invent work or move it between sections to match the blockquote.
+
 When priorities are comparable, include different relevant work items for variety. Keep separate, high-priority user work even when its project appears elsewhere.
 
 Review open Google Tasks and email requests as explicit to-dos before inferring more work. Assign tasks by required user involvement, not source. Never move agent tasks into the user section to fit item limits.
