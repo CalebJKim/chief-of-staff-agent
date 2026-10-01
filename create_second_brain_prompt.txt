@@ -1,0 +1,7 @@
+Set up a Second Brain for me using only my Google Workspace.
+
+Use relevant emails, calendar events, tasks, and Drive files to capture the projects and products I’m working on, their current status, and who I’m working with.
+
+Organize this into linked notes with references to the original sources. I want one file per person/project I am working with/on. Save it in this machine's Documents/New_CoS_SecondBrain folder.
+
+Don’t use existing notes from other Second Brain vaults or change anything in Google Workspace or other Second Brain vaults.
