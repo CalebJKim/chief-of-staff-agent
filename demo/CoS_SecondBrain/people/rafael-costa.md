@@ -11,7 +11,7 @@ confidence: high
 
 # Rafael Costa
 
-Rafael leads the social rollout within [[marketing-claims-rollout|the marketing claims rollout]] for [[rtx-spark-launch|the RTX Spark launch]].
+Rafael leads the social rollout within [[marketing-claims-rollout|the marketing claims rollout]] for [[neoagent-v2-launch|the NeoAgent V2 launch]].
 
 ## Preparing social content
 The campaign needs clear copy and suitable assets for each channel, timed to the wider release. Short posts still need the qualifications that make a product claim accurate. Removing a condition to save space can imply more than the source supports.

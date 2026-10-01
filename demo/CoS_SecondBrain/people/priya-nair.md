@@ -11,7 +11,7 @@ confidence: high
 
 # Priya Nair
 
-Priya leads marketing production for [[marketing-shoot|the marketing shoot]], supporting [[rtx-spark-launch|the RTX Spark launch]].
+Priya leads marketing production for [[marketing-shoot|the marketing shoot]], supporting [[neoagent-v2-launch|the NeoAgent V2 launch]].
 
 ## Comparing production options
 Venue, crew, presenters, equipment, script readiness, and editing capacity all affect the shoot. A replacement date can solve a booking problem while leaving less time to prepare or revise the content.

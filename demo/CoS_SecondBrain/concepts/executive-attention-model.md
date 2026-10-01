@@ -19,7 +19,7 @@ Prioritize work by its consequence and timing. Unread message counts alone do no
 3. Consider delegating optional sessions when a focus block would move critical work forward.
 4. Escalate decisions only when the accountable owner cannot resolve them.
 
-Apply these principles to [[agent-security-prd|the Agent Security PRD]], [[rtx-spark-launch|the RTX Spark launch]], and [[marketing-shoot|the marketing shoot]].
+Apply these principles to [[agent-security-prd|the Agent Security PRD]], [[neoagent-v2-launch|the NeoAgent V2 launch]], and [[marketing-shoot|the marketing shoot]].
 
 ## Personal attention and support
 Judgment, relationship context, and consequential tradeoffs may need personal involvement. Gathering information or preparing a document can often be delegated. Delegating preparation does not automatically give someone authority to make the decision.

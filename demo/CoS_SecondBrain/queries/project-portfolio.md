@@ -13,16 +13,16 @@ confidence: high
 
 | Project | Health | Next milestone | Primary dependency |
 |---|---|---|---|
-| [[rtx-spark-launch]] | At risk | Executive decisions | Storyline and demo ownership |
+| [[neoagent-v2-launch]] | At risk | Executive decisions | Storyline and demo ownership |
 | [[agent-security-prd]] | Active | Engineering handoff | Policy fallback sections |
 | [[hermes-partner-program]] | Active | VP slide review | Pilot proof and clear ask |
 | [[marketing-claims-rollout]] | Active | Slide 4 update | Qualified claim propagation |
 | [[marketing-shoot]] | Blocked | Replacement date | Executive selection |
 | [[openshell]] | At risk | Partner rehearsal | Egress default decision |
-| [[board-readiness-program]] | At Risk | Owner and milestone confirmation | [[rtx-spark-launch]] / [[finance-operating-plan]] |
+| [[board-readiness-program]] | At Risk | Owner and milestone confirmation | [[neoagent-v2-launch]] / [[finance-operating-plan]] |
 | [[northstar-customer-recovery]] | At Risk | Owner and milestone confirmation | [[openshell]] / [[enterprise-support-model]] |
 | [[meridian-strategic-account]] | Active | Owner and milestone confirmation | [[hermes-partner-program]] / [[global-sales-forecast]] |
-| [[dgx-spark-two-system-story]] | Planned | Owner and milestone confirmation | [[product-specifications]] / [[competitive-response-deepseek]] |
+| [[dgx-spark-two-system-story]] | Planned | Owner and milestone confirmation | [[performance-results]] / [[competitive-response-deepseek]] |
 | [[competitive-response-deepseek]] | Active | Owner and milestone confirmation | [[dgx-spark-two-system-story]] / [[agent-first-storyline]] |
 | [[enterprise-support-model]] | Active | Owner and milestone confirmation | [[northstar-customer-recovery]] / [[operational-resilience]] |
 | [[q4-operating-plan]] | At Risk | Owner and milestone confirmation | [[finance-operating-plan]] / [[workforce-plan]] |
@@ -34,7 +34,7 @@ confidence: high
 | [[global-developer-conference]] | Planned | Owner and milestone confirmation | [[developer-ecosystem-expansion]] / [[gtc-demo-slate]] |
 | [[customer-advisory-council]] | Active | Owner and milestone confirmation | [[meridian-strategic-account]] / [[northstar-customer-recovery]] |
 | [[global-sales-forecast]] | At Risk | Owner and milestone confirmation | [[meridian-strategic-account]] / [[regional-launch-readiness]] |
-| [[regional-launch-readiness]] | Active | Owner and milestone confirmation | [[rtx-spark-launch]] / [[global-sales-forecast]] |
+| [[regional-launch-readiness]] | Active | Owner and milestone confirmation | [[neoagent-v2-launch]] / [[global-sales-forecast]] |
 | [[pricing-and-packaging]] | Planned | Owner and milestone confirmation | [[finance-operating-plan]] / [[regional-launch-readiness]] |
 | [[data-governance-program]] | Active | Owner and milestone confirmation | [[agent-security-prd]] / [[operational-resilience]] |
 | [[operational-resilience]] | At Risk | Owner and milestone confirmation | [[enterprise-support-model]] / [[data-governance-program]] |

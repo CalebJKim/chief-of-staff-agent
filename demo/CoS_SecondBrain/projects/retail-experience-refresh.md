@@ -11,7 +11,7 @@ confidence: medium
 
 # Retail Experience Refresh
 
-This project prepares the RTX Spark experience for a store setting: the demo, script, associate training, and troubleshooting. A presentation that works on stage may need changes for a short customer visit or repeated use throughout a day.
+This project prepares the NeoAgent V2 experience for a store setting: the demo, script, associate training, and troubleshooting. A presentation that works on stage may need changes for a short customer visit or repeated use throughout a day.
 
 ## What the store experience needs
 The customer benefit should be easy to explain. Associates need setup and reset instructions, a clear route for problems, and a way to explain the limits of the example.

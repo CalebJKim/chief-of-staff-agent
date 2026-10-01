@@ -32,7 +32,17 @@ class SlideResetTests(unittest.TestCase):
         seed.reset_deck_baseline(self.slides, "same-deck", drive=self.drive)
         self.presentations.get.assert_called_once_with(presentationId="same-deck")
         self.drive.files.assert_not_called()
-        self.assertEqual(32, len(self.presentations.batchUpdate.call_args.kwargs["body"]["requests"]))
+        self.assertEqual(48, len(self.presentations.batchUpdate.call_args.kwargs["body"]["requests"]))
+
+    def test_reset_preserves_template_font_size_and_contrast(self):
+        self.presentations.get.return_value.execute.return_value = deck()
+        seed.reset_deck_baseline(self.slides, "same-deck", drive=self.drive)
+        styles = [r["updateTextStyle"] for r in self.presentations.batchUpdate.call_args.kwargs["body"]["requests"] if "updateTextStyle" in r]
+        self.assertEqual(16, len(styles))
+        for index, value in enumerate(styles):
+            self.assertEqual(31.5 if index % 2 == 0 else 18.75, value["style"]["fontSize"]["magnitude"])
+            self.assertEqual("Arial", value["style"]["fontFamily"])
+            self.assertGreater(value["style"]["foregroundColor"]["opaqueColor"]["rgbColor"]["red"], 0.9)
 
     def test_new_design_refreshes_even_when_slide_count_matches(self):
         self.presentations.get.return_value.execute.side_effect = [deck(), deck(prefix="redesigned")]
@@ -42,7 +52,7 @@ class SlideResetTests(unittest.TestCase):
         self.drive.files().create.assert_not_called()
         self.drive.files().delete.assert_not_called()
         for request in self.presentations.batchUpdate.call_args.kwargs["body"]["requests"]:
-            value = request.get("insertText", request.get("deleteText"))
+            value = request.get("insertText", request.get("deleteText", request.get("updateTextStyle")))
             self.assertTrue(value["objectId"].startswith("redesigned-"))
 
     def test_new_deck_records_template_fingerprint(self):
@@ -65,7 +75,7 @@ class SlideResetTests(unittest.TestCase):
                     media_body=media.return_value, fields="id",
                 )
                 media.assert_called_once_with(
-                    str(seed.ROOT / "demo" / "templates" / "rtx-spark-exec-review.pptx"),
+                    str(seed.ROOT / "demo" / "templates" / "neoagent-v2-exec-review.pptx"),
                     mimetype="application/vnd.openxmlformats-officedocument.presentationml.presentation", resumable=False,
                 )
                 self.drive.files().create.assert_not_called()
@@ -73,7 +83,7 @@ class SlideResetTests(unittest.TestCase):
                 write = self.presentations.batchUpdate.call_args.kwargs
                 self.assertEqual("keep-this-id", write["presentationId"])
                 for request in write["body"]["requests"]:
-                    value = request.get("insertText", request.get("deleteText"))
+                    value = request.get("insertText", request.get("deleteText", request.get("updateTextStyle")))
                     self.assertTrue(value["objectId"].startswith("restored-"))
 
     def test_expected_count_comes_from_template_not_ten(self):
@@ -129,6 +139,7 @@ class SlideResetTests(unittest.TestCase):
         with patch.object(seed, "services", return_value=svc), \
              patch.object(seed, "reset_deck_baseline") as restore, \
              patch.object(seed, "clear_seeded_tasks"), patch.object(seed, "remove_dynamic_items"), \
+             patch.object(seed.task_scenario, "ensure_resources", side_effect=lambda api, svc, state, **kw: state.setdefault("task_resources", {})), \
              patch.object(seed, "create_emails", return_value=([{"id": "new-mail"}], {})) as emails, \
              patch.object(seed, "create_tasks") as tasks, patch.object(seed, "reset_sheet_baseline") as sheet, \
              patch.object(seed, "reset_original_sheet") as original, \
@@ -156,6 +167,7 @@ class SlideResetTests(unittest.TestCase):
                 with patch.object(seed, "services", return_value=svc), \
                      patch.object(seed, "reset_deck_baseline") as restore, \
                      patch.object(seed, "clear_seeded_tasks"), patch.object(seed, "remove_dynamic_items"), \
+                     patch.object(seed.task_scenario, "ensure_resources", side_effect=lambda api, svc, state, **kw: state.setdefault("task_resources", {})), \
                      patch.object(seed, "create_emails", return_value=([], {})), \
                      patch.object(seed, "create_tasks"), patch.object(seed, "reset_sheet_baseline"), \
                      patch.object(seed, "reset_original_sheet"), \
@@ -172,7 +184,7 @@ class SlideResetTests(unittest.TestCase):
                   if "insertText" in request}
         ns = {"p": "http://schemas.openxmlformats.org/presentationml/2006/main",
               "a": "http://schemas.openxmlformats.org/drawingml/2006/main"}
-        with seed.ZipFile(seed.ROOT / "demo" / "templates" / "rtx-spark-exec-review.pptx") as archive:
+        with seed.ZipFile(seed.ROOT / "demo" / "templates" / "neoagent-v2-exec-review.pptx") as archive:
             for number in range(3, 11):
                 slide = seed.ElementTree.fromstring(archive.read(f"ppt/slides/slide{number}.xml"))
                 texts = ["\n".join("".join(p.itertext()) for p in shape.findall("p:txBody/a:p", ns))

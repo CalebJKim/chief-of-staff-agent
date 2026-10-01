@@ -29,4 +29,4 @@ Identify where engineering, governance, and support teams share responsibilities
 ## Recording decisions
 Separate information sharing from items that need a choice. If two priorities need the same people, make the tradeoff explicit. Record accepted decisions and reasons for deferral in the [[decision-log|decision log]].
 
-Follow-ups also belong in project records, especially [[rtx-spark-launch|the RTX Spark launch]] and [[agent-security-prd|the Agent Security PRD]]. Keep account decisions, staffing choices, and conference selection in their appropriate processes. Discussing linked work here does not authorize all of it.
+Follow-ups also belong in project records, especially [[neoagent-v2-launch|the NeoAgent V2 launch]] and [[agent-security-prd|the Agent Security PRD]]. Keep account decisions, staffing choices, and conference selection in their appropriate processes. Discussing linked work here does not authorize all of it.

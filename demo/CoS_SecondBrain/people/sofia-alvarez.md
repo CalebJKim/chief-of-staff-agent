@@ -11,7 +11,7 @@ confidence: high
 
 # Sofia Alvarez
 
-Sofia coordinates [[hermes-partner-program|the Hermes partner program]], including its work for [[rtx-spark-launch|the RTX Spark launch]].
+Sofia coordinates [[hermes-partner-program|the Hermes partner program]], including its work for [[neoagent-v2-launch|the NeoAgent V2 launch]].
 
 ## Preparing a partner review
 Participants need to know what decision is being requested and have the material to make it. Confirm who can make that decision, what evidence is still missing, and how the partner story depends on demonstration readiness.

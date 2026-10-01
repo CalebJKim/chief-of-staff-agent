@@ -1,7 +1,7 @@
 ---
 title: Daniel Cho
 created: 2026-09-09
-updated: 2026-09-22
+updated: 2026-09-30
 type: person
 tags: [person, operations]
 sources: [raw/meetings/leadership-staff-2026-09-08.md]
@@ -11,16 +11,12 @@ confidence: high
 
 # Daniel Cho
 
-Role: Legal claims owner.
+Daniel is the Legal contact for the wording and scope attached to [[performance-results|NeoAgent V2 performance results]]. His review feeds [[marketing-claims-rollout]].
 
-Daniel is the recorded contact for the wording and conditions attached to [[product-specifications|product specification statements]]. That work feeds [[marketing-claims-rollout]].
+## Preparing a review
+Provide the proposed wording, benchmark package, and intended audience. Show where it will appear. A chart, caption, or surrounding image can imply more than the source supports.
 
-## What a review request needs
-Provide the proposed wording, approved specifications package, and intended audience. Show where it will appear: a slide, chart, social caption, and retail script can create different impressions even when they repeat the same number.
+Small edits matter. Removing the NeoAgent V1 baseline, “median,” or “per completed task” changes the meaning. The comparison uses the same model, workflows, and environment.
 
-Small edits matter. Removing “up to” or dropping FP4 from the AI performance specification changes the meaning.
-
-## Keep approvals specific
-An approved source statement is not blanket clearance for every later adaptation. Identify what changed and why it still needs review.
-
-Daniel's recorded role is a route for interpreting claims, not proof that every campaign asset is approved. Coordinate through [[weekly-leadership-staff]] and record actual decisions in [[decision-log]].
+## Current clearance
+Keep the NeoAgent V1 baseline, metric definitions, and internal evaluation scope with the figures. Approval covers leadership review only. Final external copy needs a separate Legal review. This approval does not close the pending keynote and demo decisions.

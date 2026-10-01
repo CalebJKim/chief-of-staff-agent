@@ -9,6 +9,7 @@ import json
 import os
 import random
 import sys
+import time
 import tempfile
 import uuid
 from contextlib import contextmanager
@@ -17,6 +18,7 @@ from email.message import EmailMessage
 from email.utils import format_datetime
 from pathlib import Path
 from typing import Any
+from types import SimpleNamespace
 from xml.etree import ElementTree
 from zipfile import ZipFile
 from zoneinfo import ZoneInfo
@@ -25,6 +27,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "skills" / "productivity" / "ingest" / "scripts"))
 from actions import credentials  # noqa: E402
 from baseline import reset_sheet_baseline  # noqa: E402
+import task_scenario
 from second_brain_seed import check_reset, reset_second_brain  # noqa: E402
 from googleapiclient.discovery import build  # noqa: E402
 from googleapiclient.errors import HttpError  # noqa: E402
@@ -38,7 +41,7 @@ BACKGROUND_EMAIL_COUNT = 70
 CONTACT_EMAIL_COUNT = 1
 EMAIL_REFERENCE_HOUR = 9
 EMAIL_REFERENCE_MINUTE = 12
-BATCH_SIZE = 50
+BATCH_SIZE = 5
 TASKS_SCOPE = "https://www.googleapis.com/auth/tasks"
 
 BACKGROUND_IDENTITIES = [
@@ -77,26 +80,6 @@ BACKGROUND_TOPICS = [
 
 BACKGROUND_AUDIENCES = ["Americas", "EMEA", "APAC", "Remote", "Santa Clara", "Austin", "New York"]
 
-BACKLOG_TASKS = [
-    {
-        "key": "customer_faq", "title": "Publish a customer demo FAQ",
-        "sender": "Amina Patel <amina.example@nvidia.com>",
-        "requested_days_ago": 12, "due_days_ago": 7,
-        "request": "Please put together and share answers to the questions customers asked during our local AI demos. The sales team needs a consistent explanation of what works offline and what requires an internet connection.",
-    },
-    {
-        "key": "pilot_lessons", "title": "Share the pilot-program lessons learned",
-        "sender": "Jorge Almeida <jorge.example@nvidia.com>",
-        "requested_days_ago": 8, "due_days_ago": 3,
-        "request": "Please collect the lessons from the completed employee AI pilot and share the recommended improvements with the rollout team. We need to address the onboarding friction before bringing in the next group.",
-    },
-    {
-        "key": "workshop_budget", "title": "Finalize the developer workshop budget",
-        "sender": "Hana Ito <hana.example@nvidia.com>",
-        "requested_days_ago": 4, "due_days_ago": 1,
-        "request": "Please finish the budget proposal for next month's developer workshop and route it for approval. We need the funding decision before committing to the venue and equipment rentals.",
-    },
-]
 
 
 def hermes_home() -> Path:
@@ -183,29 +166,81 @@ def services(*, tasks_required: bool = False):
     }
 
 
+def _is_rate_limit(error: Exception) -> bool:
+    if not isinstance(error, HttpError):
+        return False
+    if error.resp.status == 429:
+        return True
+    if error.resp.status != 403:
+        return False
+    try:
+        reasons = {item.get("reason") for item in json.loads(error.content).get("error", {}).get("errors", [])}
+    except (ValueError, TypeError):
+        return False
+    return bool(reasons & {"rateLimitExceeded", "userRateLimitExceeded"})
+
+
+def _rate_limit_delay(error: Exception) -> float:
+    value = error.resp.get("retry-after", "0")
+    try:
+        return max(0.0, float(value))
+    except (ValueError, TypeError):
+        from email.utils import parsedate_to_datetime
+        try:
+            return max(0.0, parsedate_to_datetime(value).timestamp() - time.time())
+        except (ValueError, TypeError, OverflowError):
+            return 0.0
+
+
 def execute_batched(api: Any, requests: list[Any], *, ignore_errors: bool = False) -> list[Any]:
-    """Execute independent Google API requests in small HTTP batches."""
+    """Limit concurrency and retry explicit throttling failures, never successes."""
     results: list[Any] = [None] * len(requests)
-    failures: list[tuple[int, Exception]] = []
-
     for offset in range(0, len(requests), BATCH_SIZE):
-        batch = api.new_batch_http_request()
+        if offset:
+            time.sleep(0.25)
+        pending = list(range(offset, min(offset + BATCH_SIZE, len(requests))))
+        retries = 0
+        while pending:
+            errors = {}
+            completed = set()
+            batch = api.new_batch_http_request()
 
-        def callback(request_id: str, response: Any, exception: Exception | None) -> None:
-            index = int(request_id)
-            if exception is not None:
-                if not ignore_errors:
-                    failures.append((index, exception))
-            else:
-                results[index] = response
+            def callback(request_id, response, exception):
+                index = int(request_id)
+                if exception is None:
+                    results[index] = response
+                    completed.add(index)
+                else:
+                    errors[index] = exception
 
-        for index in range(offset, min(offset + BATCH_SIZE, len(requests))):
-            batch.add(requests[index], callback=callback, request_id=str(index))
-        batch.execute()
-
-    if failures:
-        index, error = failures[0]
-        raise RuntimeError(f"Google batch request {index + 1} failed: {error}")
+            for index in pending:
+                batch.add(requests[index], callback=callback, request_id=str(index))
+            try:
+                batch.execute()
+            except HttpError as error:
+                if not _is_rate_limit(error):
+                    raise  # An ambiguous write failure must not be blindly replayed.
+                errors.update({i: error for i in pending if i not in completed and i not in errors})
+            unreported = set(pending) - completed - errors.keys()
+            if unreported:
+                raise RuntimeError("Google batch returned incomplete results; check live data before retrying")
+            retry = []
+            for index, error in sorted(errors.items()):
+                if _is_rate_limit(error):
+                    retry.append(index)
+                elif not ignore_errors:
+                    raise RuntimeError(f"Google batch request {index + 1} failed: {error}") from error
+            if not retry:
+                break
+            if retries >= 5:
+                raise RuntimeError(f"Google is still rate limiting request {retry[0] + 1} after 5 retries. Reset stopped; wait before retrying.") from errors[retry[0]]
+            delay = max(2 ** retries + random.uniform(0, 1), *(_rate_limit_delay(errors[i]) for i in retry))
+            if delay > 60:
+                raise RuntimeError(f"Google asks to wait {delay:.0f} seconds before retrying. Reset stopped.") from errors[retry[0]]
+            print(f"Google rate limited {len(retry)} request(s); retrying only those in {delay:.1f}s (attempt {retries + 1}/5).", file=sys.stderr, flush=True)
+            time.sleep(delay)
+            pending = retry
+            retries += 1
     return results
 
 
@@ -223,7 +258,7 @@ def move_to_folder(drive, file_id: str, folder_id: str) -> None:
 
 def create_folder(drive) -> dict:
     item = drive.files().create(
-        body={"name": "RTX Spark Campaign", "mimeType": "application/vnd.google-apps.folder", "description": MARKER},
+        body={"name": "NeoAgent V2 Campaign", "mimeType": "application/vnd.google-apps.folder", "description": MARKER},
         fields="id,name,webViewLink",
     ).execute()
     return {"id": item["id"], "url": item.get("webViewLink", f"https://drive.google.com/drive/folders/{item['id']}")}
@@ -236,12 +271,12 @@ def upload_template(drive, folder_id: str, filename: str, name: str, mime_type: 
     result = drive.files().create(body={"name": name, "parents": [folder_id], "mimeType": mime_type}, media_body=MediaFileUpload(str(source), mimetype=source_mimes[mime_type], resumable=False), fields="id,name,mimeType,webViewLink").execute()
     return {"id": result["id"], "url": result.get("webViewLink", "")}
 
-def create_doc(drive, folder_id): return upload_template(drive, folder_id, "rtx-spark-campaign-plan.docx", "RTX Spark Campaign Plan", "application/vnd.google-apps.document")
+def create_doc(drive, folder_id): return upload_template(drive, folder_id, "neoagent-v2-campaign-plan.docx", "NeoAgent V2 Campaign Plan", "application/vnd.google-apps.document")
 def create_slides(drive, folder_id):
-    result = upload_template(drive, folder_id, "rtx-spark-exec-review.pptx", "RTX Spark Exec Review", "application/vnd.google-apps.presentation")
+    result = upload_template(drive, folder_id, "neoagent-v2-exec-review.pptx", "NeoAgent V2 Exec Review", "application/vnd.google-apps.presentation")
     result["template_sha256"] = deck_template_hash()
     return result
-def create_sheet(drive, folder_id): return upload_template(drive, folder_id, "rtx-spark-campaign-tracker.xlsx", "RTX Spark Campaign Tracker", "application/vnd.google-apps.spreadsheet")
+def create_sheet(drive, folder_id): return upload_template(drive, folder_id, "neoagent-v2-campaign-tracker.xlsx", "NeoAgent V2 Campaign Tracker", "application/vnd.google-apps.spreadsheet")
 
 def reset_original_sheet(drive, sheets, state: dict, evidence: dict, refreshed: str) -> None:
     """Keep one comparison copy at the seeded baseline, separate from the working tracker."""
@@ -315,31 +350,29 @@ def mail_import_request(
     return gmail.users().messages().import_(userId="me", body={"raw": raw, "labelIds": labels}, internalDateSource="dateHeader", neverMarkSpam=True, processForCalendar=False)
 
 
-EXEC_REVIEW_ROLES = "You will present the storyline and proposed demo slate. Planned attendees: you, Elena Park (chair and your manager), Mike Chen (product specifications), Aisha Rahman (deck and partner readiness), and Daniel Cho (Legal). Final demo selection and the retail demo owner remain open decisions."
+EXEC_REVIEW_ROLES = "You will present the storyline and proposed demo slate. Planned attendees: you, Elena Park (chair and your manager), Mike Chen (performance results), Aisha Rahman (deck and partner readiness), and Daniel Cho (Legal). Final demo selection and the retail demo owner remain open decisions."
 
 
-def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str) -> tuple[list[dict], dict[str, str]]:
+def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str, resources: dict) -> tuple[list[dict], dict[str, str]]:
     account = gmail.users().getProfile(userId="me").execute()["emailAddress"]
     meaningful = [
-        ("Elena Park <elena.example@nvidia.com>", "URGENT: RTX Spark Exec Review moved to 5 PM today", f"Hi,\n\nFollowing up on our one-on-one, please prioritize today’s leadership decisions. If other requests are competing for your time, let me know and I’ll help reprioritize. Leadership moved the RTX Spark Exec Review from Thursday to 5:00 PM today. This is a decision meeting, not a working session. We need two outcomes: approval of the agent-first keynote storyline, and alignment on the GTC demo slate and owners.\n\n{EXEC_REVIEW_ROLES}\n\nDeck: {deck_url}\n\n— Elena"),
-        ("Mike Chen <mike.example@nvidia.com>", "APPROVED: RTX Spark product specifications for slide 4", "The product specifications are approved for today's Exec Review. Use the following:\n\nBlackwell RTX GPU: Up to 6,144 cores\nGrace CPU: Up to 20 cores\nFP4 AI performance: Up to 1 petaflop\nUnified memory: Up to 128 GB\n\nKeep 'up to' with each specification and retain the FP4 precision label. Daniel has cleared this wording for leadership review."),
-        ("Aisha Rahman <aisha.example@nvidia.com>", "Exec Review deck pass: cut slide 6; protect slide 10", f"My review is complete; I have not edited the deck. These edits are still for you to apply: put Mike's approved product specifications on slide 4. Summarize the proposed customer-use example from slide 6 in the Customer Example section of slide 7, then remove slide 6 from the live flow. Preserve the local laptop comparison, the draft follow-up reviewed by the associate, and customer details staying on the device. This is a proposed use case, not customer validation or an approved demo selection; the demo slate and owners still need a decision. Move quickly through the opening so there is enough discussion time on slide 10.\n\nDeck: {deck_url}"),
-        ("Daniel Cho <daniel.example@nvidia.com>", "Legal scope: RTX Spark wording cleared for leadership review", "The RTX Spark product specification wording is cleared for today's leadership review. Keep 'up to' with all four specifications and retain the FP4 precision label. This is not blanket campaign-wide approval; route final external copy through Legal."),
+        ("Elena Park <elena.example@nvidia.com>", "URGENT: NeoAgent V2 Exec Review moved to 5 PM today", f"Hi,\n\nFollowing up on our one-on-one, please prioritize today’s leadership decisions. If other requests are competing for your time, let me know and I’ll help reprioritize. Leadership moved the NeoAgent V2 Exec Review from Thursday to 5:00 PM today. This is a decision meeting, not a working session. We need two outcomes: approval of the agent-first keynote storyline, and alignment on the GTC demo slate and owners.\n\n{EXEC_REVIEW_ROLES}\n\nDeck: {deck_url}\n\n— Elena"),
+        ("Mike Chen <mike.example@nvidia.com>", "APPROVED: NeoAgent V2 performance results for slide 4", "Hi,\n\nThe V2 comparison is ready for today's review. Please use these figures on slide 4:\n\nTask success: NeoAgent V2 92% (184/200), versus NeoAgent V1 80% (160/200), a 12-percentage-point improvement.\nMedian completion time: 30% lower than NeoAgent V1 (V1 index 100, V2 70).\nModel tokens per completed task: 25% fewer than NeoAgent V1 (V1 index 100, V2 75).\n\nBoth versions used the same model, the same 200 internal document, email, and scheduling workflows, and the same execution environment. Success means the expected end state was reached without an incorrect write. Time compares tasks completed by both versions. Token usage includes input, output, and retries per completed task.\n\nKeep the V1 baseline and evaluation scope with the figures. Daniel has cleared this wording for leadership review. These are the fictional internal figures for our demo.\n\nThanks,\nMike"),
+        ("Aisha Rahman <aisha.example@nvidia.com>", "Exec Review deck pass: cut slide 6; protect slide 10", f"Hi,\n\nMy review is complete, but I haven't edited the deck. These edits still need to be applied: put Mike's approved NeoAgent V2-versus-V1 results on slide 4, keeping the baseline and evaluation scope.\n\nSummarize the proposed customer-use example from slide 6 in the Customer Example section of slide 7, then remove slide 6 from the live flow. Keep the local laptop comparison, the draft follow-up reviewed by the associate, and customer details staying on the device. It's a proposed use case, not customer validation or an approved demo selection. The demo slate and owners still need a decision.\n\nKeep the opening short so there's time for the decisions on slide 10.\n\nDeck: {deck_url}\n\nThanks,\nAisha"),
+        ("Daniel Cho <daniel.example@nvidia.com>", "Legal scope: NeoAgent V2 comparison cleared for leadership review", "Hi,\n\nI've cleared Mike's NeoAgent V2-versus-V1 comparison for today's leadership review. Keep the V1 baseline, the shared model and evaluation setup, and the internal-workflow scope. Please retain 'median' for completion time and 'per completed task' for token usage. The success improvement is 12 percentage points, not 12%.\n\nThis clearance is for leadership review only. Send the final external copy back to me before publication.\n\nThanks,\nDaniel"),
         ("Priya Nair <priya.example@nvidia.com>", "Decision by 4:30 PM today: marketing shoot venue hold", f"The planned venue is unavailable. We can hold Studio B Friday or Studio C Tuesday, with the preferred crew, until 4:30 PM today. Choose one before the hold expires or we risk a campaign slip.\n\nTracker: {sheet_url}"),
-        ("Elena Park <elena.example@nvidia.com>", "Agent Security PRD needs to reach Engineering today", f"Please review the Agent Security PRD today and make sure the requirements are ready for Engineering. Check the network-access defaults, what happens when permission checks fail, and the limits on administrator overrides. Resolve any open decisions and make the changes you think are needed before handing it over. You can skip the optional launch storyboard session; notes will be posted afterward.\n\nCampaign plan: {doc_url}"),
+        ("Elena Park <elena.example@nvidia.com>", "Agent Security PRD needs to reach Engineering today", f"Please finish and send the Agent Security PRD to Engineering today. Protect a focused hour for the final pass. You can skip the optional launch storyboard session; notes will be posted afterward.\n\nCampaign plan: {doc_url}"),
     ]
     background = background_email_specs()
     contacts = [
-        ("Rafael Costa <rafael.example@nvidia.com>", "Introduction: RTX Spark social rollout", "Hi,\n\nI’m Rafael, your point of contact for the RTX Spark social rollout. Feel free to reach out if you have questions or want to discuss the social plans for the campaign.\n\nThanks\nRafael"),
+        ("Rafael Costa <rafael.example@nvidia.com>", "Introduction: NeoAgent V2 social rollout", "Hi,\n\nI’m Rafael, your point of contact for the NeoAgent V2 social rollout. Feel free to reach out if you have questions or want to discuss the social plans for the campaign.\n\nThanks\nRafael"),
     ]
     data = [(*item, True) for item in meaningful] + [(*item, False) for item in background + contacts]
     times = seeded_email_times(len(data))
-    backlog_start = len(data)
+    task_start = len(data)
     now = local_now()
-    for item in BACKLOG_TASKS:
-        due = (now.date() - timedelta(days=item["due_days_ago"])).isoformat()
-        data.append((item["sender"], item["title"], f"Hi,\n\n{item['request']}\n\nRequested completion date: {due}.\n\nThanks", False))
-        times.append(now.replace(hour=10, minute=0, second=0, microsecond=0) - timedelta(days=item["requested_days_ago"]))
+    data.extend((*item, False) for item in task_scenario.email_specs(resources, now.date()))
+    times.extend(task_scenario.email_times(now))
     seed_run_id = uuid.uuid4().hex
     requests = [
         mail_import_request(
@@ -361,7 +394,10 @@ def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str) -> tuple[l
         for result in results
     ]
     evidence = {"elena": created[0]["url"], "mike": created[1]["url"], "aisha": created[2]["url"], "daniel": created[3]["url"], "priya": created[4]["url"], "prd": created[5]["url"]}
-    evidence.update({item["key"]: created[backlog_start + index]["url"] for index, item in enumerate(BACKLOG_TASKS)})
+    for index, task in enumerate(task_scenario.TASKS):
+        item = created[task_start + index]
+        item["task_key"] = task["key"]
+        evidence[task["key"]] = item["url"]
     return created, evidence
 
 
@@ -370,27 +406,10 @@ def create_tasks(api, state: dict, evidence: dict[str, str]) -> None:
         return
     task_list = api.tasklists().get(tasklist="@default").execute()
     state["task_list"] = {"id": task_list["id"], "title": task_list["title"]}
-    specs = [
-        ("Prepare RTX Spark leadership decisions", "Prepare the keynote storyline and proposed GTC demos and owners for today's executive review. Incorporate the approved product specifications, keeping 'up to' and FP4 intact, and the deck review feedback.", ("elena", "mike", "aisha", "daniel"), "slides", 0),
-        ("Choose the marketing shoot venue", "Choose Studio B Friday or Studio C Tuesday before the 4:30 PM hold expires so Priya can protect the crew and campaign schedule.", ("priya",), "sheet", 0),
-        ("Finish and send the Agent Security PRD", "Complete the final PRD pass and send it to Engineering today. Protect focused time for the handoff.", ("prd",), "doc", 0),
+    requests = [
+        api.tasks().insert(tasklist=state["task_list"]["id"], body=body)
+        for body in task_scenario.task_bodies(state["task_resources"], evidence, local_now().date(), MARKER)
     ]
-    today = local_now().date()
-    for item in BACKLOG_TASKS:
-        requested = (today - timedelta(days=item["requested_days_ago"])).isoformat()
-        context = f"Backlog: requested on {requested} and still unfinished. {item['request']}"
-        specs.append((item["title"], context, (item["key"],), None, item["due_days_ago"]))
-    requests = []
-    for title, context, sources, file_key, due_days_ago in specs:
-        links = "\n".join(evidence[source] for source in sources)
-        working_file = f"\n\nWorking file: {state[file_key]['url']}" if file_key else ""
-        body = {
-            "title": title,
-            "notes": f"{context}\n\nSource emails:\n{links}{working_file}\n\n[{MARKER}]",
-            "status": "needsAction",
-            "due": (today - timedelta(days=due_days_ago)).isoformat() + "T00:00:00Z",
-        }
-        requests.append(api.tasks().insert(tasklist=state["task_list"]["id"], body=body))
     state["tasks"] = [
         {"id": item["id"], "title": item["title"], "url": item.get("webViewLink", "")}
         for item in execute_batched(api, requests)
@@ -435,8 +454,8 @@ WEEKDAY_EVENTS = [
         ("16:30", "17:00", "EMEA handoff", "Share decisions and risks with the regional team."),
     ],
     [
-        ("08:45", "09:15", "Product specifications check-in", "Review specification approval and open wording questions."),
-        ("09:30", "10:30", "Resolve RTX Spark creative comments", "Update the hero claim, stage banner, and product UI imagery."),
+        ("08:45", "09:15", "Performance results check-in", "Review benchmark approval and open wording questions."),
+        ("09:30", "10:30", "Resolve NeoAgent V2 creative comments", "Update the hero claim, stage banner, and product UI imagery."),
         ("11:00", "11:45", "Partner enablement review", "Review partner slides and the staged Windows pilot."),
         ("12:30", "13:15", "Lunch with developer relations", "Align launch examples and developer proof points."),
         ("13:30", "14:30", "Local AI Summit demo QA", "Review the three-station script, blockers, and AV dependencies."),
@@ -454,7 +473,7 @@ WEEKDAY_EVENTS = [
     ],
     [
         ("08:30", "09:00", "GTC campaign PMO", "Review critical path, partner commitments, and print readiness."),
-        ("09:30", "10:15", "Product specifications review", "Check the approved product specifications, including 'up to' and FP4."),
+        ("09:30", "10:15", "Performance results review", "Check the approved performance results, including the V1 baseline and evaluation scope."),
         ("10:45", "11:30", "Executive deck working session", "Reconcile review comments before leadership circulation."),
         ("12:00", "13:00", "Working lunch — demo slate", "Narrow the GTC demo options and proposed owners."),
         ("13:30", "14:15", "Launch video agency review", "Resolve venue, crew, and production tradeoffs."),
@@ -539,13 +558,13 @@ WEEKDAY_ADDITIONAL_EVENTS = [
 TODAY_EVENTS = [
     ("08:00", "08:25", "Today's priorities", "Review overnight changes and today's critical decisions."),
     ("09:00", "09:45", "GTC campaign PMO", "Review critical path, partner commitments, and print readiness."),
-    ("10:15", "11:00", "Agent messaging review", "Align campaign wording with the approved product specifications."),
+    ("10:15", "11:00", "Agent messaging review", "Align campaign wording with the approved performance results."),
     ("11:00", "12:00", "Focus block — Agent Security PRD", "Complete the final pass before sending the PRD to Engineering."),
     ("12:30", "13:15", "Partner working lunch", "Review partner proof points and pilot readiness."),
-    ("14:00", "14:30", "Legal qualification check", "Confirm leadership-review wording keeps 'up to' and FP4 intact."),
+    ("14:00", "14:30", "Legal qualification check", "Confirm leadership-review wording keeps the V1 baseline and metric definitions intact."),
     ("15:00", "16:00", "Launch storyboard working session — notes available", "Optional working session; notes will be posted afterward."),
-    ("16:00", "17:00", "Executive prep block", "Apply deck feedback and prepare the two leadership decisions."),
-    ("17:00", "17:45", "RTX Spark Exec Review — leadership decisions", f"Decision meeting: approve the agent-first keynote storyline and align on GTC demos and owners. {EXEC_REVIEW_ROLES}"),
+    ("16:00", "17:00", "Executive prep block", "Prepare the proposed keynote agenda, talking points, and demo slate. Weigh the alternatives and make a recommendation for the leadership decisions."),
+    ("17:00", "17:45", "NeoAgent V2 Exec Review — leadership decisions", f"Decision meeting: approve the agent-first keynote storyline and align on GTC demos and owners. {EXEC_REVIEW_ROLES}"),
     ("17:00", "17:30", "Decision follow-up triage", "Capture decisions, unresolved owners, and required follow-ups."),
 ]
 
@@ -566,7 +585,7 @@ def calendar_event_specs(
         day = start_day + timedelta(days=offset)
         events = TODAY_EVENTS if offset == active_offset else weekday_events
         for begin, end, title, description in [*events, *WEEKDAY_ADDITIONAL_EVENTS[offset]]:
-            link = f"\nDeck: {deck_url}" if title.startswith("RTX Spark Exec Review") else f"\nNotes: {doc_url}" if title.startswith("Launch storyboard") else f"\nTracker: {sheet_url}" if title == "GTC campaign PMO" else ""
+            link = f"\nDeck: {deck_url}" if title.startswith("NeoAgent V2 Exec Review") else f"\nNotes: {doc_url}" if title.startswith("Launch storyboard") else f"\nTracker: {sheet_url}" if title == "GTC campaign PMO" else ""
             specs.append((day, begin, end, title, f"{description}{link}"))
     return specs
 
@@ -681,7 +700,8 @@ def seed(week_of: date) -> dict:
         state["slides"] = create_slides(svc["drive"], state["folder"]["id"])
         reset_deck_baseline(svc["slides"], state["slides"]["id"], drive=svc["drive"])
         state["sheet"] = create_sheet(svc["drive"], state["folder"]["id"])
-        state["emails"], evidence = create_emails(svc["gmail"], state["slides"]["url"], state["sheet"]["url"], state["doc"]["url"])
+        task_scenario.ensure_resources(SimpleNamespace(ROOT=ROOT, upload_template=upload_template), svc, state)
+        state["emails"], evidence = create_emails(svc["gmail"], state["slides"]["url"], state["sheet"]["url"], state["doc"]["url"], state["task_resources"])
         create_tasks(svc["tasks"], state, evidence)
         reset_sheet_baseline(svc["sheets"], state, evidence, local_now().date().isoformat())
         reset_original_sheet(svc["drive"], svc["sheets"], state, evidence, local_now().date().isoformat())
@@ -702,7 +722,8 @@ def reset_in_place(state: dict, week_of: date) -> dict:
     state["slides"]["template_sha256"] = template_hash
     clear_seeded_tasks(svc["tasks"], state)
     remove_dynamic_items(state, svc, clear_drafts=True)
-    state["emails"], evidence = create_emails(svc["gmail"], state["slides"]["url"], state["sheet"]["url"], state["doc"]["url"])
+    task_scenario.ensure_resources(SimpleNamespace(ROOT=ROOT, upload_template=upload_template), svc, state, restore=True)
+    state["emails"], evidence = create_emails(svc["gmail"], state["slides"]["url"], state["sheet"]["url"], state["doc"]["url"], state["task_resources"])
     create_tasks(svc["tasks"], state, evidence)
     reset_sheet_baseline(svc["sheets"], state, evidence, local_now().date().isoformat())
     reset_original_sheet(svc["drive"], svc["sheets"], state, evidence, local_now().date().isoformat())
@@ -713,12 +734,43 @@ def reset_in_place(state: dict, week_of: date) -> dict:
 
 
 def deck_template_hash() -> str:
-    return hashlib.sha256((ROOT / "demo" / "templates" / "rtx-spark-exec-review.pptx").read_bytes()).hexdigest()
+    return hashlib.sha256((ROOT / "demo" / "templates" / "neoagent-v2-exec-review.pptx").read_bytes()).hexdigest()
+
+
+def deck_text_styles(source: Path, slide_number: int) -> list[dict]:
+    """Read the template's native title/body style for Google Slides text resets."""
+    ns = {"p": "http://schemas.openxmlformats.org/presentationml/2006/main",
+          "a": "http://schemas.openxmlformats.org/drawingml/2006/main"}
+    with ZipFile(source) as archive:
+        page = ElementTree.fromstring(archive.read(f"ppt/slides/slide{slide_number}.xml"))
+    styles = []
+    for shape in page.findall("p:cSld/p:spTree/p:sp", ns):
+        if not shape.findall(".//a:t", ns):
+            continue
+        run = shape.find(".//a:rPr", ns)
+        if run is None:
+            styles.append({})
+            continue
+        color = run.find("a:solidFill/a:srgbClr", ns)
+        font = run.find("a:latin", ns)
+        style = {"bold": run.get("b") == "1"}
+        if run.get("sz"):
+            style["fontSize"] = {"magnitude": int(run.get("sz")) / 100, "unit": "PT"}
+        if font is not None:
+            style["fontFamily"] = font.get("typeface")
+        if color is not None:
+            value = color.get("val")
+            style["foregroundColor"] = {"opaqueColor": {"rgbColor": {
+                key: int(value[i:i + 2], 16) / 255
+                for key, i in (("red", 0), ("green", 2), ("blue", 4))
+            }}}
+        styles.append(style)
+    return (styles + [{}, {}])[:2]
 
 
 def reset_deck_baseline(slides, presentation_id: str, *, drive=None, restore_template=False) -> None:
     presentation = slides.presentations().get(presentationId=presentation_id).execute()
-    source = ROOT / "demo" / "templates" / "rtx-spark-exec-review.pptx"
+    source = ROOT / "demo" / "templates" / "neoagent-v2-exec-review.pptx"
     with ZipFile(source) as template:
         root = ElementTree.fromstring(template.read("ppt/presentation.xml"))
     ns = {"p": "http://schemas.openxmlformats.org/presentationml/2006/main"}
@@ -740,68 +792,9 @@ def reset_deck_baseline(slides, presentation_id: str, *, drive=None, restore_tem
         presentation = slides.presentations().get(presentationId=presentation_id).execute()
         if len(presentation.get("slides", [])) != expected_slides:
             raise RuntimeError("The demo deck template was not fully restored; retry the reset before running the demo")
-    wanted = {
-        3: ("Campaign readiness", """CLAIMS
-Approved evidence is ready to incorporate.
-
-DECK
-The latest review pass defines the required edits.
-
-DECISIONS
-Leadership needs to close the keynote storyline and GTC demo slate."""),
-        4: ("Product specifications: update required", """Product specifications to go here. See Mike Chen's approved package.
-
-OWNER
-Mike Chen / Marketing"""),
-        5: ("One claim across every surface", """GTC DECK
-Agent Messaging • Campaign plan • Creative assets
-
-DECISION GATE
-Keep approved specification wording, including 'up to' and FP4, consistent.
-
-CONTROL
-Do not turn product specifications into measured workflow results."""),
-        6: ("Customer use example", """SCENARIO
-A retail associate compares two laptops using a local product catalog.
-
-ASSISTANCE
-The assistant summarizes the differences and drafts a customer follow-up.
-
-CUSTOMER VALUE
-The associate reviews the draft before sending. Customer details stay on the device."""),
-        7: ("GTC demos — alignment needed", """DECISION
-Choose demos that show useful assistance with the user in control.
-
-CUSTOMER EXAMPLE
-Candidate use case still to be summarized for the review.
-
-OPEN
-Confirm the demo slate and owners. No selection is approved yet."""),
-        8: ("Execution dependencies", """CLAIMS
-Approval unlocks deck, messaging, and creative updates.
-
-PRODUCTION
-Venue and crew timing depend on a same-day decision.
-
-PARTNERS
-Commitments must map back to the approved keynote and demo decisions."""),
-        9: ("Marketing shoot — decision required", """BLOCKER
-The planned venue is unavailable.
-
-DECISION
-Choose a replacement shoot date.
-
-IMPACT
-Priya cannot rebook the venue or protect downstream crew holds until the date is set."""),
-        10: ("Two decisions to leave with", """1  APPROVE THE PROPOSED KEYNOTE STORYLINE
-Lead with agents; use specifications as evidence.
-
-2  ALIGN ON THE DEMOS FOR GTC
-Confirm the slate and owners that prove the story.
-
-Working files
-Campaign tracker • Campaign plan"""),
-    }
+    # The builder and reset share one baseline, so richer slide content survives resets.
+    content = json.loads((ROOT / "demo" / "neoagent_deck.json").read_text(encoding="utf-8"))
+    wanted = {number: (item["title"], item["body"]) for number, item in enumerate(content, 1) if number >= 3}
     requests = []
     for slide_number, (title, body) in wanted.items():
         slide = presentation["slides"][slide_number - 1]
@@ -812,9 +805,16 @@ Campaign tracker • Campaign plan"""),
                 text_boxes.append(element["objectId"])
         if len(text_boxes) < 2:
             raise RuntimeError(f"Slide {slide_number} does not contain title/body text boxes")
-        for object_id, value in ((text_boxes[0], title), (text_boxes[1], body)):
+        styles = deck_text_styles(source, slide_number)
+        for index, (object_id, value) in enumerate(((text_boxes[0], title), (text_boxes[1], body))):
             requests.append({"deleteText": {"objectId": object_id, "textRange": {"type": "ALL"}}})
             requests.append({"insertText": {"objectId": object_id, "text": value}})
+            # deleteText ALL removes character styling in Google Slides.
+            if styles[index]:
+                requests.append({"updateTextStyle": {
+                    "objectId": object_id, "textRange": {"type": "ALL"},
+                    "style": styles[index], "fields": ",".join(styles[index]),
+                }})
     slides.presentations().batchUpdate(presentationId=presentation_id, body={"requests": requests}).execute()
 
 def main() -> int:
@@ -825,6 +825,7 @@ def main() -> int:
 def run() -> int:
     parser = argparse.ArgumentParser(description="Seed, reset, or remove the reference Chief of Staff workspace")
     parser.add_argument("--week-of", help="Monday date (YYYY-MM-DD); defaults to the current week")
+    parser.add_argument("--refresh-task-scenario", action="store_true", help="Replace only demo tasks and their supporting resources/mail")
     parser.add_argument("--reset", action="store_true")
     parser.add_argument("--cleanup", action="store_true")
     parser.add_argument("--confirm", action="store_true", help="Required because this writes to Google Workspace")
@@ -832,6 +833,13 @@ def run() -> int:
     if not args.confirm:
         raise SystemExit("Refusing Google Workspace writes without --confirm")
     path = state_path()
+    if sum((args.reset, args.cleanup, args.refresh_task_scenario)) > 1:
+        raise SystemExit("Choose only one of reset, cleanup or refresh-task-scenario")
+    if args.refresh_task_scenario:
+        if not path.exists(): raise SystemExit(f"No workspace state at {path}")
+        state = task_scenario.refresh(sys.modules[__name__], json.loads(path.read_text(encoding="utf-8")))
+        print(json.dumps({"ok": True, "status": "task-scenario-refreshed", "resources": state["task_resources"], "tasks": len(state["tasks"]), "emails": len(state["emails"])}, indent=2))
+        return 0
     if args.cleanup:
         if not path.exists(): raise SystemExit(f"No workspace state at {path}")
         cleanup(json.loads(path.read_text(encoding="utf-8")))

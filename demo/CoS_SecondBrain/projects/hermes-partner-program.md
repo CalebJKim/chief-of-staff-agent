@@ -17,7 +17,7 @@ The program explains how partners could use Hermes in an agent workflow. The exe
 - The Windows pilot smoke-check and operating evidence, with the scope of that evidence explained.
 - The partner's intended benefit and the specific next step being requested.
 - Whether [[openshell|OpenShell]] is ready to serve as an example of execution controls.
-- A clear connection to the [[rtx-spark-launch|launch]] and [[agent-first-storyline|proposed keynote story]].
+- A clear connection to the [[neoagent-v2-launch|launch]] and [[agent-first-storyline|proposed keynote story]].
 
 [[sofia-alvarez]] coordinates the VP review. [[aisha-rahman]] owns the presentation flow.
 

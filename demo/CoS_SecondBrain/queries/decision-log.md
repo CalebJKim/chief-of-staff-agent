@@ -17,9 +17,9 @@ confidence: high
 | Finalize GTC demos and owners | Executive sponsor | Open | Executive Review | [[gtc-demo-slate]] |
 | Choose replacement shoot date | Executive sponsor | Open | Before venue holds expire | [[marketing-shoot]] |
 | Approve default-deny egress posture | Security + executive sponsor | Open | Before partner rehearsal | [[openshell]] |
-| Use approved product specifications with “up to” and FP4 | [[daniel-cho]] | Approved | 2026-09-09 | [[product-specifications]] |
+| Use approved performance results with the V1 baseline and evaluation scope | [[daniel-cho]] | Approved | 2026-09-09 | [[performance-results]] |
 
-See [[rtx-spark-executive-review|the RTX Spark Executive Review]] and the [[weekly-executive-brief|weekly executive brief]] for sequencing.
+See [[neoagent-v2-executive-review|the NeoAgent V2 Executive Review]] and the [[weekly-executive-brief|weekly executive brief]] for sequencing.
 
 ## Reading a decision
 A recommendation, an accepted decision, and completed follow-up are separate stages. Approval may leave actions unfinished; preparing a document does not establish that the underlying decision was made.

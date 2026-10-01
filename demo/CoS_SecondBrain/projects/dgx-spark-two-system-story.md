@@ -30,4 +30,4 @@ These questions do not assert that a particular configuration is supported.
 ## Explaining the proposal
 A diagram or narrated walkthrough can show the intended division of work. Make clear that it explains a proposal rather than demonstrates a validated result.
 
-Connect the discussion to [[product-specifications]] and [[competitive-response-deepseek]], without carrying their assumptions into a new comparison. Confirm next decisions through [[weekly-leadership-staff]] and [[decision-log]]. No new speedup, capacity, benchmark, scaling, or reliability promise is made here.
+Connect the discussion to [[performance-results]] and [[competitive-response-deepseek]], without carrying their assumptions into a new comparison. Confirm next decisions through [[weekly-leadership-staff]] and [[decision-log]]. No new speedup, capacity, benchmark, scaling, or reliability promise is made here.

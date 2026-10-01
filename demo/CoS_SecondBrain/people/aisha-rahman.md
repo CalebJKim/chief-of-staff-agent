@@ -13,7 +13,7 @@ confidence: high
 
 Role: Partner and presentation lead.
 
-Aisha owns the presentation flow for the [[hermes-partner-program|partner program]] and is connected to the [[rtx-spark-executive-review|executive review]]. Start with what the audience needs to understand or decide after the presentation.
+Aisha owns the presentation flow for the [[hermes-partner-program|partner program]] and is connected to the [[neoagent-v2-executive-review|executive review]]. Start with what the audience needs to understand or decide after the presentation.
 
 ## Material for the review
 Bring a short story outline, the evidence each part needs, and the decision being requested. Compare the [[gtc-demo-slate|candidate demos]] by what they show, not simply by visual polish. Keep proposed owners and setup questions visible.

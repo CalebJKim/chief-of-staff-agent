@@ -1,7 +1,7 @@
 ---
 title: Qualified Product Claims
 created: 2026-09-09
-updated: 2026-09-22
+updated: 2026-09-30
 type: concept
 tags: [strategy, operations, research]
 sources: [raw/briefings/executive-operating-principles.md]
@@ -11,14 +11,12 @@ confidence: high
 
 # Qualified Product Claims
 
-A qualified product claim keeps the limits that make its wording accurate. For the RTX Spark specifications, this means retaining “up to” with every value and FP4 with the AI performance figure.
+A qualified claim keeps the conditions that make it accurate. For NeoAgent V2, the comparison is always against NeoAgent V1 using the same model, tasks, and environment.
 
-## Keeping the meaning intact
-The component name, unit, and qualifier explain what a specification describes. Removing them can change the claim even when the number stays the same. Specifications alone do not establish measured workflow performance.
+## Preserve the meaning
+Keep task success separate from completion time and token usage. A percentage-point change in success is different from a relative percentage reduction in time. Keep “median” with completion time and “per completed task” with token usage.
 
-Read the headline, chart, and surrounding text together. Consider the audience and what the complete message implies.
+## Review scope
+Keep the NeoAgent V1 baseline, metric definitions, and internal evaluation scope with the figures. Approval covers leadership review only. Final external copy needs a separate Legal review.
 
-## Reviewing a shorter version
-Keep the source evidence and intended disclosure context available when reviewing shortened or reformatted material. Check what changed, who owns the review, and what decision is needed next.
-
-[[product-specifications|Product specifications]] records the technical evidence. [[marketing-claims-rollout|The marketing claims rollout]] tracks its use in other materials. Use current evidence from those sources when judging an adaptation.
+[[performance-results]] records the exact fictional figures and definitions. [[marketing-claims-rollout]] tracks their use in other materials. A shorter caption still needs the baseline and evaluation scope. Do not generalize internal results to every customer workflow.

@@ -35,7 +35,7 @@ I coordinated the training and facilitated the exercises.
 - [[mike-chen|Mike Chen]] reviewed the technical content and the checks used in the reporting exercise.
 - [[marcus-lee|Marcus Lee]] covered permissions, sandboxing, and failure handling.
 
-Aisha and Mike also work with me on the [[rtx-spark-launch|RTX Spark launch]]. Marcus’s work on [[agent-security-prd|Agent Security PRD]] provided context for the safety discussion.
+Aisha and Mike also work with me on the [[neoagent-v2-launch|NeoAgent V2 launch]]. Marcus’s work on [[agent-security-prd|Agent Security PRD]] provided context for the safety discussion.
 
 Prepare Python, the agent interface, two task CSVs, short project briefs, and the reporting skill before the session. Participants should not have to install software or write Python themselves. Run the examples together and pause at the tool results.
 

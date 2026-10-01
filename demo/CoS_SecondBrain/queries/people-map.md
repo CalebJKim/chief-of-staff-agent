@@ -13,7 +13,7 @@ confidence: high
 
 ## Launch team
 - [[elena-park|Elena Park]]: executive program and decision cadence.
-- [[mike-chen|Mike Chen]]: product specifications.
+- [[mike-chen|Mike Chen]]: performance results.
 - [[aisha-rahman|Aisha Rahman]]: partner and executive presentation flow.
 - [[marcus-lee|Marcus Lee]]: agent security engineering.
 - [[daniel-cho|Daniel Cho]]: legal qualifications and claims clearance.
@@ -22,7 +22,7 @@ confidence: high
 - [[grant-walker|Grant Walker]]: retail readiness.
 - [[sofia-alvarez|Sofia Alvarez]]: partner program and VP coordination.
 
-Their work comes together in [[rtx-spark-launch|the RTX Spark launch]]. The [[decision-log|decision log]] records the choices that guide it.
+Their work comes together in [[neoagent-v2-launch|the NeoAgent V2 launch]]. The [[decision-log|decision log]] records the choices that guide it.
 
 ## Broader operating team
 [[victor-hale|Victor Hale]] connects finance with the operating plan. [[lena-ortiz|Lena Ortiz]] covers workforce development and succession. [[anika-shah|Anika Shah]] brings the customer-success view to recovery work.

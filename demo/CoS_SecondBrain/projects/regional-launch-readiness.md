@@ -27,4 +27,4 @@ For each region, separate a centrally delivered input from local acceptance. An 
 
 Explain the affected audience and consequence rather than hiding exceptions in one overall score.
 
-The work connects [[rtx-spark-launch]] and [[global-sales-forecast]]. A global milestone does not imply identical conditions everywhere. Confirm the owner, success checks, and next decision date through [[weekly-leadership-staff]], and record accepted commitments in [[decision-log]].
+The work connects [[neoagent-v2-launch]] and [[global-sales-forecast]]. A global milestone does not imply identical conditions everywhere. Confirm the owner, success checks, and next decision date through [[weekly-leadership-staff]], and record accepted commitments in [[decision-log]].

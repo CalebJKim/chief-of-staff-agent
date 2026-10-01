@@ -1,15 +1,15 @@
 ---
-title: RTX Spark Executive Review
+title: NeoAgent V2 Executive Review
 created: 2026-09-09
 updated: 2026-09-22
 type: meeting
-tags: [meeting, rtx-spark, decision, priority]
+tags: [meeting, neoagent-v2, decision, priority]
 sources: [raw/meetings/leadership-staff-2026-09-08.md, raw/updates/exec-deck-feedback.md]
 status: active
 confidence: high
 ---
 
-# RTX Spark Executive Review
+# NeoAgent V2 Executive Review
 
 This meeting is for two decisions: whether to approve the proposed keynote story and which demos to show at GTC. The intended outcome is a set of choices and confirmed responsibilities.
 
@@ -17,7 +17,7 @@ This meeting is for two decisions: whether to approve the proposed keynote story
 [[elena-park]] coordinates the review. [[aisha-rahman]] owns the presentation flow. [[mike-chen]] owns the product evidence. These are the roles recorded in this note, not a complete attendee list.
 
 ## Prepare before the meeting
-- Update slide 4 with the recorded [[product-specifications|product specifications]], keeping “up to” and FP4 intact.
+- Update slide 4 with the recorded [[performance-results|performance results]], keeping the V1 baseline and evaluation scope intact.
 - Move the customer example from slide 6 into slide 7, then remove slide 6.
 - Keep the introduction short so there is time for the decisions on slide 10.
 - Prepare a recommendation for the [[agent-first-storyline|keynote story]] and a comparison of the [[gtc-demo-slate|candidate demos]].

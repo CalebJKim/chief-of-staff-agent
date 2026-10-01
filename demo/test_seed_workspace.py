@@ -19,7 +19,7 @@ spec.loader.exec_module(seed)
 from baseline import PRE_EMAIL_ROWS
 
 class WorkspaceSeedTests(unittest.TestCase):
-    def test_seed_assets_use_specifications_without_old_benchmark_claims(self):
+    def test_seed_assets_use_results_without_old_benchmark_claims(self):
         retired = re.compile(r"1\.8[x×]|2\.1[x×]|38 tokens/second|22% lower energy|inference-performance-claims|product-performance-package", re.I)
         for filename in ("seed_workspace.py", "baseline.py"):
             self.assertIsNone(retired.search(MODULE.with_name(filename).read_text(encoding="utf-8")))
@@ -32,10 +32,10 @@ class WorkspaceSeedTests(unittest.TestCase):
                     if Path(name).suffix in (".xml", ".md"):
                         self.assertIsNone(retired.search(archive.read(name).decode("utf-8")), (path.name, name))
         with zipfile.ZipFile(MODULE.parent / "templates/CoS_SecondBrain.zip") as archive:
-            for name in ("concepts/product-specifications.md", "raw/updates/product-specifications-package.md"):
+            for name in ("concepts/performance-results.md", "raw/updates/performance-results-package.md"):
                 text = archive.read(name).decode("utf-8")
                 self.assertEqual(text.replace("\r\n", "\n"), (MODULE.parent / "CoS_SecondBrain" / name).read_text(encoding="utf-8"))
-                for value in ("Up to 6,144 cores", "Up to 20 cores", "Up to 1 petaflop", "Up to 128 GB", "FP4"):
+                for value in ("NeoAgent V1", "NeoAgent V2", "80%", "92%", "12 percentage points", "30% lower", "25% fewer", "same 200", "fictional"):
                     self.assertIn(value, text)
 
     def test_seed_and_reset_text_use_gtc_not_previous_event_name(self):
@@ -47,8 +47,8 @@ class WorkspaceSeedTests(unittest.TestCase):
 
     def test_reset_templates_and_second_brain_archive_use_gtc(self):
         templates = MODULE.parent / "templates"
-        for filename in ("rtx-spark-campaign-plan.docx", "rtx-spark-campaign-tracker.xlsx",
-                         "rtx-spark-exec-review.pptx", "CoS_SecondBrain.zip"):
+        for filename in ("neoagent-v2-campaign-plan.docx", "neoagent-v2-campaign-tracker.xlsx",
+                         "neoagent-v2-exec-review.pptx", "CoS_SecondBrain.zip"):
             with self.subTest(filename=filename), zipfile.ZipFile(templates / filename) as archive:
                 self.assertIsNone(archive.testzip())
                 contents = []
@@ -93,31 +93,22 @@ class WorkspaceSeedTests(unittest.TestCase):
             "sheet": {"url": "https://docs.google.com/spreadsheets/d/sheet"},
             "doc": {"url": "https://docs.google.com/document/d/doc"},
         }
-        evidence = {key: f"https://mail.google.com/mail/u/0/#all/{key}" for key in ("elena", "mike", "aisha", "daniel", "priya", "prd")}
-        evidence.update({item["key"]: f"https://mail.google.com/mail/u/0/#all/{item['key']}" for item in seed.BACKLOG_TASKS})
-        results = [{"id": f"task-{i}", "title": f"Task {i}", "webViewLink": f"https://tasks.google.com/task/{i}"} for i in range(3 + len(seed.BACKLOG_TASKS))]
+        state["task_resources"] = {key: {"url": f"https://drive.google.com/{key}"} for key in seed.task_scenario.RESOURCES}
+        evidence = {item["key"]: f"https://mail.google.com/mail/u/0/#all/{item['key']}" for item in seed.task_scenario.TASKS}
+        results = [{"id": f"task-{i}", "title": f"Task {i}"} for i in range(3)]
         now = datetime(2026, 9, 10, 10, 30, tzinfo=ZoneInfo("America/Los_Angeles"))
         with patch.object(seed, "execute_batched", return_value=results), patch.object(seed, "local_now", return_value=now):
             seed.create_tasks(api, state, evidence)
         api.tasklists().insert.assert_not_called()
         api.tasklists().get.assert_called_once_with(tasklist="@default")
-        self.assertEqual({"id": "default-list", "title": "My Tasks"}, state["task_list"])
         bodies = [call.kwargs["body"] for call in api.tasks().insert.call_args_list]
-        self.assertEqual(3 + len(seed.BACKLOG_TASKS), len(bodies))
+        self.assertEqual(3, len(bodies))
+        self.assertEqual([item["title"] for item in seed.task_scenario.TASKS], [b["title"] for b in bodies])
         notes = "\n".join(body["notes"] for body in bodies)
         self.assertTrue(all(url in notes for url in evidence.values()))
-        self.assertTrue(all(state[key]["url"] in notes for key in ("slides", "sheet", "doc")))
-        self.assertTrue(all(body["due"] == "2026-09-10T00:00:00Z" for body in bodies[:3]))
+        self.assertTrue(all(item["url"] in notes for item in state["task_resources"].values()))
+        self.assertTrue(all(body["due"] == "2026-09-10T00:00:00Z" for body in bodies))
         self.assertTrue(all(body["status"] == "needsAction" for body in bodies))
-        for item, body in zip(seed.BACKLOG_TASKS, bodies[3:]):
-            requested = now.date() - timedelta(days=item["requested_days_ago"])
-            due = date.fromisoformat(body["due"][:10])
-            self.assertLess(requested, due)
-            self.assertLess(due, now.date())
-            self.assertIn(requested.isoformat(), body["notes"])
-            self.assertIn("still unfinished", body["notes"])
-            self.assertIn(evidence[item["key"]], body["notes"])
-            self.assertNotIn("Working file:", body["notes"])
         self.assertTrue(all(call.kwargs["tasklist"] == "default-list" for call in api.tasks().insert.call_args_list))
         self.assertEqual(len(bodies), len(state["tasks"]))
 
@@ -152,18 +143,18 @@ class WorkspaceSeedTests(unittest.TestCase):
 
     def test_reference_names_and_no_private_labels(self):
         source = MODULE.read_text(encoding="utf-8")
-        self.assertIn("RTX Spark Campaign Tracker", source)
-        self.assertIn("RTX Spark Campaign Plan", source)
-        self.assertIn("RTX Spark Exec Review", source)
+        self.assertIn("NeoAgent V2 Campaign Tracker", source)
+        self.assertIn("NeoAgent V2 Campaign Plan", source)
+        self.assertIn("NeoAgent V2 Exec Review", source)
         self.assertNotIn("Public Demo", source)
         self.assertNotIn("August", source)
 
     def test_exact_templates_are_present_and_valid(self):
         templates = Path(__file__).with_name("templates")
         expected = {
-            "rtx-spark-campaign-tracker.xlsx": "xl/workbook.xml",
-            "rtx-spark-exec-review.pptx": "ppt/presentation.xml",
-            "rtx-spark-campaign-plan.docx": "word/document.xml",
+            "neoagent-v2-campaign-tracker.xlsx": "xl/workbook.xml",
+            "neoagent-v2-exec-review.pptx": "ppt/presentation.xml",
+            "neoagent-v2-campaign-plan.docx": "word/document.xml",
         }
         for filename, member in expected.items():
             path = templates / filename
@@ -187,22 +178,21 @@ class WorkspaceSeedTests(unittest.TestCase):
                 if event_day == day
             )
             self.assertTrue(any(next_begin < end for (_, end), (next_begin, _) in zip(periods, periods[1:])))
-        exec_reviews = [item for item in specs if item[3].startswith("RTX Spark Exec Review")]
+        exec_reviews = [item for item in specs if item[3].startswith("NeoAgent V2 Exec Review")]
         self.assertEqual(1, len(exec_reviews))
         self.assertEqual(monday + timedelta(days=3), exec_reviews[0][0])
         self.assertIn(seed.EXEC_REVIEW_ROLES, exec_reviews[0][4])
         self.assertIn("You will present", seed.EXEC_REVIEW_ROLES)
         self.assertIn("Planned attendees:", seed.EXEC_REVIEW_ROLES)
         self.assertIn("Mike Chen", MODULE.read_text(encoding="utf-8"))
-        for specification in ("Blackwell RTX GPU: Up to 6,144 cores", "Grace CPU: Up to 20 cores",
-                              "FP4 AI performance: Up to 1 petaflop", "Unified memory: Up to 128 GB"):
-            self.assertIn(specification, MODULE.read_text(encoding="utf-8"))
+        for result in ("NeoAgent V2 92% (184/200)", "NeoAgent V1 80% (160/200)", "30% lower than NeoAgent V1", "25% fewer than NeoAgent V1"):
+            self.assertIn(result, MODULE.read_text(encoding="utf-8"))
 
     def test_main_emails_are_preserved_with_diverse_background_mail_and_fixed_times(self):
         gmail = Mock()
         gmail.users().getProfile.return_value.execute.return_value = {"emailAddress": "demo@example.test"}
         today_count = seed.MEANINGFUL_EMAIL_COUNT + seed.BACKGROUND_EMAIL_COUNT + seed.CONTACT_EMAIL_COUNT
-        total = today_count + len(seed.BACKLOG_TASKS)
+        total = today_count + len(seed.task_scenario.TASKS)
         results = [
             {"id": f"message-{index}", "threadId": f"thread-{index}"}
             for index in range(total)
@@ -210,7 +200,7 @@ class WorkspaceSeedTests(unittest.TestCase):
         now = datetime(2026, 8, 27, 14, 30, tzinfo=ZoneInfo("America/Los_Angeles"))
 
         with patch.object(seed, "local_now", return_value=now), patch.object(seed, "execute_batched", return_value=results) as batched:
-            created, evidence = seed.create_emails(gmail, "deck", "sheet", "doc")
+            created, evidence = seed.create_emails(gmail, "deck", "sheet", "doc", {key: {"url": f"https://drive.google.com/{key}"} for key in seed.task_scenario.RESOURCES})
 
         imported = []
         labels = []
@@ -223,30 +213,28 @@ class WorkspaceSeedTests(unittest.TestCase):
         self.assertEqual(total, len(batched.call_args.args[1]))
         self.assertEqual(
             [
-                "URGENT: RTX Spark Exec Review moved to 5 PM today",
-                "APPROVED: RTX Spark product specifications for slide 4",
+                "URGENT: NeoAgent V2 Exec Review moved to 5 PM today",
+                "APPROVED: NeoAgent V2 performance results for slide 4",
                 "Exec Review deck pass: cut slide 6; protect slide 10",
-                "Legal scope: RTX Spark wording cleared for leadership review",
+                "Legal scope: NeoAgent V2 comparison cleared for leadership review",
                 "Decision by 4:30 PM today: marketing shoot venue hold",
                 "Agent Security PRD needs to reach Engineering today",
             ],
             [message["Subject"] for message in imported[:seed.MEANINGFUL_EMAIL_COUNT]],
         )
-        self.assertEqual({"elena", "mike", "aisha", "daniel", "priya", "prd"} | {item["key"] for item in seed.BACKLOG_TASKS}, set(evidence))
+        self.assertEqual({"elena", "mike", "aisha", "daniel", "priya", "prd"} | {item["key"] for item in seed.task_scenario.TASKS}, set(evidence))
         review_feedback = imported[2].get_payload(decode=True).decode("utf-8")
         self.assertIn(seed.EXEC_REVIEW_ROLES, imported[0].get_payload(decode=True).decode("utf-8"))
-        for phrase in ("I have not edited the deck", "proposed customer-use example", "Customer Example section of slide 7",
+        for phrase in ("I haven't edited the deck", "proposed customer-use example", "Customer Example section of slide 7",
                        "then remove slide 6", "not customer validation", "owners still need a decision"):
             self.assertIn(phrase, review_feedback)
         received_at = [parsedate_to_datetime(message["Date"]) for message in imported]
         self.assertEqual({now.date()}, {value.date() for value in received_at[:seed.MEANINGFUL_EMAIL_COUNT]})
         self.assertEqual({now.date(), now.date() - timedelta(days=1)}, {value.date() for value in received_at[:today_count]})
         self.assertEqual(seed.seeded_email_times(today_count, now), received_at[:today_count])
-        for index, item in enumerate(seed.BACKLOG_TASKS, today_count):
-            due = now.date() - timedelta(days=item["due_days_ago"])
-            self.assertLess(received_at[index].date(), due)
-            self.assertLess(due, now.date())
-            self.assertIn(due.isoformat(), imported[index].get_payload())
+        for index, item in enumerate(seed.task_scenario.TASKS, today_count):
+            self.assertEqual(now.date(), received_at[index].date())
+            self.assertLess(received_at[index].hour, 9)
             self.assertEqual(created[index]["url"], evidence[item["key"]])
         self.assertEqual(total, len(set(received_at)))
         self.assertTrue(all("IMPORTANT" in value for value in labels[:seed.MEANINGFUL_EMAIL_COUNT]))
@@ -260,7 +248,7 @@ class WorkspaceSeedTests(unittest.TestCase):
         self.assertEqual(seed.CONTACT_EMAIL_COUNT, len(contacts))
         self.assertEqual(
             {
-                "Rafael Costa <rafael.example@nvidia.com>": "Introduction: RTX Spark social rollout",
+                "Rafael Costa <rafael.example@nvidia.com>": "Introduction: NeoAgent V2 social rollout",
             },
             {message["From"]: message["Subject"] for message in contacts},
         )
@@ -274,7 +262,7 @@ class WorkspaceSeedTests(unittest.TestCase):
         tracker_people = {row[1] for row in PRE_EMAIL_ROWS if row[1] not in {"Workspace Owner", "Unassigned"}}
         self.assertEqual(set(), tracker_people - seeded_addresses.keys())
         self.assertTrue(all("@" in seeded_addresses[name] for name in tracker_people))
-        self.assertTrue(all(address.endswith(".example@nvidia.com") for address in seeded_addresses.values()))
+        self.assertTrue(all(address.endswith((".example@nvidia.com", "@example.com")) for address in seeded_addresses.values()))
 
     def test_google_requests_are_executed_in_bounded_batches(self):
         batches = []
@@ -497,8 +485,8 @@ class WorkspaceSeedTests(unittest.TestCase):
         call = slides.presentations().batchUpdate.call_args
         requests = call.kwargs["body"]["requests"]
         inserted = [item["insertText"]["text"] for item in requests if "insertText" in item]
-        self.assertEqual(32, len(requests))
-        self.assertTrue(any("Product specifications to go here" in text for text in inserted))
+        self.assertEqual(48, len(requests))
+        self.assertTrue(any("Performance results to go here" in text for text in inserted))
         self.assertTrue(any("Two decisions to leave with" in text for text in inserted))
         self.assertFalse(any("Retail demo owner" in text for text in inserted))
 
