@@ -28,6 +28,7 @@ sys.path.insert(0, str(ROOT / "skills" / "productivity" / "ingest" / "scripts"))
 from actions import credentials  # noqa: E402
 from baseline import reset_sheet_baseline  # noqa: E402
 import task_scenario
+from news_scenario import NEWS_EMAILS
 from second_brain_seed import check_reset, reset_second_brain  # noqa: E402
 from googleapiclient.discovery import build  # noqa: E402
 from googleapiclient.errors import HttpError  # noqa: E402
@@ -36,7 +37,7 @@ MARKER = "chief-of-staff-reference-workspace-v1"
 STATE_FILE = "chief-of-staff-workspace-state.json"
 TZ_NAME = os.environ.get("CHIEF_OF_STAFF_WORKSPACE_TZ", "America/Los_Angeles")
 STATUS_VALUES = ["On track", "In progress", "Awaiting update", "Blocked", "Complete"]
-MEANINGFUL_EMAIL_COUNT = 6
+MEANINGFUL_EMAIL_COUNT = 6 + len(NEWS_EMAILS)
 BACKGROUND_EMAIL_COUNT = 70
 CONTACT_EMAIL_COUNT = 1
 EMAIL_REFERENCE_HOUR = 9
@@ -360,9 +361,10 @@ def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str, resources:
         ("Mike Chen <mike.example@nvidia.com>", "APPROVED: NeoAgent V2 performance results for slide 4", "Hi,\n\nThe V2 comparison is ready for today's review. Please use these figures on slide 4:\n\nTask success: NeoAgent V2 92% (184/200), versus NeoAgent V1 80% (160/200), a 12-percentage-point improvement.\nMedian completion time: 30% lower than NeoAgent V1 (V1 index 100, V2 70).\nModel tokens per completed task: 25% fewer than NeoAgent V1 (V1 index 100, V2 75).\n\nBoth versions used the same model, the same 200 internal document, email, and scheduling workflows, and the same execution environment. Success means the expected end state was reached without an incorrect write. Time compares tasks completed by both versions. Token usage includes input, output, and retries per completed task.\n\nKeep the V1 baseline and evaluation scope with the figures. Daniel has cleared this wording for leadership review. These are the fictional internal figures for our demo.\n\nThanks,\nMike"),
         ("Aisha Rahman <aisha.example@nvidia.com>", "Exec Review deck pass: cut slide 6; protect slide 10", f"Hi,\n\nMy review is complete, but I haven't edited the deck. These edits still need to be applied: put Mike's approved NeoAgent V2-versus-V1 results on slide 4, keeping the baseline and evaluation scope.\n\nSummarize the proposed customer-use example from slide 6 in the Customer Example section of slide 7, then remove slide 6 from the live flow. Keep the local laptop comparison, the draft follow-up reviewed by the associate, and customer details staying on the device. It's a proposed use case, not customer validation or an approved demo selection. The demo slate and owners still need a decision.\n\nKeep the opening short so there's time for the decisions on slide 10.\n\nDeck: {deck_url}\n\nThanks,\nAisha"),
         ("Daniel Cho <daniel.example@nvidia.com>", "Legal scope: NeoAgent V2 comparison cleared for leadership review", "Hi,\n\nI've cleared Mike's NeoAgent V2-versus-V1 comparison for today's leadership review. Keep the V1 baseline, the shared model and evaluation setup, and the internal-workflow scope. Please retain 'median' for completion time and 'per completed task' for token usage. The success improvement is 12 percentage points, not 12%.\n\nThis clearance is for leadership review only. Send the final external copy back to me before publication.\n\nThanks,\nDaniel"),
-        ("Priya Nair <priya.example@nvidia.com>", "Decision by 4:30 PM today: marketing shoot venue hold", f"The planned venue is unavailable. We can hold Studio B Friday or Studio C Tuesday, with the preferred crew, until 4:30 PM today. Choose one before the hold expires or we risk a campaign slip.\n\nTracker: {sheet_url}"),
-        ("Elena Park <elena.example@nvidia.com>", "Agent Security PRD needs to reach Engineering today", f"Please finish and send the Agent Security PRD to Engineering today. Protect a focused hour for the final pass. You can skip the optional launch storyboard session; notes will be posted afterward.\n\nCampaign plan: {doc_url}"),
+        ("Priya Nair <priya.example@nvidia.com>", "Your preference by 4:30 PM: marketing shoot venue", f"The planned venue is unavailable. I’ve checked the crew, equipment, and production schedule. Studio B Friday and Studio C Tuesday both work.\n\nJust let me know which you prefer by 4:30 PM today, before the holds expire. I’ll handle the booking and production arrangements.\n\nTracker: {sheet_url}"),
+        ("Elena Park <elena.example@nvidia.com>", "Review, update, and finalize the Agent Security PRD today", f"Please review, update, and finalize the Agent Security PRD today. Decide the open fallback policies and audit requirements, then reflect those decisions in the document. Protect a focused hour for this review. You can skip the optional launch storyboard session; notes will be posted afterward.\n\nCampaign plan: {doc_url}"),
     ]
+    meaningful.extend((item["sender"], item["subject"], item["body"]) for item in NEWS_EMAILS)
     background = background_email_specs()
     contacts = [
         ("Rafael Costa <rafael.example@nvidia.com>", "Introduction: NeoAgent V2 social rollout", "Hi,\n\nI’m Rafael, your point of contact for the NeoAgent V2 social rollout. Feel free to reach out if you have questions or want to discuss the social plans for the campaign.\n\nThanks\nRafael"),
@@ -394,6 +396,9 @@ def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str, resources:
         for result in results
     ]
     evidence = {"elena": created[0]["url"], "mike": created[1]["url"], "aisha": created[2]["url"], "daniel": created[3]["url"], "priya": created[4]["url"], "prd": created[5]["url"]}
+    for index, news in enumerate(NEWS_EMAILS, MEANINGFUL_EMAIL_COUNT - len(NEWS_EMAILS)):
+        created[index]["news_key"] = news["key"]
+        evidence[news["key"]] = created[index]["url"]
     for index, task in enumerate(task_scenario.TASKS):
         item = created[task_start + index]
         item["task_key"] = task["key"]
@@ -467,16 +472,16 @@ WEEKDAY_EVENTS = [
         ("09:00", "10:00", "Retail demo rehearsal", "Validate the retail demo flow and identify coverage gaps."),
         ("10:30", "11:15", "Social rollout planning", "Review asset readiness, timing, and channel dependencies."),
         ("11:30", "12:00", "Manager one-on-one", "Review launch priorities and executive-meeting goals."),
-        ("13:00", "14:30", "Focus block — Agent Security PRD", "Complete the final security and engineering review pass."),
+        ("13:00", "14:30", "Focus block — Agent Security PRD", "Review, update, and finalize the PRD, resolving the open fallback policies and audit requirements."),
         ("15:00", "15:45", "Legal office hours", "Review qualification language and external-copy routing."),
-        ("16:15", "17:00", "Creative production review", "Review the shoot plan and unresolved venue options."),
+        ("16:15", "17:00", "Creative production review", "Review Priya's booking status and production arrangements."),
     ],
     [
         ("08:30", "09:00", "GTC campaign PMO", "Review critical path, partner commitments, and print readiness."),
         ("09:30", "10:15", "Performance results review", "Check the approved performance results, including the V1 baseline and evaluation scope."),
         ("10:45", "11:30", "Executive deck working session", "Reconcile review comments before leadership circulation."),
         ("12:00", "13:00", "Working lunch — demo slate", "Narrow the GTC demo options and proposed owners."),
-        ("13:30", "14:15", "Launch video agency review", "Resolve venue, crew, and production tradeoffs."),
+        ("13:30", "14:15", "Launch video agency review", "Review booking status and production arrangements with Priya."),
         ("15:00", "16:00", "Focus block — executive deck", "Apply final content updates and verify decision slides."),
         ("16:30", "17:15", "Leadership pre-read handoff", "Prepare the decision-focused pre-read for leadership."),
     ],
@@ -523,10 +528,10 @@ WEEKDAY_ADDITIONAL_EVENTS = [
         ("10:15", "10:30", "Editorial stand-up", "Confirm messaging handoffs for the rest of the day."),
         ("10:45", "11:30", "Content approvals huddle", "Review social assets and approvals needed today."),
         ("13:30", "14:15", "Security stakeholder check-in", "Align reviewers during the protected PRD work block."),
-        ("14:30", "15:00", "Engineering handoff", "Transfer approved security decisions to the engineering team."),
+        ("14:30", "15:00", "Security requirements review", "Review the open fallback-policy and audit choices before finalizing the PRD."),
         ("15:20", "16:00", "Claims escalation review", "Resolve qualification questions raised in legal office hours."),
         ("16:00", "16:15", "Approval queue closeout", "Clear pending approvals before creative production review."),
-        ("16:30", "17:15", "Production decisions huddle", "Close venue and production decisions before end of day."),
+        ("16:30", "17:15", "Production decisions huddle", "Review booking status and production arrangements before end of day."),
     ],
     [
         ("08:15", "08:45", "Leadership agenda check", "Confirm decisions and presenters for upcoming leadership reviews."),
@@ -535,7 +540,7 @@ WEEKDAY_ADDITIONAL_EVENTS = [
         ("12:00", "12:30", "Executive sponsor check-in", "Review the decisions that need sponsorship before the working lunch."),
         ("12:30", "13:30", "Demo owner working lunch", "Resolve ownership and readiness questions for the demo slate."),
         ("13:30", "13:50", "Demo production callback", "Close urgent production questions from the working lunch."),
-        ("13:50", "14:40", "Agency escalation huddle", "Close open venue, crew, and production tradeoffs."),
+        ("13:50", "14:40", "Agency escalation huddle", "Review booking status and any outstanding production arrangements with Priya."),
         ("14:40", "15:00", "Leadership materials check", "Confirm the materials needed for the afternoon pre-read."),
         ("15:30", "16:30", "Pre-read quality check", "Verify decision framing before the leadership handoff."),
     ],
@@ -559,7 +564,7 @@ TODAY_EVENTS = [
     ("08:00", "08:25", "Today's priorities", "Review overnight changes and today's critical decisions."),
     ("09:00", "09:45", "GTC campaign PMO", "Review critical path, partner commitments, and print readiness."),
     ("10:15", "11:00", "Agent messaging review", "Align campaign wording with the approved performance results."),
-    ("11:00", "12:00", "Focus block — Agent Security PRD", "Complete the final pass before sending the PRD to Engineering."),
+    ("11:00", "12:00", "Focus block — Agent Security PRD", "Review, update, and finalize the PRD, resolving the open fallback policies and audit requirements."),
     ("12:30", "13:15", "Partner working lunch", "Review partner proof points and pilot readiness."),
     ("14:00", "14:30", "Legal qualification check", "Confirm leadership-review wording keeps the V1 baseline and metric definitions intact."),
     ("15:00", "16:00", "Launch storyboard working session — notes available", "Optional working session; notes will be posted afterward."),

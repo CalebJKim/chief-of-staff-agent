@@ -1,12 +1,13 @@
 # Wiki Index
 
-> Read this first to locate compiled knowledge. Last updated: 2026-09-30 | Total maintained pages: 96
+> Read this first to locate compiled knowledge. Last updated: 2026-10-01 | Total maintained pages: 100
 
 These notes cover projects, people, decisions, and meeting preparation. Use the source dates and recorded status to distinguish background from current evidence.
 
 Start with Home for a guided overview. Detailed briefs cover Meridian's proposed policy-reference evaluation, Northstar's support handoff, resource planning, developer education, and how documents are maintained and corrected. Their linked people and meeting notes explain who can contribute and what still needs deciding.
 
 ## Projects
+- [[ai-hr-assistant|AI-HR Assistant]]
 - [[agent-security-prd|Agent Security PRD]]
 - [[analyst-relations-program|Analyst Relations Program]]
 - [[board-readiness-program|Board Readiness Program]]
@@ -37,6 +38,7 @@ Start with Home for a guided overview. Detailed briefs cover Meridian's proposed
 - [[regional-launch-readiness|Regional Launch Readiness]]
 - [[retail-experience-refresh|Retail Experience Refresh]]
 - [[neoagent-v2-launch|NeoAgent V2 Launch]]
+- [[superbox|SuperBox]]
 - [[supply-allocation-plan|Supply Allocation Plan]]
 - [[workforce-plan|Workforce Plan]]
 
@@ -58,11 +60,13 @@ Start with Home for a guided overview. Detailed briefs cover Meridian's proposed
 - [[marcus-lee|Marcus Lee]]
 - [[maya-singh|Maya Singh]]
 - [[mike-chen|Mike Chen]]
+- [[morgan-reeves|Morgan Reeves]]
 - [[nadia-petrov|Nadia Petrov]]
 - [[noah-williams|Noah Williams]]
 - [[omar-haddad|Omar Haddad]]
 - [[priya-nair|Priya Nair]]
 - [[rafael-costa|Rafael Costa]]
+- [[samira-noor|Samira Noor]]
 - [[sarah-bennett|Sarah Bennett]]
 - [[sofia-alvarez|Sofia Alvarez]]
 - [[tessa-ellis|Tessa Ellis]]

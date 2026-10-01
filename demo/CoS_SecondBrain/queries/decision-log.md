@@ -15,7 +15,7 @@ confidence: high
 |---|---|---|---|---|
 | Approve agent-first keynote storyline | Executive sponsor | Open | Executive Review | [[agent-first-storyline]] |
 | Finalize GTC demos and owners | Executive sponsor | Open | Executive Review | [[gtc-demo-slate]] |
-| Choose replacement shoot date | Executive sponsor | Open | Before venue holds expire | [[marketing-shoot]] |
+| Confirm preferred shoot date | Executive sponsor | Awaiting brief reply | Before venue holds expire | [[marketing-shoot]] |
 | Approve default-deny egress posture | Security + executive sponsor | Open | Before partner rehearsal | [[openshell]] |
 | Use approved performance results with the V1 baseline and evaluation scope | [[daniel-cho]] | Approved | 2026-09-09 | [[performance-results]] |
 

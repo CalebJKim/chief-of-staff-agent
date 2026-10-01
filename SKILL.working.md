@@ -117,7 +117,7 @@ Report command or packet retrieval failures without retries or repairs. Briefly 
 
 #### 2. Rank and assign work
 
-Prioritize work requested by or involving the explicitly identified manager. Never infer this relationship from title or seniority. Rank other work, including open Google Tasks and to-dos, by impact and urgency, not unread count or `signal_score` (JSON evidence-selection score).
+Prioritize work requested by or involving the explicitly identified manager. Never infer this relationship from title or seniority. Rank other work, including open Google Tasks and to-dos, by impact and urgency, not unread count.
 
 When priorities are comparable, include different relevant work items for variety. Keep separate, high-priority user work even when its project appears elsewhere.
 

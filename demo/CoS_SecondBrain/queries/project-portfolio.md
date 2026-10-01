@@ -14,10 +14,10 @@ confidence: high
 | Project | Health | Next milestone | Primary dependency |
 |---|---|---|---|
 | [[neoagent-v2-launch]] | At risk | Executive decisions | Storyline and demo ownership |
-| [[agent-security-prd]] | Active | Engineering handoff | Policy fallback sections |
+| [[agent-security-prd]] | Active | Final PRD review | Fallback-policy and audit decisions |
 | [[hermes-partner-program]] | Active | VP slide review | Pilot proof and clear ask |
 | [[marketing-claims-rollout]] | Active | Slide 4 update | Qualified claim propagation |
-| [[marketing-shoot]] | Blocked | Replacement date | Executive selection |
+| [[marketing-shoot]] | Blocked | Booking confirmation | User's date preference |
 | [[openshell]] | At risk | Partner rehearsal | Egress default decision |
 | [[board-readiness-program]] | At Risk | Owner and milestone confirmation | [[neoagent-v2-launch]] / [[finance-operating-plan]] |
 | [[northstar-customer-recovery]] | At Risk | Owner and milestone confirmation | [[openshell]] / [[enterprise-support-model]] |

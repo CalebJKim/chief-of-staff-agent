@@ -217,12 +217,17 @@ class WorkspaceSeedTests(unittest.TestCase):
                 "APPROVED: NeoAgent V2 performance results for slide 4",
                 "Exec Review deck pass: cut slide 6; protect slide 10",
                 "Legal scope: NeoAgent V2 comparison cleared for leadership review",
-                "Decision by 4:30 PM today: marketing shoot venue hold",
-                "Agent Security PRD needs to reach Engineering today",
+                "Your preference by 4:30 PM: marketing shoot venue",
+                "Review, update, and finalize the Agent Security PRD today",
+                "SuperBox launch readiness: UI issues delay shoots and demos",
+                "AI-HR Assistant approved for internal pilot",
             ],
             [message["Subject"] for message in imported[:seed.MEANINGFUL_EMAIL_COUNT]],
         )
-        self.assertEqual({"elena", "mike", "aisha", "daniel", "priya", "prd"} | {item["key"] for item in seed.task_scenario.TASKS}, set(evidence))
+        self.assertEqual({"elena", "mike", "aisha", "daniel", "priya", "prd", "superbox_readiness", "ai_hr_pilot"} | {item["key"] for item in seed.task_scenario.TASKS}, set(evidence))
+        for index, news in enumerate(seed.NEWS_EMAILS, 6):
+            self.assertEqual(news["key"], created[index]["news_key"])
+            self.assertEqual(created[index]["url"], evidence[news["key"]])
         review_feedback = imported[2].get_payload(decode=True).decode("utf-8")
         self.assertIn(seed.EXEC_REVIEW_ROLES, imported[0].get_payload(decode=True).decode("utf-8"))
         for phrase in ("I haven't edited the deck", "proposed customer-use example", "Customer Example section of slide 7",

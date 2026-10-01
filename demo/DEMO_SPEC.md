@@ -4,15 +4,17 @@ The seeder creates a self-contained realistic Chief of Staff workspace in the Go
 
 ## What it creates
 
-- **6 imported Gmail messages** marked Inbox, Unread, and Important:
+- **8 imported Gmail messages** marked Inbox, Unread, and Important:
   - Exec Review moved to 5 PM
   - Approved performance metrics
   - Slide 6/7/10 review feedback
   - Leadership-review legal clearance
   - Marketing shoot venue deadline
   - Agent Security PRD deadline
+  - SuperBox UI issues delay readiness; Engineering recommends holding SuperBox shoots and demos
+  - AI-HR Assistant pilot approved and available for address, ESPP, and 401(k) contribution updates
 - **70 low-priority background messages** and **1 contact message** so the inbox is realistic without hiding the important work. Synthetic senders use the visibly fake local-part pattern `name.example@nvidia.com`.
-- **3 task-supporting emails** from Leah Moreno, Tessa Ellis and Evan Mercer, dated the seed/reset morning. They support a financial-analysis project ramp-up email, a GTC 2027 presenter reply awaiting the user's decision, and a meeting-notes prototype ETA update. The new fictional contacts use `example.com` addresses. These replace the old FAQ, pilot-lessons and workshop-budget requests. The original 77 emails keep their repeatable, irregular timestamps, which run backward from 9:12 AM today into the previous afternoon/evening, in the configured workspace time zone. Resetting advances the dates but preserves clock times and ordering, even when run before 9:12 AM. The six important messages remain dated today.
+- **3 task-supporting emails** from Leah Moreno, Tessa Ellis and Evan Mercer, dated the seed/reset morning. They support a financial-analysis project ramp-up email, a GTC 2027 presenter reply awaiting the user's decision, and a meeting-notes prototype ETA update. The new fictional contacts use `example.com` addresses. These replace the old FAQ, pilot-lessons and workshop-budget requests. The 79 core/background/contact emails keep their repeatable, irregular timestamps, which run backward from 9:12 AM today into the previous afternoon/evening, in the configured workspace time zone. Resetting advances the dates but preserves clock times and ordering, even when run before 9:12 AM. The eight important messages remain dated today.
 - **89–90 Calendar events** across the workweek. Each day has a distinct, busy schedule with overlaps; the current workday also contains the 5 PM Exec Review.
 - **3 unfinished Google Tasks in the default list (My Tasks)**, all due on the seed/reset date: draft Leah Moreno’s ramp-up email for the AI for Financial Analysis assistant, respond to the GTC 2027 presenter invitation, and update the Local AI Meeting Notes Assistant’s prototype ETA. Notes link to the source email and relevant files. They replace all six former demo tasks. Personal tasks are preserved.
 - **3 additional Google Docs and a four-slide deck**: AI for Financial Analysis Assistant — Project Overview, Progress and Findings, and Next Steps, plus Local AI Meeting Notes Assistant — Project Overview. The latter retains the unique `<ETA goes here>` placeholder. Evan's email supplies an internal-testing date seven days after seeding. Tessa's email references the conversation seven days before seeding without deciding the user's availability. Resources are imported from editable Office templates and restored at the same Drive IDs on reset.
@@ -110,3 +112,7 @@ python demo/seed_workspace.py --refresh-task-scenario --confirm
 This creates missing task resources, replaces only the marked task-supporting emails, and replaces seeded tasks. It preserves the RTX documents/deck/tracker, calendar events, drafts and personal tasks. It checkpoints new file/message IDs in the state file. A full reset also restores the task resource templates, including the ETA placeholder. The three task notes keep essential context within the brief packet’s 240-character note limit; resource URLs follow it.
 
 The DOCX source is `build_task_documents.py` (python-docx). The four-slide deck source is `build_task_deck.mjs` (the bundled artifact runtime). Runtime paths are supplied to the builders rather than stored in generated project documents. The seed process imports the checked-in templates and does not need the authoring runtimes.
+
+## Product news scenarios
+
+SuperBox and AI-HR Assistant are fictional projects. Morgan Reeves reports a recommended SuperBox hold, with no confirmed readiness date; this does not affect the NeoAgent shoot. Samira Noor announces AI-HR pilot access, with user review and confirmation before any submission. Neither message requests a new user task. Both arrive on the seed morning under the existing timestamp policy. The two messages bring the total seeded email count to 82. Second Brain project and contact notes preserve their scope and ownership. The Financial Analysis project and its resources are unchanged.

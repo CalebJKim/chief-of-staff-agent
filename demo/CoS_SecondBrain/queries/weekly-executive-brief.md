@@ -13,13 +13,13 @@ confidence: high
 
 ## Top outcomes
 1. Prepare and close decisions at [[neoagent-v2-executive-review|the NeoAgent V2 Executive Review]].
-2. Finish [[agent-security-prd|the Agent Security PRD]] for Engineering.
+2. Review, update, and finalize [[agent-security-prd|the Agent Security PRD]], resolving the open security-policy decisions.
 3. Update [[marketing-claims-rollout|the marketing claims rollout]] with approved evidence.
 
 ## Time and open decisions
 The source-period plan uses the optional creative session for a protected PRD block and delegates the customer escalation during the first half of the Executive Review.
 
-The [[marketing-shoot|marketing shoot]] needs a date decision. [[gtc-demo-slate|The GTC demo slate]] needs retail ownership, and [[openshell|OpenShell]] needs a decision on its default network-access policy.
+For the [[marketing-shoot|marketing shoot]], Priya needs only the user's preferred date; she handles booking and production arrangements. [[gtc-demo-slate|The GTC demo slate]] needs retail ownership, and [[openshell|OpenShell]] needs a decision on its default network-access policy.
 
 These outcomes and meeting tradeoffs reflect the source period. Check current commitments and availability before carrying them into a new week.
 
