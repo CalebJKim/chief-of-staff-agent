@@ -129,6 +129,7 @@ class SlideResetTests(unittest.TestCase):
         with patch.object(seed, "services", return_value=svc), \
              patch.object(seed, "reset_deck_baseline") as restore, \
              patch.object(seed, "clear_seeded_tasks"), patch.object(seed, "remove_dynamic_items"), \
+             patch.object(seed.task_scenario, "ensure_resources", side_effect=lambda api, svc, state, **kw: state.setdefault("task_resources", {})), \
              patch.object(seed, "create_emails", return_value=([{"id": "new-mail"}], {})) as emails, \
              patch.object(seed, "create_tasks") as tasks, patch.object(seed, "reset_sheet_baseline") as sheet, \
              patch.object(seed, "reset_original_sheet") as original, \
@@ -156,6 +157,7 @@ class SlideResetTests(unittest.TestCase):
                 with patch.object(seed, "services", return_value=svc), \
                      patch.object(seed, "reset_deck_baseline") as restore, \
                      patch.object(seed, "clear_seeded_tasks"), patch.object(seed, "remove_dynamic_items"), \
+                     patch.object(seed.task_scenario, "ensure_resources", side_effect=lambda api, svc, state, **kw: state.setdefault("task_resources", {})), \
                      patch.object(seed, "create_emails", return_value=([], {})), \
                      patch.object(seed, "create_tasks"), patch.object(seed, "reset_sheet_baseline"), \
                      patch.object(seed, "reset_original_sheet"), \

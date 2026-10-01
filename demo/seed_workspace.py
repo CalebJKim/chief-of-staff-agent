@@ -15,6 +15,7 @@ from email.message import EmailMessage
 from email.utils import format_datetime
 from pathlib import Path
 from typing import Any
+from types import SimpleNamespace
 from xml.etree import ElementTree
 from zipfile import ZipFile
 from zoneinfo import ZoneInfo
@@ -23,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "skills" / "productivity" / "ingest" / "scripts"))
 from actions import credentials  # noqa: E402
 from baseline import reset_sheet_baseline  # noqa: E402
+import task_scenario
 from second_brain_seed import check_reset, reset_second_brain  # noqa: E402
 from googleapiclient.discovery import build  # noqa: E402
 from googleapiclient.errors import HttpError  # noqa: E402
@@ -75,26 +77,6 @@ BACKGROUND_TOPICS = [
 
 BACKGROUND_AUDIENCES = ["Americas", "EMEA", "APAC", "Remote", "Santa Clara", "Austin", "New York"]
 
-BACKLOG_TASKS = [
-    {
-        "key": "customer_faq", "title": "Publish a customer demo FAQ",
-        "sender": "Amina Patel <amina.example@nvidia.com>",
-        "requested_days_ago": 12, "due_days_ago": 7,
-        "request": "Please put together and share answers to the questions customers asked during our local AI demos. The sales team needs a consistent explanation of what works offline and what requires an internet connection.",
-    },
-    {
-        "key": "pilot_lessons", "title": "Share the pilot-program lessons learned",
-        "sender": "Jorge Almeida <jorge.example@nvidia.com>",
-        "requested_days_ago": 8, "due_days_ago": 3,
-        "request": "Please collect the lessons from the completed employee AI pilot and share the recommended improvements with the rollout team. We need to address the onboarding friction before bringing in the next group.",
-    },
-    {
-        "key": "workshop_budget", "title": "Finalize the developer workshop budget",
-        "sender": "Hana Ito <hana.example@nvidia.com>",
-        "requested_days_ago": 4, "due_days_ago": 1,
-        "request": "Please finish the budget proposal for next month's developer workshop and route it for approval. We need the funding decision before committing to the venue and equipment rentals.",
-    },
-]
 
 
 def hermes_home() -> Path:
@@ -295,12 +277,12 @@ def mail_import_request(
 EXEC_REVIEW_ROLES = "You will present the storyline and proposed demo slate. Planned attendees: you, Elena Park (chair and your manager), Mike Chen (product specifications), Aisha Rahman (deck and partner readiness), and Daniel Cho (Legal). Final demo selection and the retail demo owner remain open decisions."
 
 
-def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str) -> tuple[list[dict], dict[str, str]]:
+def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str, resources: dict) -> tuple[list[dict], dict[str, str]]:
     account = gmail.users().getProfile(userId="me").execute()["emailAddress"]
     meaningful = [
         ("Elena Park <elena.example@nvidia.com>", "URGENT: RTX Spark Exec Review moved to 5 PM today", f"Hi,\n\nFollowing up on our one-on-one, please prioritize today’s leadership decisions. If other requests are competing for your time, let me know and I’ll help reprioritize. Leadership moved the RTX Spark Exec Review from Thursday to 5:00 PM today. This is a decision meeting, not a working session. We need two outcomes: approval of the agent-first keynote storyline, and alignment on the GTC demo slate and owners.\n\n{EXEC_REVIEW_ROLES}\n\nDeck: {deck_url}\n\n— Elena"),
         ("Mike Chen <mike.example@nvidia.com>", "APPROVED: RTX Spark product specifications for slide 4", "The product specifications are approved for today's Exec Review. Use the following:\n\nBlackwell RTX GPU: Up to 6,144 cores\nGrace CPU: Up to 20 cores\nFP4 AI performance: Up to 1 petaflop\nUnified memory: Up to 128 GB\n\nKeep 'up to' with each specification and retain the FP4 precision label. Daniel has cleared this wording for leadership review."),
-        ("Aisha Rahman <aisha.example@nvidia.com>", "Exec Review deck pass: cut slide 6; protect slide 10", f"My review is complete; I have not edited the deck. These edits are still for you to apply: put Mike's approved product specifications on slide 4. Summarize the proposed customer-use example from slide 6 in the Customer Example section of slide 7, then remove slide 6 from the live flow. Preserve the local laptop comparison, the draft follow-up reviewed by the associate, and customer details staying on the device. This is a proposed use case, not customer validation or an approved demo selection; the demo slate and owners still need a decision. Move quickly through the opening so there is enough discussion time on slide 10.\n\nDeck: {deck_url}"),
+        ("Aisha Rahman <aisha.example@nvidia.com>", "Exec Review deck pass: cut slide 6; protect slide 10", f"My review is complete; I have not edited the deck. These edits still need to be applied: put Mike's approved product specifications on slide 4. Summarize the proposed customer-use example from slide 6 in the Customer Example section of slide 7, then remove slide 6 from the live flow. Preserve the local laptop comparison, the draft follow-up reviewed by the associate, and customer details staying on the device. This is a proposed use case, not customer validation or an approved demo selection; the demo slate and owners still need a decision. Move quickly through the opening so there is enough discussion time on slide 10.\n\nDeck: {deck_url}"),
         ("Daniel Cho <daniel.example@nvidia.com>", "Legal scope: RTX Spark wording cleared for leadership review", "The RTX Spark product specification wording is cleared for today's leadership review. Keep 'up to' with all four specifications and retain the FP4 precision label. This is not blanket campaign-wide approval; route final external copy through Legal."),
         ("Priya Nair <priya.example@nvidia.com>", "Decision by 4:30 PM today: marketing shoot venue hold", f"The planned venue is unavailable. We can hold Studio B Friday or Studio C Tuesday, with the preferred crew, until 4:30 PM today. Choose one before the hold expires or we risk a campaign slip.\n\nTracker: {sheet_url}"),
         ("Elena Park <elena.example@nvidia.com>", "Agent Security PRD needs to reach Engineering today", f"Please finish and send the Agent Security PRD to Engineering today. Protect a focused hour for the final pass. You can skip the optional launch storyboard session; notes will be posted afterward.\n\nCampaign plan: {doc_url}"),
@@ -311,12 +293,10 @@ def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str) -> tuple[l
     ]
     data = [(*item, True) for item in meaningful] + [(*item, False) for item in background + contacts]
     times = seeded_email_times(len(data))
-    backlog_start = len(data)
+    task_start = len(data)
     now = local_now()
-    for item in BACKLOG_TASKS:
-        due = (now.date() - timedelta(days=item["due_days_ago"])).isoformat()
-        data.append((item["sender"], item["title"], f"Hi,\n\n{item['request']}\n\nRequested completion date: {due}.\n\nThanks", False))
-        times.append(now.replace(hour=10, minute=0, second=0, microsecond=0) - timedelta(days=item["requested_days_ago"]))
+    data.extend((*item, False) for item in task_scenario.email_specs(resources, now.date()))
+    times.extend(task_scenario.email_times(now))
     seed_run_id = uuid.uuid4().hex
     requests = [
         mail_import_request(
@@ -338,7 +318,10 @@ def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str) -> tuple[l
         for result in results
     ]
     evidence = {"elena": created[0]["url"], "mike": created[1]["url"], "aisha": created[2]["url"], "daniel": created[3]["url"], "priya": created[4]["url"], "prd": created[5]["url"]}
-    evidence.update({item["key"]: created[backlog_start + index]["url"] for index, item in enumerate(BACKLOG_TASKS)})
+    for index, task in enumerate(task_scenario.TASKS):
+        item = created[task_start + index]
+        item["task_key"] = task["key"]
+        evidence[task["key"]] = item["url"]
     return created, evidence
 
 
@@ -347,27 +330,10 @@ def create_tasks(api, state: dict, evidence: dict[str, str]) -> None:
         return
     task_list = api.tasklists().get(tasklist="@default").execute()
     state["task_list"] = {"id": task_list["id"], "title": task_list["title"]}
-    specs = [
-        ("Prepare RTX Spark leadership decisions", "Prepare the keynote storyline and proposed GTC demos and owners for today's executive review. Incorporate the approved product specifications, keeping 'up to' and FP4 intact, and the deck review feedback.", ("elena", "mike", "aisha", "daniel"), "slides", 0),
-        ("Choose the marketing shoot venue", "Choose Studio B Friday or Studio C Tuesday before the 4:30 PM hold expires so Priya can protect the crew and campaign schedule.", ("priya",), "sheet", 0),
-        ("Finish and send the Agent Security PRD", "Complete the final PRD pass and send it to Engineering today. Protect focused time for the handoff.", ("prd",), "doc", 0),
+    requests = [
+        api.tasks().insert(tasklist=state["task_list"]["id"], body=body)
+        for body in task_scenario.task_bodies(state["task_resources"], evidence, local_now().date(), MARKER)
     ]
-    today = local_now().date()
-    for item in BACKLOG_TASKS:
-        requested = (today - timedelta(days=item["requested_days_ago"])).isoformat()
-        context = f"Backlog: requested on {requested} and still unfinished. {item['request']}"
-        specs.append((item["title"], context, (item["key"],), None, item["due_days_ago"]))
-    requests = []
-    for title, context, sources, file_key, due_days_ago in specs:
-        links = "\n".join(evidence[source] for source in sources)
-        working_file = f"\n\nWorking file: {state[file_key]['url']}" if file_key else ""
-        body = {
-            "title": title,
-            "notes": f"{context}\n\nSource emails:\n{links}{working_file}\n\n[{MARKER}]",
-            "status": "needsAction",
-            "due": (today - timedelta(days=due_days_ago)).isoformat() + "T00:00:00Z",
-        }
-        requests.append(api.tasks().insert(tasklist=state["task_list"]["id"], body=body))
     state["tasks"] = [
         {"id": item["id"], "title": item["title"], "url": item.get("webViewLink", "")}
         for item in execute_batched(api, requests)
@@ -637,7 +603,8 @@ def seed(week_of: date) -> dict:
         state["slides"] = create_slides(svc["drive"], state["folder"]["id"])
         reset_deck_baseline(svc["slides"], state["slides"]["id"], drive=svc["drive"])
         state["sheet"] = create_sheet(svc["drive"], state["folder"]["id"])
-        state["emails"], evidence = create_emails(svc["gmail"], state["slides"]["url"], state["sheet"]["url"], state["doc"]["url"])
+        task_scenario.ensure_resources(SimpleNamespace(ROOT=ROOT, upload_template=upload_template), svc, state)
+        state["emails"], evidence = create_emails(svc["gmail"], state["slides"]["url"], state["sheet"]["url"], state["doc"]["url"], state["task_resources"])
         create_tasks(svc["tasks"], state, evidence)
         reset_sheet_baseline(svc["sheets"], state, evidence, local_now().date().isoformat())
         reset_original_sheet(svc["drive"], svc["sheets"], state, evidence, local_now().date().isoformat())
@@ -658,7 +625,8 @@ def reset_in_place(state: dict, week_of: date) -> dict:
     state["slides"]["template_sha256"] = template_hash
     clear_seeded_tasks(svc["tasks"], state)
     remove_dynamic_items(state, svc, clear_drafts=True)
-    state["emails"], evidence = create_emails(svc["gmail"], state["slides"]["url"], state["sheet"]["url"], state["doc"]["url"])
+    task_scenario.ensure_resources(SimpleNamespace(ROOT=ROOT, upload_template=upload_template), svc, state, restore=True)
+    state["emails"], evidence = create_emails(svc["gmail"], state["slides"]["url"], state["sheet"]["url"], state["doc"]["url"], state["task_resources"])
     create_tasks(svc["tasks"], state, evidence)
     reset_sheet_baseline(svc["sheets"], state, evidence, local_now().date().isoformat())
     reset_original_sheet(svc["drive"], svc["sheets"], state, evidence, local_now().date().isoformat())
@@ -776,6 +744,7 @@ Campaign tracker • Campaign plan"""),
 def main() -> int:
     parser = argparse.ArgumentParser(description="Seed, reset, or remove the reference Chief of Staff workspace")
     parser.add_argument("--week-of", help="Monday date (YYYY-MM-DD); defaults to the current week")
+    parser.add_argument("--refresh-task-scenario", action="store_true", help="Replace only demo tasks and their supporting resources/mail")
     parser.add_argument("--reset", action="store_true")
     parser.add_argument("--cleanup", action="store_true")
     parser.add_argument("--confirm", action="store_true", help="Required because this writes to Google Workspace")
@@ -783,6 +752,13 @@ def main() -> int:
     if not args.confirm:
         raise SystemExit("Refusing Google Workspace writes without --confirm")
     path = state_path()
+    if sum((args.reset, args.cleanup, args.refresh_task_scenario)) > 1:
+        raise SystemExit("Choose only one of reset, cleanup or refresh-task-scenario")
+    if args.refresh_task_scenario:
+        if not path.exists(): raise SystemExit(f"No workspace state at {path}")
+        state = task_scenario.refresh(sys.modules[__name__], json.loads(path.read_text(encoding="utf-8")))
+        print(json.dumps({"ok": True, "status": "task-scenario-refreshed", "resources": state["task_resources"], "tasks": len(state["tasks"]), "emails": len(state["emails"])}, indent=2))
+        return 0
     if args.cleanup:
         if not path.exists(): raise SystemExit(f"No workspace state at {path}")
         cleanup(json.loads(path.read_text(encoding="utf-8")))

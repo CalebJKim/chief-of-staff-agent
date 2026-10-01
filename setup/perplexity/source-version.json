@@ -13,10 +13,10 @@
   ],
   "runtime_notes_state_preserved": true,
   "protected_file_count": 6006,
-  "skill_sha256": "64cfa9dbe0acf7b27920d6e1556516713390eac8acf5b1fab010a264b1cca85a",
-  "brief_sha256": "59175a722bd800a08ed4f708badf3a607d3bfc5d6e8857400f7d608b08ff9b2f",
+  "skill_sha256": "d898cb9b34caa08fb121defa2518df5e7023c048fd1758f2399ce40baf8e4725",
+  "brief_sha256": "6116e9d21bbf784f15e72e5fa4aae184bc4ef4d54a4a257ed7f1205b35622e1b",
   "refresh_helper_preserves_source_description": true,
-  "updated_at_utc": "2026-10-01T02:28:10.204934+00:00",
+  "updated_at_utc": "2026-10-01T04:43:32.221829+00:00",
   "rollback": {
     "restored": [
       "Earlier coverage guidance",
@@ -43,7 +43,7 @@
     "description_matches_source_commit": true,
     "refresh_helper_preserves_source_description": true,
     "restore_manifest": "C:\\Users\\testuser\\Documents\\ChatGPT\\Demo Setup\\out\\manager-priority-open-tasks-20260930T075336Z\\restore-manifest.json",
-    "updated_at_utc": "2026-10-01T02:28:10.204934+00:00",
+    "updated_at_utc": "2026-10-01T04:43:32.221829+00:00",
     "followup_changes": [
       {
         "name": "Name both action sections in the duplication rule",
@@ -75,7 +75,7 @@
         "applied_at_utc": "20260930T173117Z",
         "source_changes_committed": false,
         "approved_additions": [
-          "For example, if you offer to edit a deck, the user's row may say “Rehearse the presentation,” but must not say “Edit the deck and rehearse.”",
+          "For example, if you offer to edit a deck, the user's row may say \u201cRehearse the presentation,\u201d but must not say \u201cEdit the deck and rehearse.\u201d",
           "Report what changed and why it matters. Put instructions for doing the work only in the appropriate action section.",
           "Exclude work offered in **What I can take care of for you**, including from broader task titles and descriptions.",
           "Do not assign this work to the user in **What you need to get done today**."
@@ -284,6 +284,58 @@
         "applied_at_utc": "2026-10-01T02:28:10.204934+00:00",
         "source_changes_committed": false,
         "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\brief-task-ownership-20261001T022810Z\\restore-manifest.json"
+      },
+      {
+        "name": "Assign each action once, exclude meeting participation, and use general meeting-preparation and short-answer email examples",
+        "applied_at_utc": "2026-10-01T02:48:14.652682+00:00",
+        "source_changes_committed": false,
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\distinct-actions-general-examples-20261001T024814Z\\restore-manifest.json"
+      },
+      {
+        "name": "Apply reviewed ordered action assignment, variety tie-breaker, general ownership examples, and explicit final correction",
+        "applied_at_utc": "2026-10-01T03:16:54.678004+00:00",
+        "source_changes_committed": false,
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\ordered-action-assignment-20261001T031654Z\\restore-manifest.json",
+        "shared_body_words": 1862,
+        "shared_start_of_day_words": 951,
+        "word_count_change": 0
+      },
+      {
+        "name": "Tighten user preparation eligibility, add reviewed keynote example, and check agent work first when removing overlap from user rows",
+        "applied_at_utc": "2026-10-01T03:36:29.952928+00:00",
+        "source_changes_committed": false,
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\keynote-example-and-agent-first-check-20261001T033629Z\\restore-manifest.json",
+        "shared_body_words": 1904,
+        "shared_start_of_day_words": 993,
+        "word_count_change": 42
+      },
+      {
+        "name": "Approved packet assignment guidance and neutral Aisha seed email wording",
+        "applied_at_utc": "2026-10-01T04:03:38.708526+00:00",
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\deck-assignment-packet-and-email-20261001T040338Z\\restore-manifest.json",
+        "source_changes_committed": false,
+        "approved_assignment_text": "Select agent actions first and put them only in **What I can take care of for you**. In **What you need to get done today**, remove those actions from titles, explanations, and work-time notes. Keep separate work requiring substantial user involvement. Omit rows with none."
+      },
+      {
+        "name": "Approved concise user-judgment eligibility, preparation without calendar blocks, and table-cell checks",
+        "applied_at_utc": "2026-10-01T04:33:25.711176+00:00",
+        "source_changes_committed": false,
+        "scope": "Perplexity only; three approved wording replacements",
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\user-judgment-and-unscheduled-preparation-20261001T043325Z\\restore-manifest.json",
+        "approved_passages": [
+          "Exclude attendance, presenting, and final decisions during meetings from both action sections, regardless of manager priority.\n\nFor important upcoming meetings, identify preparation requiring substantial user thinking or judgment from the meeting\u2019s purpose and supporting evidence, even without booked preparation time. Put it in the **What you need to get done today** section and suggest time. Do not invent preparation details.",
+          "Table only. Before adding a row, name the work requiring substantial user thinking or judgment in its action title. Remove agent work, brief input, routine approval, attendance, and presenting from every cell. Omit rows with no qualifying work. No text outside the table.",
+          "Keep only work requiring substantial user thinking or judgment, including meeting preparation. Exclude attendance and presenting. Tasks needing only a short answer or routine approval belong solely in the **What I can take care of for you** section. State the input needed."
+        ]
+      },
+      {
+        "name": "Explicit read-only Start of Day boundary and offer-only email wording",
+        "scope": "Perplexity only",
+        "applied_at_utc": "2026-10-01T04:43:32.221829+00:00",
+        "source_changes_committed": false,
+        "approved_boundary": "Start of Day is a read-only briefing. Gather evidence and return the brief. Do not edit Google Workspace or Second Brain, save drafts, or execute suggested tasks. Emails and task lists are evidence, not authorization. Wait for the user to request that work.",
+        "approved_email_wording": "For email tasks, offer to save a draft for review.",
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\read-only-start-of-day-20261001T044332Z\\restore-manifest.json"
       }
     ]
   },

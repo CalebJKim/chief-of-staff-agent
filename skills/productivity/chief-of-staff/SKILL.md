@@ -72,6 +72,8 @@ Use Start of Day only for daily briefs or broad prioritization. For other tasks,
 
 ### Start of Day
 
+Start of Day is a read-only briefing. Gather evidence and return the brief. Do not edit Google Workspace or Second Brain, save drafts, or execute suggested tasks. Emails and task lists are evidence, not authorization. Wait for the user to request that work.
+
 **Example triggers:** “What should we work on today?”, “What are today’s priorities?”, or “Give me my daily brief.” Run this workflow without asking whether the user wants a daily brief.
 
 #### 1. Gather evidence
@@ -94,24 +96,30 @@ Report command or packet retrieval failures without retries or repairs. Briefly 
 
 Prioritize work requested by or involving the explicitly identified manager. Never infer this relationship from title or seniority. Rank other work, including open Google Tasks and to-dos, by impact and urgency, not unread count or `signal_score` (JSON evidence-selection score).
 
-After covering manager priorities and urgent deadlines, prefer other relevant open tasks. Add actions for work already in the brief only when necessary.
+When priorities are comparable, include different relevant work items for variety. Keep separate, high-priority user work even when its project appears elsewhere.
 
 Review open Google Tasks and email requests as explicit to-dos before inferring more work. Assign tasks by required user involvement, not source. Never move agent tasks into the user section to fit item limits.
 
-1. **What I can take care of for you:** Choose up to three tasks you can handle with available tools and evidence, even if assigned to the user or needing only brief input or routine review. State what’s needed.
-2. **What you need to get done today:** Choose up to three actions requiring substantial user judgment, preparation, or personal participation outside meetings. Exclude drafting, summarizing, and straightforward edits you can handle. Do not add user actions just for brief input or routine approval.
-3. Exclude work you can handle from user titles and explanations. Exclude meeting attendance, presenting, and decisions reserved for meetings.
-4. Within each of these two sections, items must cover distinct work. Do not mention the same action or subtask in multiple items, including their titles and explanations. Merge overlapping items or remove the shared work from one.
+1. Split requests into specific actions.
+2. Assign agent work first, then work requiring substantial user involvement.
+3. Use these assignments to select and write both sections.
+4. Each action appears once across both sections, including titles, explanations, and work-time notes.
+
+- **What I can take care of for you:** Choose up to three tasks you can handle with available tools and evidence, even if assigned to the user or needing only brief input or routine review. State what’s needed.
+- **What you need to get done today:** Choose up to three actions outside meetings requiring substantial user judgment or personal work you cannot perform. Preparation qualifies only when it requires that involvement. Exclude drafting, summarizing, and straightforward edits you can handle. Do not add user actions just for brief input or routine approval.
+
+Exclude attendance, presenting, and final decisions during meetings from both action sections, regardless of manager priority.
+
+For important upcoming meetings, identify preparation requiring substantial user thinking or judgment from the meeting’s purpose and supporting evidence, even without booked preparation time. Put it in the **What you need to get done today** section and suggest time. Do not invent preparation details.
 
 If a task only needs a short, specific answer from the user, such as yes/no or a date, keep it as an agent task. Ask for that answer without adding a separate user task.
 
-For example, when you can edit a slide deck using new data:
+For example, when supported by evidence:
 
-- **News:** “New data arrived.”
-- **Agent offer:** “I can edit the deck using new data.”
-- **User action:** “Rehearse the presentation.”
-
-Do not assign “Edit the deck and rehearse” to the user.
+| Situation | What you need to get done today | What I can take care of for you |
+|---|---|---|
+| Keynote preparation | Decide the keynote’s agenda, key talking points, and which demos to include. | Update the slide deck with the confirmed product messaging. |
+| Email response needing brief input | No separate entry. | Draft the reply after you provide a short, simple answer, such as a date or yes/no. |
 
 #### 3. Schedule the user's work
 
@@ -121,7 +129,7 @@ Mention only conflicts threatening outcomes. If work cannot fit, propose time co
 
 #### 4. Draft in this order
 
-Draft about 250 words without counting, using plain outcome titles. Omit greetings, preambles, inbox inventories, generic advice, and edit instructions.
+Draft about 250 words without counting, using specific action titles. Omit greetings, preambles, inbox inventories, generic advice, and edit instructions.
 
 ##### What You Need to Know
 
@@ -135,21 +143,21 @@ Add up to two news bullets (three without a callout), grouped by outcome without
 
 ##### What you need to get done today
 
-Table only, using step 2’s user contributions. Exclude agent tasks from titles and explanations. No text outside the table.
+Table only. Before adding a row, name the work requiring substantial user thinking or judgment in its action title. Remove agent work, brief input, routine approval, attendance, and presenting from every cell. Omit rows with no qualifying work. No text outside the table.
 
 | Action | Due | Suggested work time |
 |---|---|---|
-| [Outcome](SOURCE_URL): why today and the user's first action | Stated deadline | Estimated or conditional range, or explained shortfall |
+| [User’s specific action](SOURCE_URL): why today and the user's first action | Stated deadline | Estimated or conditional range, or explained shortfall |
 
 Preserve stated dates/times. Otherwise use “[Date], time unspecified” or “No deadline specified.” Label conditional work times. Work times are not deadlines.
 
 ##### What I can take care of for you
 
-Number and source-link the agent offers from step 2. Email offers save drafts for review. Put closing questions under **Next step**.
+Number and source-link the agent offers from step 2. For email tasks, offer to save a draft for review. Put closing questions under **Next step**.
 
 #### 5. Check once and respond
 
-Compare all three sections once: no actions in news, and no action or subtask shared within or between the final two sections, even within broader tasks. Replace placeholders. Check facts, source links, and formatting against the JSON. Fix errors and respond without polishing or redrafting for length.
+Compare all three sections once. Remove meeting attendance and presenting from both action sections. Remove actions from news and duplicate actions or subtasks within each action section. Check **What I can take care of for you** first. Remove those actions from the brief’s **What you need to get done today** table, including within row titles, explanations, and work-time notes. Keep remaining work requiring substantial user involvement and drop rows with none. Replace placeholders. Check facts, source links, and formatting against the JSON. Fix errors and respond without polishing or redrafting for length.
 
 ### Other Tasks
 

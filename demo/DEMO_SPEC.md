@@ -12,9 +12,10 @@ The seeder creates a self-contained realistic Chief of Staff workspace in the Go
   - Marketing shoot venue deadline
   - Agent Security PRD deadline
 - **70 low-priority background messages** and **1 contact message** so the inbox is realistic without hiding the important work. Synthetic senders use the visibly fake local-part pattern `name.example@nvidia.com`.
-- **3 older request emails** support unfinished backlog work: a customer demo FAQ, pilot-program lessons learned, and a developer workshop budget. These are additional to the original 77 emails, whose repeatable, irregular timestamps normally run backward from 9:12 AM today into the previous afternoon/evening, in the configured workspace time zone. Before 9:12 AM, reset shifts this schedule so the newest message is one minute before the current minute, avoiding future timestamps while preserving gaps and ordering. Near midnight, some or all important messages may therefore be dated yesterday. Resets at or after 9:12 AM preserve the fixed clock times, with all six important messages dated today.
+- **3 task-supporting emails** from Leah Moreno, Tessa Ellis and Evan Mercer, dated the seed/reset morning. They support a financial-analysis project ramp-up email, a GTC 2027 presenter reply awaiting the user's decision, and a meeting-notes prototype ETA update. The new fictional contacts use `example.com` addresses. These replace the old FAQ, pilot-lessons and workshop-budget requests. The original 77 emails keep their repeatable, irregular timestamps, which normally run backward from 9:12 AM today into the previous afternoon/evening, in the configured workspace time zone. Before 9:12 AM, reset shifts this schedule so the newest message is one minute before the current minute, avoiding future timestamps while preserving gaps and ordering. Near midnight, some or all important messages may therefore be dated yesterday. Resets at or after 9:12 AM preserve the fixed clock times, with all six important messages dated today.
 - **89–90 Calendar events** across the workweek. Each day has a distinct, busy schedule with overlaps; the current workday also contains the 5 PM Exec Review.
-- **An optional Google Tasks checklist with 6 unfinished tasks in the account's default list (My Tasks)**: 3 due today and 3 backlog tasks originally due 7, 3, and 1 days ago. Dates are relative to each seed/reset day. Every task links to its source emails; today's tasks also link to the relevant files. Enable the Tasks API and authorize its scope before seeding it. Check items off in [Google Tasks](https://tasks.google.com/).
+- **3 unfinished Google Tasks in the default list (My Tasks)**, all due on the seed/reset date: draft Leah Moreno’s ramp-up email for the AI for Financial Analysis assistant, respond to the GTC 2027 presenter invitation, and update the Local AI Meeting Notes Assistant’s prototype ETA. Notes link to the source email and relevant files. They replace all six former demo tasks. Personal tasks are preserved.
+- **3 additional Google Docs and a four-slide deck**: AI for Financial Analysis Assistant — Project Overview, Progress and Findings, and Next Steps, plus Local AI Meeting Notes Assistant — Project Overview. The latter retains the unique `<ETA goes here>` placeholder. Evan's email supplies an internal-testing date seven days after seeding. Tessa's email references the conversation seven days before seeding without deciding the user's availability. Resources are imported from editable Office templates and restored at the same Drive IDs on reset.
 - **1 Google Sheet**: `RTX Spark Campaign Tracker`
   - Tab: `Campaign Lanes`
   - Columns A:J: Lane, PIC, Status, Latest update, Next action, Due, Dependency/blocker, Evidence, Artifact, Notes
@@ -97,3 +98,15 @@ The exact names are helpful for artifact matching, but the Chief of Staff logic 
 - Workspace admin restriction: ask the administrator to allow the OAuth client/scopes.
 - Existing state file: run cleanup first, or inspect/remove the local state only after manually cleaning created resources.
 - Gmail import blocked by policy: send the six messages to the connected account manually; the rest of the seed can still be created.
+
+## Refresh only the task scenario
+
+With `HERMES_HOME` pointing to the active demo profile, run:
+
+```text
+python demo/seed_workspace.py --refresh-task-scenario --confirm
+```
+
+This creates missing task resources, replaces only the marked task-supporting emails, and replaces seeded tasks. It preserves the RTX documents/deck/tracker, calendar events, drafts and personal tasks. It checkpoints new file/message IDs in the state file. A full reset also restores the task resource templates, including the ETA placeholder. The three task notes keep essential context within the brief packet’s 240-character note limit; resource URLs follow it.
+
+The DOCX source is `build_task_documents.py` (python-docx). The four-slide deck source is `build_task_deck.mjs` (the bundled artifact runtime). Runtime paths are supplied to the builders rather than stored in generated project documents. The seed process imports the checked-in templates and does not need the authoring runtimes.

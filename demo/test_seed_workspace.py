@@ -93,31 +93,22 @@ class WorkspaceSeedTests(unittest.TestCase):
             "sheet": {"url": "https://docs.google.com/spreadsheets/d/sheet"},
             "doc": {"url": "https://docs.google.com/document/d/doc"},
         }
-        evidence = {key: f"https://mail.google.com/mail/u/0/#all/{key}" for key in ("elena", "mike", "aisha", "daniel", "priya", "prd")}
-        evidence.update({item["key"]: f"https://mail.google.com/mail/u/0/#all/{item['key']}" for item in seed.BACKLOG_TASKS})
-        results = [{"id": f"task-{i}", "title": f"Task {i}", "webViewLink": f"https://tasks.google.com/task/{i}"} for i in range(3 + len(seed.BACKLOG_TASKS))]
+        state["task_resources"] = {key: {"url": f"https://drive.google.com/{key}"} for key in seed.task_scenario.RESOURCES}
+        evidence = {item["key"]: f"https://mail.google.com/mail/u/0/#all/{item['key']}" for item in seed.task_scenario.TASKS}
+        results = [{"id": f"task-{i}", "title": f"Task {i}"} for i in range(3)]
         now = datetime(2026, 9, 10, 10, 30, tzinfo=ZoneInfo("America/Los_Angeles"))
         with patch.object(seed, "execute_batched", return_value=results), patch.object(seed, "local_now", return_value=now):
             seed.create_tasks(api, state, evidence)
         api.tasklists().insert.assert_not_called()
         api.tasklists().get.assert_called_once_with(tasklist="@default")
-        self.assertEqual({"id": "default-list", "title": "My Tasks"}, state["task_list"])
         bodies = [call.kwargs["body"] for call in api.tasks().insert.call_args_list]
-        self.assertEqual(3 + len(seed.BACKLOG_TASKS), len(bodies))
+        self.assertEqual(3, len(bodies))
+        self.assertEqual([item["title"] for item in seed.task_scenario.TASKS], [b["title"] for b in bodies])
         notes = "\n".join(body["notes"] for body in bodies)
         self.assertTrue(all(url in notes for url in evidence.values()))
-        self.assertTrue(all(state[key]["url"] in notes for key in ("slides", "sheet", "doc")))
-        self.assertTrue(all(body["due"] == "2026-09-10T00:00:00Z" for body in bodies[:3]))
+        self.assertTrue(all(item["url"] in notes for item in state["task_resources"].values()))
+        self.assertTrue(all(body["due"] == "2026-09-10T00:00:00Z" for body in bodies))
         self.assertTrue(all(body["status"] == "needsAction" for body in bodies))
-        for item, body in zip(seed.BACKLOG_TASKS, bodies[3:]):
-            requested = now.date() - timedelta(days=item["requested_days_ago"])
-            due = date.fromisoformat(body["due"][:10])
-            self.assertLess(requested, due)
-            self.assertLess(due, now.date())
-            self.assertIn(requested.isoformat(), body["notes"])
-            self.assertIn("still unfinished", body["notes"])
-            self.assertIn(evidence[item["key"]], body["notes"])
-            self.assertNotIn("Working file:", body["notes"])
         self.assertTrue(all(call.kwargs["tasklist"] == "default-list" for call in api.tasks().insert.call_args_list))
         self.assertEqual(len(bodies), len(state["tasks"]))
 
@@ -202,7 +193,7 @@ class WorkspaceSeedTests(unittest.TestCase):
         gmail = Mock()
         gmail.users().getProfile.return_value.execute.return_value = {"emailAddress": "demo@example.test"}
         today_count = seed.MEANINGFUL_EMAIL_COUNT + seed.BACKGROUND_EMAIL_COUNT + seed.CONTACT_EMAIL_COUNT
-        total = today_count + len(seed.BACKLOG_TASKS)
+        total = today_count + len(seed.task_scenario.TASKS)
         results = [
             {"id": f"message-{index}", "threadId": f"thread-{index}"}
             for index in range(total)
@@ -210,7 +201,7 @@ class WorkspaceSeedTests(unittest.TestCase):
         now = datetime(2026, 8, 27, 14, 30, tzinfo=ZoneInfo("America/Los_Angeles"))
 
         with patch.object(seed, "local_now", return_value=now), patch.object(seed, "execute_batched", return_value=results) as batched:
-            created, evidence = seed.create_emails(gmail, "deck", "sheet", "doc")
+            created, evidence = seed.create_emails(gmail, "deck", "sheet", "doc", {key: {"url": f"https://drive.google.com/{key}"} for key in seed.task_scenario.RESOURCES})
 
         imported = []
         labels = []
@@ -232,7 +223,7 @@ class WorkspaceSeedTests(unittest.TestCase):
             ],
             [message["Subject"] for message in imported[:seed.MEANINGFUL_EMAIL_COUNT]],
         )
-        self.assertEqual({"elena", "mike", "aisha", "daniel", "priya", "prd"} | {item["key"] for item in seed.BACKLOG_TASKS}, set(evidence))
+        self.assertEqual({"elena", "mike", "aisha", "daniel", "priya", "prd"} | {item["key"] for item in seed.task_scenario.TASKS}, set(evidence))
         review_feedback = imported[2].get_payload(decode=True).decode("utf-8")
         self.assertIn(seed.EXEC_REVIEW_ROLES, imported[0].get_payload(decode=True).decode("utf-8"))
         for phrase in ("I have not edited the deck", "proposed customer-use example", "Customer Example section of slide 7",
@@ -242,11 +233,9 @@ class WorkspaceSeedTests(unittest.TestCase):
         self.assertEqual({now.date()}, {value.date() for value in received_at[:seed.MEANINGFUL_EMAIL_COUNT]})
         self.assertEqual({now.date(), now.date() - timedelta(days=1)}, {value.date() for value in received_at[:today_count]})
         self.assertEqual(seed.seeded_email_times(today_count, now), received_at[:today_count])
-        for index, item in enumerate(seed.BACKLOG_TASKS, today_count):
-            due = now.date() - timedelta(days=item["due_days_ago"])
-            self.assertLess(received_at[index].date(), due)
-            self.assertLess(due, now.date())
-            self.assertIn(due.isoformat(), imported[index].get_payload())
+        for index, item in enumerate(seed.task_scenario.TASKS, today_count):
+            self.assertEqual(now.date(), received_at[index].date())
+            self.assertLess(received_at[index].hour, 9)
             self.assertEqual(created[index]["url"], evidence[item["key"]])
         self.assertEqual(total, len(set(received_at)))
         self.assertTrue(all("IMPORTANT" in value for value in labels[:seed.MEANINGFUL_EMAIL_COUNT]))
@@ -274,7 +263,7 @@ class WorkspaceSeedTests(unittest.TestCase):
         tracker_people = {row[1] for row in PRE_EMAIL_ROWS if row[1] not in {"Workspace Owner", "Unassigned"}}
         self.assertEqual(set(), tracker_people - seeded_addresses.keys())
         self.assertTrue(all("@" in seeded_addresses[name] for name in tracker_people))
-        self.assertTrue(all(address.endswith(".example@nvidia.com") for address in seeded_addresses.values()))
+        self.assertTrue(all(address.endswith((".example@nvidia.com", "@example.com")) for address in seeded_addresses.values()))
 
     def test_google_requests_are_executed_in_bounded_batches(self):
         batches = []
