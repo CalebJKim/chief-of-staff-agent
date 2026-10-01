@@ -97,6 +97,8 @@ Use Start of Day only for daily briefs or broad prioritization. For other tasks,
 
 ### Start of Day
 
+**Example triggers:** “What should we work on today?”, “What are today’s priorities?”, or “Give me my daily brief.” Run this workflow without asking whether the user wants a daily brief.
+
 #### 1. Gather evidence
 
 Run this command exactly once, and only when the current request asks for a daily brief or broad prioritization. Do not run it for focused tasks or follow-ups. Use this skill’s **How to run the scripts** subsection:
@@ -119,10 +121,14 @@ Prioritize work requested by or involving the explicitly identified manager. Nev
 
 After covering manager priorities and urgent deadlines, prefer other relevant open tasks. Add actions for work already in the brief only when necessary.
 
-1. **What I can take care of for you:** Choose up to two tasks you can complete with available tools and evidence, even if assigned to the user.
-2. **What you need to get done today:** Choose up to three actions requiring the user's judgment, input, or participation outside meetings, including preparation and important Google Tasks.
+Review open Google Tasks and email requests as explicit to-dos before inferring more work. Assign tasks by required user involvement, not source. Never move agent tasks into the user section to fit item limits.
+
+1. **What I can take care of for you:** Choose up to three tasks you can handle with available tools and evidence, even if assigned to the user or needing only brief input or routine review. State what’s needed.
+2. **What you need to get done today:** Choose up to three actions requiring substantial user judgment, preparation, or personal participation outside meetings. Exclude drafting, summarizing, and straightforward edits you can handle. Do not add user actions just for brief input or routine approval.
 3. Exclude work you can handle from user titles and explanations. Exclude meeting attendance, presenting, and decisions reserved for meetings.
 4. Within each of these two sections, items must cover distinct work. Do not mention the same action or subtask in multiple items, including their titles and explanations. Merge overlapping items or remove the shared work from one.
+
+If a task only needs a short, specific answer from the user, such as yes/no or a date, keep it as an agent task. Ask for that answer without adding a separate user task.
 
 For example, when you can edit a slide deck using new data:
 
@@ -142,18 +148,20 @@ Mention only conflicts threatening outcomes. If work cannot fit, propose time co
 
 Draft about 250 words without counting, using plain outcome titles. Omit greetings, preambles, inbox inventories, generic advice, and edit instructions.
 
-##### What you need to know today
+##### What You Need to Know
+
+Keep this heading above the callout and news bullets. Do not add a “What Changed” heading or other subheadings.
 
 Only new information or deadlines and their implications. No pending work or actions, including in the callout. Lead with the manager's update when available:
 
 > [!IMPORTANT]
 > **[Your manager's update](SOURCE_URL)** — One-sentence update or deadline and its implication.
 
-Add up to two news bullets (three without a callout), grouped by outcome without repeating the callout: **[What changed](SOURCE_URL)** — one-sentence implication.
+Add up to two news bullets (three without a callout), grouped by outcome without repeating the callout: **[Specific update or deadline](SOURCE_URL)** — one-sentence implication.
 
 ##### What you need to get done today
 
-Table only, using step 2's user contributions, including selected Google Tasks. Exclude agent tasks from both the action title and its explanation. No text outside the table.
+Table only, using step 2’s user contributions. Exclude agent tasks from titles and explanations. No text outside the table.
 
 | Action | Due | Suggested work time |
 |---|---|---|
