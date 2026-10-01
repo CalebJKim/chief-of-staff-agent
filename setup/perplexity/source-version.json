@@ -7,14 +7,16 @@
     "skills/productivity/chief-of-staff/SKILL.md",
     "skills/productivity/chief-of-staff/scripts/second_brain.py",
     "skills/productivity/chief-of-staff/tests/test_second_brain.py",
-    "skills/productivity/ingest/SKILL.md"
+    "skills/productivity/ingest/SKILL.md",
+    "skills/productivity/chief-of-staff/references/command-reference.md",
+    "skills/productivity/chief-of-staff/references/meeting-preparation.md"
   ],
   "runtime_notes_state_preserved": true,
   "protected_file_count": 6006,
-  "skill_sha256": "4b2424c4c8d520508fe3c22a8028f7b4f2740b99a877afef2ef3163095212d46",
+  "skill_sha256": "62b616edc1c5a6b6660425b8d33f3e2ede4baa85864b7cdf77d16641343c77bd",
   "brief_sha256": "59175a722bd800a08ed4f708badf3a607d3bfc5d6e8857400f7d608b08ff9b2f",
   "refresh_helper_preserves_source_description": true,
-  "updated_at_utc": "2026-09-30T22:10:36.012790+00:00",
+  "updated_at_utc": "2026-09-30T23:54:00.753654+00:00",
   "rollback": {
     "restored": [
       "Earlier coverage guidance",
@@ -31,14 +33,17 @@
     "name": "Single-command daily brief with bounded packet and 638-word Start of Day",
     "applied_at_utc": "20260930T075336Z",
     "source_worktree": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff",
-    "source_changes_committed": true,
+    "source_changes_committed": false,
     "files": [
-      "skills/productivity/chief-of-staff/SKILL.md"
+      "skills/productivity/chief-of-staff/SKILL.md",
+      "skills/productivity/chief-of-staff/references/command-reference.md",
+      "skills/productivity/chief-of-staff/references/meeting-preparation.md",
+      "skills/productivity/chief-of-staff/references/updating-project-tracker.md"
     ],
     "description_matches_source_commit": true,
     "refresh_helper_preserves_source_description": true,
     "restore_manifest": "C:\\Users\\testuser\\Documents\\ChatGPT\\Demo Setup\\out\\manager-priority-open-tasks-20260930T075336Z\\restore-manifest.json",
-    "updated_at_utc": "2026-09-30T22:10:36.012790+00:00",
+    "updated_at_utc": "2026-09-30T23:54:00.753654+00:00",
     "followup_changes": [
       {
         "name": "Name both action sections in the duplication rule",
@@ -70,7 +75,7 @@
         "applied_at_utc": "20260930T173117Z",
         "source_changes_committed": false,
         "approved_additions": [
-          "For example, if you offer to edit a deck, the user's row may say \u201cRehearse the presentation,\u201d but must not say \u201cEdit the deck and rehearse.\u201d",
+          "For example, if you offer to edit a deck, the user's row may say “Rehearse the presentation,” but must not say “Edit the deck and rehearse.”",
           "Report what changed and why it matters. Put instructions for doing the work only in the appropriate action section.",
           "Exclude work offered in **What I can take care of for you**, including from broader task titles and descriptions.",
           "Do not assign this work to the user in **What you need to get done today**."
@@ -181,10 +186,77 @@
         "applied_at_utc": "2026-09-30T21:52:52.444493+00:00",
         "added_words": 14,
         "source_changes_committed": false
+      },
+      {
+        "name": "Extract command reference, supporting notes, and action examples; update routing and maintenance guidance",
+        "applied_at_utc": "2026-09-30T22:38:48.095702+00:00",
+        "source_changes_committed": false,
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\reference-split-20260930T223701Z\\restore-manifest.json",
+        "other_task_references": "Add the table and rows as each task reference is reviewed and implemented",
+        "word_counts": {
+          "shared_body_before": 1805,
+          "shared_body_after": 1442,
+          "shared_with_metadata": 1479,
+          "shared_reference": 417,
+          "perplexity_body": 1505
+        }
+      },
+      {
+        "name": "Add approved Meeting Preparation reference and first Other Tasks routing row",
+        "applied_at_utc": "2026-09-30T22:49:37.244147+00:00",
+        "source_changes_committed": false,
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\meeting-preparation-20260930T224937Z\\restore-manifest.json",
+        "shared_reference_words": 302
+      },
+      {
+        "name": "Link command reference directly from Meeting Preparation",
+        "applied_at_utc": "2026-09-30T22:54:34.716980+00:00",
+        "source_changes_committed": false,
+        "shared_reference_words": 310,
+        "backup_directory": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\task-command-link-20260930T225434Z"
+      },
+      {
+        "name": "Restrict Start of Day to daily briefs and broad prioritization; route focused tasks to matching guidance",
+        "applied_at_utc": "2026-09-30T23:03:41.266093+00:00",
+        "source_changes_committed": false,
+        "restore_manifest": "C:\\Users\\testuser\\Documents\\ChatGPT\\Demo Setup\\out\\focused-task-routing-20260930T230302Z\\restore-manifest.json"
+      },
+      {
+        "name": "Load only references needed for the current request and reuse available contents",
+        "applied_at_utc": "2026-09-30T23:13:32.145931+00:00",
+        "source_changes_committed": false,
+        "approved_text": "Read and follow only the reference files needed for the current request. Reuse contents already available in context. Do not load task references just to suggest work in a daily brief.",
+        "added_words": 1,
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\selective-reference-loading-20260930T231332Z\\restore-manifest.json"
+      },
+      {
+        "name": "Add approved tracker update reference and routing row, with open items reported as bullet points",
+        "applied_at_utc": "2026-09-30T23:21:39.851295+00:00",
+        "source_changes_committed": false,
+        "shared_reference_words": 498,
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\tracker-reference-20260930T232139Z\\restore-manifest.json"
+      },
+      {
+        "name": "Route by requested outcome, add example triggers, and clarify read-only meeting preparation",
+        "applied_at_utc": "2026-09-30T23:40:19.953182+00:00",
+        "source_changes_committed": false,
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\meeting-prep-routing-20260930T234019Z\\restore-manifest.json"
+      },
+      {
+        "name": "Require distinct actions and subtasks within each daily brief action section and check within-section overlap",
+        "applied_at_utc": "2026-09-30T23:44:17.112829+00:00",
+        "source_changes_committed": false,
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\within-section-distinct-work-20260930T234417Z\\restore-manifest.json"
+      },
+      {
+        "name": "Limit meeting preparation tasks to work directly related to the meeting, excluding unrelated earlier deadlines",
+        "applied_at_utc": "2026-09-30T23:54:00.753654+00:00",
+        "source_changes_committed": false,
+        "restore_manifest": "C:\\Users\\testuser\\Desktop\\ChiefOfStaff_PPLX\\.pplx-state\\meeting-prep-relevance-20260930T235400Z\\restore-manifest.json"
       }
     ]
   },
-  "refresh_helper_sha256": "9cc4eeaf56352c5f034ca742648f1401db3b8c9a025e5d1a0d1eeae8116a8c8d",
+  "refresh_helper_sha256": "6e0e843f57269e13012436eb57a66aca03919ffe0add14dbf771dbaa52221dea",
   "daily_brief_sha256": "bb3daa47c6e275891eb61dbe7a73b3a180fe4e8797d6be44107809dd929987a8",
   "runtime_sha256": "d19b13dadd49ea23d946fdc2f7f4e79145089f4583ee6829fe63cee00f9addee",
   "daily_brief_launcher_sha256": "8876879dba8dd265845910cdfd3be71443f2a959b6c5035e5b7ce4c0771e9502",
@@ -201,5 +273,9 @@
     "name": "pplx_checkpoint_1",
     "perplexity_branch": "pplx_demo",
     "shared_source_commit": "6bf8b634ed52eb5af00eb10a5575cc6429b4e7b4"
-  }
+  },
+  "command_reference_sha256": "1a4a38a24cdb8f824d1bd6c3e6db2d6b50c4147ba2945c9d29e59d83139b65ce",
+  "command_reference_moved": true,
+  "meeting_preparation_sha256": "c5605d9e55b3bbc88c2ebb4487b6838cf74dcc667b8ea05faa741b4fd05404cd",
+  "updating_project_tracker_sha256": "6d39a1fa73d390415e8d9d399bc507bb4ab510d2c221bd3e61768078023e13f5"
 }

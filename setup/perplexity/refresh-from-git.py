@@ -27,6 +27,11 @@ def adapt(text: str, name: str) -> str:
     text = re.sub(r'\A---\n.*?\n---\n',
                   f"---\nname: {name}\n{description_line}\n---\n<!-- Original authors: NVIDIA, Hermes Agent. License: MIT. -->\n",
                   text, count=1, flags=re.S)
+    return adapt_body(text)
+
+
+def adapt_body(text: str) -> str:
+    """Convert platform instructions in a skill or a supporting reference."""
     text = text.replace(
         'The terminal already runs Bash: submit these commands directly, without an outer `bash -c`/`bash -lc` wrapper. Keep heredoc delimiters on their own lines.',
         "Perplexity's `shell` tool runs Windows PowerShell 5.1. Submit commands directly, without an outer shell wrapper. Load the runtime initialization shown below at the start of each shell call; variables do not persist between calls. Keep single-quoted here-string delimiters on their own lines. `CosRoot` is the installed Chief of Staff skill folder; scripts, Python, notes, and private state are bundled there. `CosHome` and `COS_STATE_DIR` point to its state directory. Do not use the old Desktop copy. If access is denied, use Perplexity's normal folder-access permission flow.")
@@ -139,6 +144,9 @@ def main() -> None:
     for name in ('chief-of-staff', 'ingest'):
         p = f'skills/productivity/{name}/SKILL.md'
         desired[p] = adapt(raw[p].decode('utf-8'), name).encode('utf-8')
+    for p in paths:
+        if '/references/' in p and p.endswith('.md'):
+            desired[p] = adapt_body(raw[p].decode('utf-8')).encode('utf-8')
     p = 'skills/productivity/chief-of-staff/scripts/second_brain.py'
     old = '    root = Path(json.loads(config.read_text(encoding="utf-8"))["vault_path"]).expanduser().resolve()'
     new = '    root = Path(json.loads(config.read_text(encoding="utf-8"))["vault_path"]).expanduser()\n    if not root.is_absolute():\n        root = profile / root\n    root = root.resolve()'
