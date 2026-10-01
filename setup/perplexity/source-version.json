@@ -13,8 +13,8 @@
   ],
   "runtime_notes_state_preserved": true,
   "protected_file_count": 6006,
-  "skill_sha256": "0b231745f5c8fbb52c0c711c4c270c4568efe71154a1e31aa46551e0f094f6cf",
-  "brief_sha256": "6116e9d21bbf784f15e72e5fa4aae184bc4ef4d54a4a257ed7f1205b35622e1b",
+  "skill_sha256": "e5ecfe61155c6c4e3e75457d2d60cbe1e8ab8b70ce35514bd5ee6e76537bd517",
+  "brief_sha256": "e298e7f262564c4f6882f982edfe4864c779f05bca1335e8e50afa944811dae5",
   "refresh_helper_preserves_source_description": true,
   "updated_at_utc": "2026-10-01T05:29:44.887618+00:00",
   "rollback": {

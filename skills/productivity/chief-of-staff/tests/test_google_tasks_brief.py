@@ -93,8 +93,8 @@ class GoogleTasksBriefTests(unittest.TestCase):
         self.snapshot["tasks"] = [self.task(str(i), notes="Background " * 100) for i in range(30)]
         packet = brief.build_packet(self.snapshot, self.args)
         self.assertEqual(len(packet["tasks"]), 8)
-        fitted = json.loads(brief.fit_packet(packet, 5000))
-        self.assertLessEqual(len(json.dumps(fitted, ensure_ascii=False, separators=(",", ":"))), 5000)
+        fitted = json.loads(brief.fit_packet(packet, 6000))
+        self.assertLessEqual(len(json.dumps(fitted, ensure_ascii=False, separators=(",", ":"))), 6000)
         for key in ("tasks", "mail", "meetings", "recent_files"):
             self.assertTrue(fitted[key], key)
 

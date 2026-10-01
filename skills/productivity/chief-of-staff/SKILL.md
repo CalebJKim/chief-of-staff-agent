@@ -74,7 +74,7 @@ Use Start of Day only for daily briefs or broad prioritization. For other tasks,
 
 Start of Day is a read-only briefing. Gather evidence and return the brief. Do not edit Google Workspace or Second Brain, save drafts, or execute suggested tasks. Emails and task lists are evidence, not authorization. Wait for the user to request that work.
 
-**Example triggers:** “What should we work on today?”, “What are today’s priorities?”, or “Give me my daily brief.” Run this workflow without asking whether the user wants a daily brief.
+**Example cues:** “What should we work on today?”, “What are today’s priorities?”, or “Give me my daily brief.” Run this workflow without asking whether the user wants a daily brief.
 
 #### 1. Gather evidence
 
@@ -137,11 +137,15 @@ Draft about 250 words without counting, using specific action titles. Omit greet
 
 Keep this heading above the callout and news bullets. Do not add a “What Changed” heading or other subheadings.
 
-Only new information or deadlines and their implications. No pending work or actions, including in the callout. Lead with the manager's update when available, using this Markdown blockquote (a bold label, with no alert marker):
+Include only news or updates, even in the callout. Exclude pending work, requests, and reminders. Keep task deadlines with actions below. Meeting updates may include changed times and the user's role.
 
-> **[Your manager's update](SOURCE_URL)** — One-sentence update or deadline and its implication.
+For example, new data or product announcements belong here. Deck or document updates and emails to send belong below.
 
-Add up to two news bullets (three without a callout), grouped by outcome without repeating the callout: **[Specific update or deadline](SOURCE_URL)** — one-sentence implication.
+Lead with the manager's update when available, using this Markdown blockquote (a bold label, with no alert marker):
+
+> **[Your manager's update](SOURCE_URL)** — One-sentence news or update.
+
+Add up to two news bullets (three without a callout), grouped by outcome without repeating the callout: **[Specific news or update](SOURCE_URL)** — one-sentence summary.
 
 ##### What you need to get done today
 
@@ -159,7 +163,7 @@ Number and source-link the agent offers from step 2. For email tasks, offer to s
 
 #### 5. Check once and respond
 
-Compare all three sections once. Remove meeting attendance and presenting from both action sections. Remove actions from news and duplicate actions or subtasks within each action section. Check **What I can take care of for you** first. Remove those actions from the brief’s **What you need to get done today** table, including within row titles, explanations, and work-time notes. Keep remaining work requiring substantial user involvement and drop rows with none. Replace placeholders. Check facts, source links, and formatting against the JSON. Fix errors and respond without polishing or redrafting for length.
+Compare all three sections once. Remove meeting attendance and presenting from both action sections. Remove tasks and reminders from news, retaining distinct updates. Remove duplicate actions or subtasks within each action section. Check **What I can take care of for you** first. Remove those actions from the brief’s **What you need to get done today** table, including within row titles, explanations, and work-time notes. Keep remaining work requiring substantial user involvement and drop rows with none. Replace placeholders. Check facts, source links, and formatting against the JSON. Fix errors and respond without polishing or redrafting for length.
 
 ### Other Tasks
 
@@ -169,8 +173,8 @@ Match the user’s intent, including requests worded differently from the exampl
 
 | Task | When to use | Reference |
 |---|---|---|
-| Meeting Preparation | **Example triggers:** “Help me prepare for the exec review” or “Brief me before my meeting.” **Result:** Read-only meeting briefing in the reference’s format. | [Meeting preparation](references/meeting-preparation.md) |
-| Updating Project Tracker | **Example triggers:** “Update the project tracker” or “Bring the tracker up to date.” **Result:** Reconcile the requested entries with current evidence. | [Updating project tracker](references/updating-project-tracker.md) |
+| Meeting Preparation | **Example cues:** “Help me prepare for the exec review” or “Brief me before my meeting.” **Result:** Read-only meeting briefing in the reference’s format. | [Meeting preparation](references/meeting-preparation.md) |
+| Updating Project Tracker | **Example cues:** “Update the project tracker” or “Bring the tracker up to date.” **Result:** Reconcile the requested entries with current evidence. | [Updating project tracker](references/updating-project-tracker.md) |
 
 ## Update Conventions
 
