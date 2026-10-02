@@ -7,7 +7,7 @@ These notes cover projects, people, decisions, and meeting preparation. Use the 
 Start with Home for a guided overview. Detailed briefs cover Meridian's proposed policy-reference evaluation, Northstar's support handoff, resource planning, developer education, and how documents are maintained and corrected. Their linked people and meeting notes explain who can contribute and what still needs deciding.
 
 ## Projects
-- [[ai-hr-assistant|AI-HR Assistant]]
+- [[autonomous-robot-demo|Autonomous Robot Demo]]
 - [[agent-security-prd|Agent Security PRD]]
 - [[analyst-relations-program|Analyst Relations Program]]
 - [[board-readiness-program|Board Readiness Program]]

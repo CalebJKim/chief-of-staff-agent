@@ -1,9 +1,8 @@
-"""Restore only the repository's demo vault; never reset a connected personal vault."""
+"""Restore only CoS_Workspace/CoS_SecondBrain; never follow personal vault settings."""
 from __future__ import annotations
 
 import json
 import shutil
-import tempfile
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 from uuid import uuid4
@@ -12,7 +11,8 @@ from zipfile import ZipFile
 
 def check_reset(root: Path, profile: Path) -> None:
     demo = root.resolve() / "demo"
-    for path in (demo, demo / "CoS_SecondBrain", demo / ".second-brain-backups"):
+    workspace = root.resolve() / "CoS_Workspace"
+    for path in (demo, workspace, workspace / "CoS_SecondBrain", demo / ".second-brain-backups"):
         if path.resolve() != path.absolute():
             raise RuntimeError(f"Refusing Second Brain reset through a linked path: {path}")
     jobs = profile / "cron" / "jobs.json"
@@ -32,11 +32,16 @@ def check_reset(root: Path, profile: Path) -> None:
 def reset_second_brain(root: Path, profile: Path) -> dict:
     check_reset(root, profile)
     demo = root.resolve() / "demo"
-    vault = demo / "CoS_SecondBrain"
+    workspace = root.resolve() / "CoS_Workspace"
+    workspace.mkdir(exist_ok=True)
+    vault = workspace / "CoS_SecondBrain"
     backup = None
+    # Inherit the selected workspace's access grants. On Windows, staging in a
+    # TemporaryDirectory can carry its private ACL into the replacement vault.
     # Stage first; a bad archive never replaces the working notes.
-    with tempfile.TemporaryDirectory(prefix=".second-brain-reset-", dir=demo) as temporary:
-        restored = Path(temporary) / "vault"
+    restored = workspace / (".second-brain-reset-" + uuid4().hex)
+    restored.mkdir()
+    try:
         with ZipFile(demo / "templates" / "CoS_SecondBrain.zip") as archive:
             archive.extractall(restored)
         settings = vault / ".obsidian"
@@ -52,4 +57,9 @@ def reset_second_brain(root: Path, profile: Path) -> dict:
             if backup is not None and not vault.exists():
                 backup.rename(vault)
             raise
+    finally:
+        if restored.exists():
+            if restored.resolve() != restored or restored.parent != workspace:
+                raise RuntimeError(f"Refusing cleanup through a linked staging path: {restored}")
+            shutil.rmtree(restored)
     return {"vault": str(vault), "backup": str(backup) if backup else None}

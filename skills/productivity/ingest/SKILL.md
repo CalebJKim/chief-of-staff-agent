@@ -15,6 +15,8 @@ metadata:
 
 Pull a bounded, metadata-first Workspace snapshot for planning. It deliberately avoids full email bodies and document contents; retrieve those only after relevance is established.
 
+For Second Brain updates, follow the chief-of-staff skill's [Updating Second Brain](../chief-of-staff/references/updating-second-brain.md) reference instead. Its helper performs ingestion.
+
 ## When to Use
 
 - Refresh the chief-of-staff brief.

@@ -106,14 +106,14 @@ The existing Workspace connection remains usable before this extra consent.
 
 ## Second Brain
 
-The demo notes are included in `demo/CoS_SecondBrain/`. Open that folder as a
+The active demo notes live in `CoS_Workspace/CoS_SecondBrain/` inside the Desktop checkout. Open that folder as a
 separate vault in Obsidian. The installer connects it by default when no vault is
 already configured; existing connections and personal notes are preserved.
 
 To explicitly switch an existing demo profile to the bundled vault, run from the repo:
 
 ```bash
-python install.py --second-brain "demo/CoS_SecondBrain"
+python install.py --second-brain "CoS_Workspace/CoS_SecondBrain"
 ```
 
 The folder path is saved in the profile's local `second-brain.json`, not in Git.
@@ -122,7 +122,7 @@ vault without copying or overwriting it. Reading context does not edit notes;
 a separately configured scheduled job can update them when authorized.
 
 `python demo/reset_workspace.py` (or `python demo/seed_workspace.py --reset --confirm`)
-resets Google Workspace and restores **only** `demo/CoS_SecondBrain/` from
+resets Google Workspace and restores **only** `CoS_Workspace/CoS_SecondBrain/` from
 `demo/templates/CoS_SecondBrain.zip`. Existing demo notes, including job-created
 files, are first moved into the Git-ignored `demo/.second-brain-backups/` folder.
 Local `.obsidian` settings are preserved. Other vaults are never reset, even if

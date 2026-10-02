@@ -191,7 +191,7 @@ class PrepareProfileTests(unittest.TestCase):
 
     def test_default_second_brain_connection_does_not_modify_notes(self) -> None:
         source = Path(self.temp_dir.name) / "repo"
-        vault = source / "demo" / "CoS_SecondBrain"
+        vault = source / "CoS_Workspace" / "CoS_SecondBrain"
         vault.mkdir(parents=True)
         note = vault / "index.md"
         note.write_text("Existing notes", encoding="utf-8")
@@ -206,9 +206,10 @@ class PrepareProfileTests(unittest.TestCase):
         note = personal / "keep.md"
         note.write_text("Personal notes", encoding="utf-8")
         self.write_fixture("second-brain.json", json.dumps({"vault_path": str(personal)}).encode(), root=self.target)
-        source = Path(__file__).resolve().parents[1]
+        source = Path(self.temp_dir.name) / "repo"
         self.assertEqual(personal, connect_second_brain(source, self.target))
-        bundled = source / "demo" / "CoS_SecondBrain"
+        bundled = source / "CoS_Workspace" / "CoS_SecondBrain"
+        bundled.mkdir(parents=True)
         self.assertEqual(bundled.resolve(), connect_second_brain(source, self.target, bundled))
         self.assertEqual("Personal notes", note.read_text())
 

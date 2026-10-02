@@ -54,7 +54,17 @@
 - Added brief person notes for Leah Moreno, Tessa Ellis, and Evan Mercer, grounded in their seeded emails and supporting project resources.
 - Added all three names to the People index and synced the demo vault copies and reset baselines.
 
-## [2026-10-01] add | SuperBox and AI-HR Assistant news
-- Added fictional source emails, short project notes, and contacts for SuperBox readiness and AI-HR pilot access.
+## [2026-10-01] add | SuperBox and Autonomous Robot Demo news
+- Added fictional source emails, short project notes, and contacts for SuperBox readiness and Autonomous Robot Demo completion.
 - Preserved the distinction between a recommended SuperBox hold and a cancellation, and between optional HR pilot access and requested changes.
 - Updated the index, people map, and reset ZIP. The Financial Analysis project is unchanged.
+
+## [2026-10-01] update | Reconcile notes with Google Workspace evidence
+- Updated 4 notes based on today's Gmail, Calendar, and Drive evidence:
+  - **projects/neoagent-v2-launch.md**: Added meeting time change (exec review moved to 5 PM today), Daniel Cho's legal clearance for performance results.
+  - **meetings/neoagent-v2-executive-review.md**: Added meeting time (5 PM today), Aisha Rahman's slide edit notes, SuperBox UI blocker, deck link.
+  - **projects/agent-security-prd.md**: Added campaign plan link, Elena Park's finalization request.
+  - **concepts/performance-results.md**: Added Daniel Cho's legal clearance details and specific wording requirements.
+- Notes already current (no changes needed): superbox.md, autonomous-robot-demo.md, gtc-demo-slate.md, openshell.md, marketing-shoot.md.
+- New Drive files noted: NeoAgent V2 Campaign Plan, Campaign Tracker, Reference Tracker, Local AI Meeting Notes Assistant docs.
+- No Google Workspace data was changed.

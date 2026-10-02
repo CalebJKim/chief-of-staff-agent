@@ -17,10 +17,23 @@ platform_toolsets:
 # catalog, keeping chief-of-staff, ingest, and google-workspace enabled. Do not copy that
 # generated machine-specific list into this portable example.
 skills:
-  creation_nudge_interval: 15
+  creation_nudge_interval: 0
 
 agent:
   # The workflow normally needs only terminal + skills.
   disabled_toolsets:
     - desktop_ui
   max_turns: 40
+
+# Keep demo sessions independent; disable automatic memory and skill learning.
+memory:
+  memory_enabled: false
+  user_profile_enabled: false
+  memory_char_limit: 0
+  user_char_limit: 0
+  nudge_interval: 0
+auxiliary:
+  background_review:
+    enabled: false
+curator:
+  enabled: false

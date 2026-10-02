@@ -27,7 +27,10 @@ def configured_vault(profile: Path) -> Path | None:
     config = profile / "second-brain.json"
     if not config.exists():
         return None
-    root = Path(json.loads(config.read_text(encoding="utf-8"))["vault_path"]).expanduser().resolve()
+    root = Path(json.loads(config.read_text(encoding="utf-8"))["vault_path"]).expanduser()
+    if not root.is_absolute():
+        root = profile / root
+    root = root.resolve()
     if not root.is_dir():
         raise ValueError("Configured Second Brain folder is unavailable")
     return root

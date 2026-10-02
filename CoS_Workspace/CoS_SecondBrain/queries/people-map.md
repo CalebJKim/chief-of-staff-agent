@@ -34,4 +34,4 @@ Use the map to find expertise and coordination paths. A person may supply eviden
 
 ## Product news contacts
 - [[morgan-reeves|Morgan Reeves]]: Engineering readiness updates for [[superbox|SuperBox]].
-- [[samira-noor|Samira Noor]]: [[ai-hr-assistant|AI-HR Assistant]] pilot access and HR support.
+- [[samira-noor|Samira Noor]]: [[autonomous-robot-demo|Autonomous Robot Demo]] readiness and marketing-shoot support.

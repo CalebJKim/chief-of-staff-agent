@@ -80,7 +80,7 @@ Google resources; do not seed a second copy merely because the profile is new:
 python demo/seed_workspace.py --confirm
 ```
 
-Reset Google Workspace and the bundled `demo/CoS_SecondBrain/` notes to their baselines with:
+Reset Google Workspace and the bundled `CoS_Workspace/CoS_SecondBrain/` notes to their baselines with:
 
 ```bash
 python demo/reset_workspace.py
@@ -92,9 +92,9 @@ python demo/seed_workspace.py --cleanup --confirm
 Keep `HERMES_HOME` set to the new profile for resets. Do not use both profiles to
 reset or edit the same Google workspace concurrently.
 
-Open `demo/CoS_SecondBrain/` as a separate Obsidian vault. The installer connects
+Open `CoS_Workspace/CoS_SecondBrain/` as a separate Obsidian vault. The installer connects
 it when no vault is configured; existing connections are preserved. To switch an
-existing profile explicitly, run `python install.py --second-brain "demo/CoS_SecondBrain"`.
+existing profile explicitly, run `python install.py --second-brain "CoS_Workspace/CoS_SecondBrain"`.
 Reset restores this repo vault only, preserves its `.obsidian` settings, and backs
 up its previous contents under `demo/.second-brain-backups/`. Personal vaults are
 untouched. Pause scheduled jobs before resetting; reset does not remove them.

@@ -25,6 +25,7 @@ def run(script: Path, *args: str) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--mode', choices=('daily-brief', 'second-brain-update'), default='daily-brief')
     parser.add_argument("--fixture", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
     scripts = Path(__file__).resolve().parent
@@ -50,6 +51,7 @@ def main() -> int:
         stage = "brief"
         encoded = run(
             scripts / "brief.py", "--snapshot", str(snapshot),
+            "--mode", args.mode,
             "--max-meetings", "10", "--max-mail", "8", "--max-files", "8",
             "--max-chars", str(MAX_CHARS), "--work-end", "17",
         ).strip()
@@ -62,7 +64,7 @@ def main() -> int:
         print(json.dumps({"packet_path": str(packet_path)}, ensure_ascii=False))
         print(encoded)
         return 0
-    except (OSError, ValueError, subprocess.CalledProcessError) as exc:
+    except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as exc:
         detail = exc.stderr if isinstance(exc, subprocess.CalledProcessError) else str(exc)
         print(json.dumps({"ok": False, "stage": stage, "error": (detail or str(exc))[:2000]}), file=sys.stderr)
         return 1

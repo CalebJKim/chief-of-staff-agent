@@ -16,17 +16,17 @@ Morgan
 SuperBox product coordination""",
     },
     {
-        "key": "ai_hr_pilot",
+        "key": "autonomous_robot_ready",
         "sender": "Samira Noor <samira.noor@example.com>",
-        "subject": "AI-HR Assistant approved for internal pilot",
+        "subject": "Autonomous Robot Demo complete and ready for marketing shoots",
         "body": """Hi,
 
-AI-HR Assistant has been approved for an internal pilot, and your access is now enabled. You can use it to update your home address, change your ESPP contributions, and adjust your 401(k) contributions. It walks you through each change and lets you review and confirm the details before submitting.
+Good news: the Autonomous Robot Demo is complete and has passed the final engineering walkthrough. It's ready for marketing shoots, including product footage and recorded demos.
 
-HR is coordinating the pilot and handling support. You're welcome to try it whenever you need to make a change; there's nothing you need to set up or update today.
+The robotics team has the demo setup and reset instructions ready and can support the shoot. This clears the readiness blocker for Marketing. Shoot dates haven't been booked yet.
 
 Thanks,
 Samira
-HR operations""",
+Robotics demo coordination""",
     },
 ]

@@ -19,10 +19,10 @@ class SecondBrainResetTests(unittest.TestCase):
         self.root = Path(temp.name)
         self.profile = self.root / "profile"
         self.profile.mkdir()
-        self.vault = self.root / "demo" / "CoS_SecondBrain"
+        self.vault = self.root / "CoS_Workspace" / "CoS_SecondBrain"
         self.vault.mkdir(parents=True)
         self.archive = self.root / "demo" / "templates" / "CoS_SecondBrain.zip"
-        self.archive.parent.mkdir()
+        self.archive.parent.mkdir(parents=True)
         self.baseline = {"index.md": b"# Index\n", "projects/project.md": b"Original facts\n"}
         with ZipFile(self.archive, "w") as archive:
             for name, content in self.baseline.items():
