@@ -54,7 +54,7 @@
 - Added brief person notes for Leah Moreno, Tessa Ellis, and Evan Mercer, grounded in their seeded emails and supporting project resources.
 - Added all three names to the People index and synced the demo vault copies and reset baselines.
 
-## [2026-10-01] add | SuperBox and AI-HR Assistant news
-- Added fictional source emails, short project notes, and contacts for SuperBox readiness and AI-HR pilot access.
+## [2026-10-01] add | SuperBox and Autonomous Robot Demo news
+- Added fictional source emails, short project notes, and contacts for SuperBox readiness and Autonomous Robot Demo completion.
 - Preserved the distinction between a recommended SuperBox hold and a cancellation, and between optional HR pilot access and requested changes.
 - Updated the index, people map, and reset ZIP. The Financial Analysis project is unchanged.

@@ -220,11 +220,11 @@ class WorkspaceSeedTests(unittest.TestCase):
                 "Your preference by 4:30 PM: marketing shoot venue",
                 "Review, update, and finalize the Agent Security PRD today",
                 "SuperBox launch readiness: UI issues delay shoots and demos",
-                "AI-HR Assistant approved for internal pilot",
+                "Autonomous Robot Demo complete and ready for marketing shoots",
             ],
             [message["Subject"] for message in imported[:seed.MEANINGFUL_EMAIL_COUNT]],
         )
-        self.assertEqual({"elena", "mike", "aisha", "daniel", "priya", "prd", "superbox_readiness", "ai_hr_pilot"} | {item["key"] for item in seed.task_scenario.TASKS}, set(evidence))
+        self.assertEqual({"elena", "mike", "aisha", "daniel", "priya", "prd", "superbox_readiness", "autonomous_robot_ready"} | {item["key"] for item in seed.task_scenario.TASKS}, set(evidence))
         for index, news in enumerate(seed.NEWS_EMAILS, 6):
             self.assertEqual(news["key"], created[index]["news_key"])
             self.assertEqual(created[index]["url"], evidence[news["key"]])

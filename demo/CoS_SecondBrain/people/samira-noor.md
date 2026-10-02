@@ -3,8 +3,8 @@ title: Samira Noor
 created: 2026-10-01
 updated: 2026-10-01
 type: person
-tags: [person, operations]
-sources: ["raw/updates/ai-hr-pilot.md"]
+tags: [person, robotics]
+sources: ["raw/updates/autonomous-robot-readiness.md"]
 status: active
 confidence: high
 ---
@@ -13,6 +13,6 @@ confidence: high
 
 Email: samira.noor@example.com
 
-Samira is a fictional HR operations teammate coordinating the [[ai-hr-assistant|AI-HR Assistant]] pilot and support. Samira announced approval and access for the initial pilot group.
+Samira is a fictional robotics teammate coordinating the [[autonomous-robot-demo|Autonomous Robot Demo]] and shoot support. Samira confirmed that the demo is complete, has passed its final engineering walkthrough, and is ready for marketing shoots.
 
 Navigation: [[people-map|People Map]].
