@@ -51,7 +51,13 @@ Do not load the command reference for Start of Day.
 
 The `terminal` tool runs Bash. Omit `bash -c`/`bash -lc` wrappers. Keep heredoc delimiters on their own lines.
 
-Initial setup for the active profile, Python, and script paths:
+Run initialization and execution in the same shell tool call. Never split them across calls or rely on variables from earlier calls. Repeat initialization in each call that runs a script.
+
+Group necessary, independent reads with small expected outputs in one shell call
+after initialization. Read necessary large sources separately. Wait when a later read
+depends on an earlier result.
+
+Example: replace the search command with the needed task command and submit the whole block in one tool call.
 
 ```bash
 if [ -n "${HERMES_HOME:-}" ]; then
@@ -75,17 +81,11 @@ BRIEF="$COS_HOME/skills/productivity/chief-of-staff/scripts/brief.py"
 DAILY_BRIEF="$COS_HOME/skills/productivity/chief-of-staff/scripts/daily_brief.py"
 ACTION="$COS_HOME/skills/productivity/ingest/scripts/actions.py"
 SECOND_BRAIN="$COS_HOME/skills/productivity/chief-of-staff/scripts/second_brain.py"
-```
 
-Reuse the working Python path, including when fixing shell quoting errors. Set needed variables in each terminal call.
-
-Run only the commands needed for the task.
-
-Example:
-
-```bash
 "$PYTHON" "$SECOND_BRAIN" search 'meeting topic' --max 3
 ```
+
+Reuse the working Python path, including when fixing shell quoting errors. Run only the commands needed for the task.
 
 Run `ingest.py` only when the task needs a fresh snapshot.
 

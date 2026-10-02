@@ -31,7 +31,7 @@ Commands follow `actions.py`. Uppercase placeholders require values. Brackets ma
 
 ## Examples
 
-Use the setup in the skill’s **How to run the scripts** subsection. Run only commands needed for the task.
+Include initialization and the needed commands below in the same shell tool call, following the main skill’s **How to run the scripts** subsection.
 
 ```bash
 "$PYTHON" "$ACTION" gmail thread THREAD_ID

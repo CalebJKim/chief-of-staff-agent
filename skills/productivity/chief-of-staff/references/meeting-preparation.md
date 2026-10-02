@@ -11,6 +11,10 @@ Use [Command reference](command-reference.md) for `actions.py` commands and argu
 - Distinguish requested work from confirmed completion and planned from confirmed attendance. Flag missing context without guessing.
 - If the meeting time has passed, flag it and still brief. Elapsed time does not prove preparation or decisions are complete.
 
+Once organizer requests and preparation feedback establish the meeting’s purpose,
+participants, your role, outstanding preparation, and goals, write the briefing.
+Do not read or search other sources unless needed to fill specific gaps in those fields.
+
 ## 2. Write the briefing
 
 Aim for 200–300 words. Fill this template in your reply with evidence-backed content. Preserve headings, labels, list styles, and order. Add list entries as needed. Omit unsupported fields, meeting time, and an unnecessary **Next step**. Render Markdown without code fences. Add no sections, tables, timelines, or outside commentary.
