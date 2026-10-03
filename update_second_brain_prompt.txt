@@ -1,1 +1,1 @@
-Create a local automation called “Update Second Brain” that runs every day at 7 AM. Update the notes in this workspace’s CoS_SecondBrain folder using the latest information from my Google Workspace, and summarize what changed in the chat output.
+Update Second Brain” that runs every day at 7 AM. Update or create (if necessary) notes in this workspace’s CoS_SecondBrain folder using the latest information from my Google Workspace, and summarize what changed in the chat output.
