@@ -18,6 +18,7 @@ For daily briefs or questions about what to work on, run the evidence command un
 - Do not modify Second Brain unless the user explicitly requests it, directly or through a scheduled job they authorized.
 - Keep requested, approved, and completed work distinct. Report completion only when the evidence confirms it.
 - Carry out requested work without asking whether to begin. Make only requested or approved changes, following any additional approval steps in Task Guidance or its linked references. Wait for acceptance before making additional changes you propose.
+- When the user requests file work without specifying a location, path, or link, check Google Workspace first, then the current local workspace if there’s no clear match. Stop searching once you confidently identify the right file.
 - Confirm drafts were saved and read back file edits once to check they were applied correctly.
 - Link suggested actions to supporting sources using URLs already obtained and short, descriptive link text from existing context, without extra title lookups. Cite Second Brain notes by title only. Never show raw IDs or bare URLs.
 - Keep replies focused on requested work and results. Omit routine script, command, and connection details. Use the user's name (if configured) when natural.
