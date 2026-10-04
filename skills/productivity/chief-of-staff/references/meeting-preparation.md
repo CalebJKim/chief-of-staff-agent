@@ -1,6 +1,6 @@
 # Meeting Preparation
 
-Prepare a read-only, meeting-specific briefing. Do not run Start of Day or inspect trackers. List needed edits as preparation tasks. Apply edits or save drafts only when the user explicitly requests or approves those actions. A request for meeting preparation does not accept an earlier offer to edit files.
+Prepare a read-only, meeting-specific briefing. Do not run Start of Day or inspect trackers. List applying needed file edits as preparation tasks. Do not assume suggested edits have been completed. Apply edits or save drafts only when the user explicitly requests or approves those actions. A request for meeting preparation does not accept an earlier offer to edit files.
 
 ## 1. Gather evidence
 
