@@ -146,7 +146,7 @@ Include only new facts, decisions, approvals, readiness confirmations, announcem
 
 For example, new data or product announcements belong here. Deck or document updates and emails to send belong below.
 
-Lead with the manager's update when available, using this Markdown blockquote (a bold label, with no alert marker):
+After the **What You Need to Know** header, lead with the manager's most important update when available, using this Markdown blockquote (a bold label, with no alert marker):
 
 > **[Your manager's update](SOURCE_URL)** — One-sentence news or update.
 
