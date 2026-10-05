@@ -89,10 +89,5 @@ foreach ($StateName in @('google_token.json', 'google_client_secret.json', 'chie
 # The selected workspace determines the vault. Ignore old installed connections.
 $BrainJson = @{ vault_path = $NotesPath } | ConvertTo-Json
 [IO.File]::WriteAllText((Join-Path $CosHome 'second-brain.json'), $BrainJson, [Text.UTF8Encoding]::new($false))
-$SeedSnapshot = Join-Path $CosSeedHome 'chief-of-staff\snapshot.json'
-$LiveSnapshot = Join-Path $CosHome 'chief-of-staff\snapshot.json'
-if (-not (Test-Path -LiteralPath $LiveSnapshot) -and (Test-Path -LiteralPath $SeedSnapshot)) {
-    New-Item -ItemType Directory -Path (Split-Path -Parent $LiveSnapshot) -Force | Out-Null
-    [IO.File]::WriteAllBytes($LiveSnapshot, [IO.File]::ReadAllBytes($SeedSnapshot))
-}
+# Snapshots and packets belong to individual runs. Never restore bundled evidence.
 $env:COS_STATE_DIR = $CosHome

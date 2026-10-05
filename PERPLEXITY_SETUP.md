@@ -25,6 +25,22 @@ Start a fresh local Computer conversation after this update so it loads the inst
 
 The installed runtime contains private Google credentials and cached mailbox data. Do not upload, publish, or share the entire installed folder. Source code and skill instructions can be shared without `runtime`.
 
+## Connect or reconnect Google Workspace
+
+After installing Perplexity and the demo skills, run from this checkout:
+
+```powershell
+.\setup.ps1 -Harness perplexity
+```
+
+The launcher selects Perplexity's Python and this checkout's
+`CoS_Workspace\.chief-of-staff-state` credential folder. It reuses a working
+connection or guides you through Google authorization. First-time setup asks
+for your downloaded Desktop OAuth client JSON. No `HERMES_HOME` setting is
+needed. Append `-Check` for a read-only local path check, or see
+[connection options](README.md#connect-google-workspace) for custom locations.
+This connects Google only; it does not install skills, seed data, or reset the demo.
+
 ## Reset the demo
 
 From PowerShell:
@@ -39,7 +55,11 @@ Credentials and resource IDs come from `CoS_Workspace/.chief-of-staff-state`.
 No environment setup is required. It resets Google Workspace and restores
 `CoS_Workspace/CoS_SecondBrain`, backing up the previous notes. Append `-Check` to
 validate the local setup without resetting or calling Google, or `-WeekOf YYYY-MM-DD`
-to change the saved demo week. See [reset details](README.md#reset-the-demo-data)
+to change the saved demo week. After a successful reset, it removes generated
+`daily-brief-*` folders and standalone packets/snapshots from `.chief-of-staff-state`
+and its `chief-of-staff` subfolder, reporting removal counts. Credentials,
+configuration, resource IDs, and unrelated workspace files are preserved.
+See [reset details](README.md#reset-the-demo-data)
 for what is replaced. Finish running jobs and pause scheduled jobs before resetting.
 
 ## Verification

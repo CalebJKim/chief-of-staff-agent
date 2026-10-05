@@ -183,9 +183,13 @@ $rows | ConvertTo-Json -Compress
 
     def test_same_confirmed_reset_runs_google_and_local_reset(self):
         (self.vault / "index.md").write_text("Changed")
+        packet = self.vault.parent / ".chief-of-staff-state/chief-of-staff" / ("daily-brief-" + "a" * 32) / "packet.json"
+        packet.parent.mkdir(parents=True)
+        packet.write_text('{"old": true}')
         self.assertEqual(0, self.run_reset())
         self.assertEqual(1, self.google_reset_calls)
         self.assert_baseline()
+        self.assertFalse(packet.parent.exists())
 
     def test_confirmation_still_required(self):
         with self.assertRaisesRegex(SystemExit, "without --confirm"):
@@ -210,10 +214,31 @@ $rows | ConvertTo-Json -Compress
 
     def test_google_failure_leaves_local_notes_untouched(self):
         (self.vault / "index.md").write_text("Keep my notes")
+        snapshot = self.vault.parent / ".chief-of-staff-state/snapshot.json"
+        snapshot.parent.mkdir()
+        snapshot.write_text('{"old": true}')
         with self.assertRaisesRegex(RuntimeError, "Google unavailable"):
             self.run_reset(failure=RuntimeError("Google unavailable"))
         self.assertEqual("Keep my notes", (self.vault / "index.md").read_text())
+        self.assertEqual(snapshot.read_text(), '{"old": true}')
         self.assertFalse((self.root / "demo" / ".second-brain-backups").exists())
+
+    def test_second_brain_failure_preserves_cached_evidence(self):
+        snapshot = self.vault.parent / ".chief-of-staff-state/snapshot.json"
+        snapshot.parent.mkdir()
+        snapshot.write_text('{"old": true}')
+        with patch.object(seed, "reset_second_brain", side_effect=RuntimeError("Notes reset failed")):
+            with self.assertRaisesRegex(RuntimeError, "Notes reset failed"):
+                self.run_reset()
+        self.assertEqual(self.google_reset_calls, 1)
+        self.assertEqual(snapshot.read_text(), '{"old": true}')
+
+    def test_invalid_cache_stops_before_google_reset(self):
+        wrong_type = self.vault.parent / ".chief-of-staff-state/snapshot.json"
+        wrong_type.mkdir(parents=True)
+        with self.assertRaisesRegex(RuntimeError, "Expected an evidence file"):
+            self.run_reset()
+        self.assertEqual(self.google_reset_calls, 0)
 
     def test_bundled_archive_is_valid_and_excludes_settings(self):
         # Test the reset source independently of mutable working notes.

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,9 @@ ROOT = Path(__file__).resolve().parents[2]
 POWERSHELL = Path(os.environ['SystemRoot']) / 'System32/WindowsPowerShell/v1.0/powershell.exe'
 SKILLS = Path(os.environ['PPLX_SKILLS_DIR'])
 MANAGED = SKILLS.parent / 'template/venv/Scripts/python.exe'
+cache_spec = importlib.util.spec_from_file_location('evidence_cache', ROOT / 'demo/evidence_cache.py')
+evidence_cache = importlib.util.module_from_spec(cache_spec)
+cache_spec.loader.exec_module(evidence_cache)
 
 
 def quoted(path):
@@ -187,6 +191,31 @@ class RuntimeTests(unittest.TestCase):
         result = self.initialize()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(token.read_text(), 'existing refreshed credential')
+
+    def test_reset_then_initialization_does_not_restore_bundled_evidence(self):
+        self.workspace.rename(self.root / 'CoS_Workspace')
+        self.workspace = self.root / 'CoS_Workspace'
+        self.vault = self.workspace / 'CoS_SecondBrain'
+        seed = self.chief / 'runtime/state/chief-of-staff'
+        live = self.workspace / '.chief-of-staff-state/chief-of-staff'
+        stale = '{"generated_at":"2026-09-29T17:02:04Z"}'
+        for folder in (seed, live):
+            folder.mkdir(parents=True)
+            (folder / 'snapshot.json').write_text(stale, encoding='utf-8')
+            run = folder / ('daily-brief-' + 'a' * 32)
+            run.mkdir()
+            (run / 'snapshot.json').write_text(stale, encoding='utf-8')
+            (run / 'packet.json').write_text(stale, encoding='utf-8')
+
+        removed = evidence_cache.clear_evidence_cache(self.root)
+        self.assertEqual(removed, {'run_folders_removed': 1, 'files_removed': 3})
+        for _ in range(2):
+            result = self.initialize()
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(list(self.workspace.rglob('snapshot.json')), [])
+            self.assertEqual(list(self.workspace.rglob('packet.json')), [])
+        self.assertEqual((seed / 'snapshot.json').read_text(), stale)
+        self.assertTrue((self.vault / 'index.md').exists())
 
 
 if __name__ == '__main__':

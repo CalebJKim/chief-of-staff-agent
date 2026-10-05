@@ -29,7 +29,7 @@ def install(source: Path, skills: Path) -> dict:
     copy_code(source / 'skills/productivity/chief-of-staff', chief)
     copy_code(source / 'skills/productivity/ingest', ingest)
     # The main skill also owns these helpers so it can run without its companion.
-    for helper in ('actions.py', 'ingest.py', 'verify.py'):
+    for helper in ('actions.py', 'workspace_formatting.py', 'ingest.py', 'verify.py'):
         shutil.copy2(source / 'skills/productivity/ingest/scripts' / helper, chief / 'scripts' / helper)
 
     initial_state = not state.exists()
@@ -38,8 +38,7 @@ def install(source: Path, skills: Path) -> dict:
         target = state / name
         if not target.exists():
             shutil.copy2(source / '.pplx-state' / name, target)
-    if initial_state and (source / '.pplx-state/chief-of-staff').exists():
-        shutil.copytree(source / '.pplx-state/chief-of-staff', state / 'chief-of-staff')
+    # Generated snapshots and packets are not installation state. Never bundle them.
     # runtime.ps1 generates second-brain.json from <workspace>/CoS_SecondBrain.
     # Preserve any legacy installed connection, but never use it as a fallback.
     config = {'format_version': 4, 'seed_state_root': 'runtime/state', 'python_selection': 'perplexity-then-system'}

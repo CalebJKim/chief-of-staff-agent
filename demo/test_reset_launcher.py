@@ -26,6 +26,7 @@ class ResetStateTests(unittest.TestCase):
         self.state.mkdir(parents=True)
         for name in ('google_token.json', 'chief-of-staff-workspace-state.json'):
             (self.state / name).write_text('{}')
+        (self.state / 'snapshot.json').write_text('{"old": true}')
         templates = self.root / 'demo/templates'
         templates.mkdir(parents=True)
         with ZipFile(templates / 'CoS_SecondBrain.zip', 'w') as archive:

@@ -31,8 +31,10 @@ def main(argv=None) -> int:
     import googleapiclient.discovery
     from zoneinfo import ZoneInfo
     from second_brain_seed import check_reset
+    from evidence_cache import check_evidence_cache
     ZoneInfo("America/Los_Angeles")
     check_reset(ROOT, state)
+    check_evidence_cache(ROOT)
     if args.check:
         print(json.dumps({"ok": True, "mode": "check", "python": sys.executable,
                           "state": str(state), "vault": str(ROOT / "CoS_Workspace" / "CoS_SecondBrain")}, indent=2))

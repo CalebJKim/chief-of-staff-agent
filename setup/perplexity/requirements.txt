@@ -5,3 +5,4 @@ google-auth-httplib2==0.3.1
 httplib2==0.32.0
 pyasn1==0.6.4
 tzdata
+PyMuPDF==1.28.0

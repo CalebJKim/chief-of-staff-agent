@@ -74,6 +74,32 @@ workspace at the same time. No Google data is reset or changed by installation.
 
 ## Connect Google Workspace
 
+On Windows, run one of these commands from this checkout after installing the
+chosen harness and demo skills/profile:
+
+```powershell
+.\setup.ps1 -Harness hermes
+.\setup.ps1 -Harness perplexity
+```
+
+The launcher selects the harness's managed Python, with system Python as a
+fallback only if the managed interpreter is absent. It reuses a working Google
+connection or guides you through sign-in. First-time setup asks for your downloaded
+Desktop OAuth client JSON. You can also pass `-ClientSecret 'C:\path\client.json'`.
+It does not install the harness or demo skills, seed/reset Google data, or change
+model settings.
+
+Hermes uses its `chief-of-staff` profile by default. Perplexity uses
+`CoS_Workspace\.chief-of-staff-state` beside the launcher. Override these with
+`-Profile` / `-HermesRoot`, or `-WorkspaceRoot` / `-SkillsDir`, respectively.
+Omit `-Harness` to choose interactively. Add `-Check` for a read-only local path
+check, without contacting Google, installing dependencies, or signing in.
+Environment settings are restored when the launcher exits.
+
+The shared OAuth helper honors `COS_STATE_DIR` first and otherwise preserves
+the existing Hermes profile lookup. The individual commands below remain
+available for other shells and manual setup.
+
 Never commit OAuth files. Create a Desktop OAuth client, then run:
 
 ```powershell
