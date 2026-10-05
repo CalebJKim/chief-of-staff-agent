@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 STATUS_GUIDE = (
-    "Status guide (lane scope, not downstream work): Awaiting update = missing input; "
-    "In progress = input received, own drafting/edits pending; Complete = own deliverable done; "
-    "Blocked = unresolved dependency; On track = progressing without a blocker."
+    "Status guide (lane scope, not downstream work): Check completion first. Complete = deliverable done; "
+    "Awaiting update = missing input; In progress = input received, drafting/edits pending; "
+    "Blocked = explicit dependency preventing progress; On track = unfinished work progressing without a blocker."
 )
 
 PRE_EMAIL_ROWS = [
-    ["Performance results", "Mike Chen", "Awaiting update", "Benchmark approval is still pending in the tracker; the approved performance results have not yet been recorded.", "Obtain Mike’s approved performance results for leadership review.", "", "Awaiting approved Performance results.", "Pending Product confirmation", "DECK_URL", "This lane delivers the approved results and wording. Applying them is tracked separately under Exec Review deck and Agent Messaging."],
+    ["Performance results", "Mike Chen", "Awaiting update", "Awaiting Mike’s approved performance results.", "Obtain Mike’s approved performance results.", "", "Awaiting approved Performance results.", "Pending Product confirmation", "DECK_URL", "This lane ends when Mike provides approved performance results. Adding them to the slide deck and drafting messaging are tracked separately under Exec Review deck and Agent Messaging."],
     ["Exec Review deck", "Elena Park", "Awaiting update", "The Exec Review deck still uses placeholder benchmark wording and has not incorporated the latest review notes.", "Apply approved results when received; reconcile slide 6, slide 7, and slide 10 feedback before the Exec Review.", "", "Blocked on approved results and final review direction.", "Pending Mike and Aisha updates", "DECK_URL", "Two decisions: keynote storyline and GTC demos/owners."],
     ["Agent Messaging", "Workspace Owner", "Awaiting update", "Agent Messaging still carries placeholder benchmark wording and is waiting on the approved benchmark package.", "Draft the messaging using Product's approved results, keeping the NeoAgent V1 baseline and evaluation scope intact, aligned with the deck.", "", "Awaiting approved performance results and wording.", "Pending Product / Legal confirmation", "DOC_URL", "This lane prepares draft messaging from approved Performance results. Final external publication needs a separate Legal review after the draft is ready."],
     ["Marketing shoot", "Priya Nair", "Blocked", "Priya has checked both replacement options. Studio B Friday and Studio C Tuesday both meet production needs. Holds expire at 4:30 PM today.", "Reply to Priya with the preferred option. Priya will handle booking and production arrangements.", "", "Awaiting only the user's Friday/Tuesday preference before the holds expire.", "EMAIL_PRIYA", "SHEET_URL", "Missing the hold risks a campaign slip."],
-    ["Partner enablement", "Aisha Rahman", "On track", "The VP requested a review of the partner slides, and the staged Windows pilot passed its smoke check and is ready for an inclusion decision.", "Review the partner section and decide whether the pilot belongs in the demo.", "", "Keynote and GTC demo-owner decisions remain open.", "Partner review evidence", "DECK_URL", "Production inclusion is not yet approved."],
+    ["Partner enablement", "Aisha Rahman", "On track", "The VP requested a review of the partner slides, and the staged Windows pilot passed its smoke check and is ready for an inclusion decision.", "Review the partner section and decide whether the pilot belongs in the demo.", "", "", "Partner review evidence", "DECK_URL", "Pilot inclusion requires a separate leadership decision; it does not block the partner review."],
     ["Social rollout", "Rafael Costa", "Awaiting update", "No current status has been received.", "Request asset readiness, timing, and blockers from Rafael.", "", "PIC status", "Email / Slack", "", "Follow-up draft needed."],
     ["Retail demo readiness", "Unassigned", "Blocked", "The retail demo lane still has no final owner, so the GTC demo slate cannot be presented as closed.", "Assign the final retail demo owner and confirm coverage during the Exec Review.", "", "Final retail demo owner is unassigned.", "Tracker owner field", "DECK_URL", "No owner has been assigned."],
     ["Legal intake LGL-2026-0847", "Daniel Cho", "Awaiting update", "Legal intake is open and the tracker has no recorded clearance for the performance result wording.", "Obtain Daniel’s clearance of the performance result wording for leadership review, including the NeoAgent V1 baseline and evaluation scope.", "", "Awaiting legal confirmation of benchmark wording.", "Pending Daniel / Product evidence", "SHEET_URL", "This intake covers leadership-review clearance only. Final external-copy review is a separate requirement, not a condition for closing this intake."],
@@ -32,6 +32,13 @@ def reset_sheet_baseline(sheets, state: dict, evidence: dict[str, str], refreshe
         "Blocked", '=COUNTIF(C7:C,"Blocked")', "",
         "Active lanes", '=COUNTA(A7:A)', "Last refreshed", refreshed,
     ]]
+    # A previous run may have expanded the summary beyond the tracker width.
+    # Clear values only, retaining the template's formatting before restoring A:J.
+    sheets.spreadsheets().values().clear(
+        spreadsheetId=state["sheet"]["id"],
+        range="'Campaign Lanes'!3:3",
+        body={},
+    ).execute()
     sheets.spreadsheets().values().batchUpdate(
         spreadsheetId=state["sheet"]["id"],
         body={

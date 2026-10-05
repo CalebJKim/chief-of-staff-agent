@@ -8,14 +8,23 @@ Use [Command reference](command-reference.md) for `actions.py` commands and argu
 
 1. **Read the tracker.** Use `sheets get` unless its current contents are already in context. Find an unknown tracker ID with `drive search`. Do not search local notes for it. Use returned tab names and a range for another known tab. Identify each requested entry’s deliverable, status, and blocker, plus the tracker’s status definitions.
 2. **Check existing evidence.** Assess each requested entry using current source evidence already in context. Do not search if it is sufficient. Otherwise, identify the missing or outdated information needed to assess progress, completion, or changed blockers.
-3. **Fill required gaps.** Batch independent, bounded Gmail searches by verified sender or short project term. Read matching threads only as needed, and reuse relevant results across entries. Consult Second Brain only if a necessary fact remains missing.
+3. **Fill required gaps.** Batch independent, bounded Gmail searches by verified sender or short project term. Read threads only as needed and reuse results. If an input’s status remains unknown, try one simpler sender or deliverable search. Search misses do not prove inputs are missing. Consult Second Brain only for remaining necessary gaps.
 
 ## 2. Reconcile entries
 
-- Review every requested item against current evidence, including unchanged entries. One update may affect several items.
-- Apply the tracker’s status definitions to each item’s deliverable and explicitly required follow-up. Exclude unstated requirements, hypothetical next steps, and work tracked elsewhere.
-- Reassess affected lanes and blockers. Received inputs are no longer missing. With required inputs available but lane work unfinished, use `In progress`, not `Awaiting update`. Later-stage approvals block current work only if explicitly required.
-- Keep status and details consistent with evidence. Preserve accurate values. Clear values only when evidence shows they no longer apply, never because information is missing.
+1. **Establish scope.** Identify the lane's deliverable and required dependencies. Exclude other lanes' work and downstream uses of its output. Do not add unstated requirements or hypothetical steps.
+2. **Check completion first.** If current evidence confirms the deliverable is finished, use **Complete**. Do not add downstream work to keep it open. An outdated tracker entry does not mean the deliverable is unfinished.
+3. **Check whether a change is supported.** If evidence establishes no change to the lane's progress, inputs, or blockers, preserve its status. Contact introductions alone do not establish progress. Tracker timestamps do not establish status accuracy.
+4. **Classify unfinished work.**
+   - **Awaiting update:** Required input is still missing.
+   - **In progress:** Required input has arrived; the lane's drafting or edits remain.
+   - **Blocked:** Evidence explicitly identifies a dependency preventing the lane's work from proceeding.
+   - **On track:** Work remains and is progressing without a blocker.
+
+   Missing input alone does not change **Awaiting update** to **Blocked**; evidence must establish an impediment to progress. Pending approvals block only work that requires them.
+5. **Check consistency before writing.** The status, next action, and blocker must describe the same lane. A completed deliverable cannot remain **On track** or **In progress**. Apply shared evidence to every requested lane. Received inputs cannot remain missing.
+
+- Preserve accurate values. Clear values only when evidence shows they no longer apply, never because information is missing.
 
 ## 3. Apply and verify
 

@@ -459,6 +459,9 @@ class WorkspaceSeedTests(unittest.TestCase):
         seed.reset_sheet_baseline(sheets, state, evidence, "2026-08-28")
 
         sheets.spreadsheets().values().update.assert_not_called()
+        sheets.spreadsheets().values().clear.assert_called_once_with(
+            spreadsheetId="sheet-1", range="'Campaign Lanes'!3:3", body={}
+        )
         call = sheets.spreadsheets().values().batchUpdate.call_args
         self.assertEqual("sheet-1", call.kwargs["spreadsheetId"])
         self.assertEqual(
