@@ -6,9 +6,9 @@ A tracker update request authorizes evidence-backed changes to the requested tra
 
 Use [Command reference](command-reference.md) for `actions.py` commands and arguments.
 
-- When batching needed reads, combine `gmail important --max 12 --newer-than-days 2` with `sheets get` if the tracker ID is known, or `drive search` if unknown. After `drive search`, read the identified tracker with `sheets get`.
-- Do not search local notes for the tracker ID. Use the returned tab name, never a guessed name. Specify a range for another known tab.
-- For unresolved evidence gaps, use one bounded Gmail search by verified sender or short project term, then read the matching thread. Consult Second Brain only if a necessary fact remains missing.
+1. **Read the tracker.** Use `sheets get` unless its current contents are already in context. Find an unknown tracker ID with `drive search`. Do not search local notes for it. Use returned tab names and a range for another known tab. Identify each requested entry’s deliverable, status, and blocker, plus the tracker’s status definitions.
+2. **Check existing evidence.** Assess each requested entry using current source evidence already in context. Do not search if it is sufficient. Otherwise, identify the missing or outdated information needed to assess progress, completion, or changed blockers.
+3. **Fill required gaps.** Batch independent, bounded Gmail searches by verified sender or short project term. Read matching threads only as needed, and reuse relevant results across entries. Consult Second Brain only if a necessary fact remains missing.
 
 ## 2. Reconcile entries
 
