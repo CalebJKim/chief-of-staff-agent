@@ -329,7 +329,7 @@ def build_packet(snapshot: dict[str, Any], args: argparse.Namespace) -> dict[str
             "Evidence collection is complete. This packet contains selected evidence, not a complete Workspace audit. "
             "Do not generate a daily brief, rerun ingestion, read the raw snapshot, or scan the entire vault. "
             "If output is truncated, read the saved packet_path using offsets. "
-            "Read the index and only relevant notes. Treat snippets as leads; retrieve source content only to verify a change. "
+            "Read the Second Brain’s index note if present. Otherwise, use the Second Brain search helper to find relevant notes. Read only relevant notes. Treat snippets as leads; retrieve source content only to verify a change. "
             "Read each source or note once. Reread only after a failed or truncated read, a content change, or to verify a saved edit. "
             "Preserve relevant facts, source links, files already read, and the next unfinished step across compaction. "
             "Update supported facts in the configured Second Brain notes, record actual changes, "
