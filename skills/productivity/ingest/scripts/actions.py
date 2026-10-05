@@ -362,12 +362,41 @@ def docs_replace(args: argparse.Namespace) -> None:
     emit({"status": "updated", "document_id": args.document_id, "occurrences_changed": occurrences})
 
 
+def tracker_read_view(values: list[list[Any]]) -> dict[str, Any] | None:
+    """Label tracker cells without interpreting status or dropping columns."""
+    aliases = {
+        "pic": "owner", "latest update": "latest", "next action": "next",
+        "dependency / blocker": "blocker",
+    }
+    for header_index, row in enumerate(values):
+        headers = [str(cell).strip().casefold() for cell in row]
+        if "lane" not in headers or "status" not in headers:
+            continue
+        keys = [aliases.get(header, header) for header in headers]
+        # Fall back to raw cells if labels would overwrite or omit any values.
+        data_rows = values[header_index + 1:]
+        if not all(keys) or len(set(keys)) != len(keys) or any(len(item) > len(keys) for item in data_rows):
+            return None
+        lanes = [
+            {key: item[column] if column < len(item) else "" for column, key in enumerate(keys)}
+            for item in data_rows if any(cell != "" for cell in item)
+        ]
+        return {"context": values[:header_index], "lanes": lanes}
+    return None
+
+
 def sheets_get(args: argparse.Namespace) -> None:
     result = service("sheets", "v4").spreadsheets().values().get(
         spreadsheetId=args.spreadsheet_id,
         range=args.range,
     ).execute()
-    emit({"spreadsheet_id": args.spreadsheet_id, "range": result.get("range"), "values": result.get("values", [])})
+    metadata = {"spreadsheet_id": args.spreadsheet_id, "range": result.get("range")}
+    values = result.get("values", [])
+    tracker = tracker_read_view(values)
+    if tracker is None:
+        emit({**metadata, "values": values})
+    else:
+        print(json.dumps({**metadata, **tracker}, ensure_ascii=False, indent=2))
 
 
 def sheets_update(args: argparse.Namespace) -> None:
