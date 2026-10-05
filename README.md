@@ -147,11 +147,18 @@ You can still use `--second-brain "/path/to/your/Second Brain"` to connect anoth
 vault without copying or overwriting it. Reading context does not edit notes;
 a separately configured scheduled job can update them when authorized.
 
+Reset uses the current Monday–Friday week in the demo timezone (Pacific by default).
+Pass `--week-of YYYY-MM-DD` to select another week's Monday.
+
 `python demo/reset_workspace.py` (or `python demo/seed_workspace.py --reset --confirm`)
-resets Google Workspace and restores **only** `CoS_Workspace/CoS_SecondBrain/` from
+resets Google Workspace and restores `CoS_Workspace/CoS_SecondBrain/` from
 `demo/templates/CoS_SecondBrain.zip`. Existing demo notes, including job-created
 files, are first moved into the Git-ignored `demo/.second-brain-backups/` folder.
-Local `.obsidian` settings are preserved. Other vaults are never reset, even if
+Local `.obsidian` settings are preserved. Reset deletes all other files and folders
+inside `CoS_Workspace`, except `google_token.json`, `google_client_secret.json`,
+`chief-of-staff-workspace-state.json`, and `second-brain.json` directly inside
+`.chief-of-staff-state`. This removes old packets, snapshots, tracker updates,
+drafts, and helper scripts. Other vaults outside `CoS_Workspace` are never reset, even if
 connected to the profile. Finish running profile jobs before resetting and do not
 start new jobs during a reset. No jobs are removed by reset.
 

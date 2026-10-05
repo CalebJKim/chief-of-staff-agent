@@ -1,11 +1,14 @@
 import base64
 import importlib.util
+import io
+import json
 import re
 import sys
 import unittest
 import zipfile
 from datetime import date, datetime, timedelta
 from email import message_from_bytes
+from email.header import decode_header, make_header
 from email.utils import parseaddr, parsedate_to_datetime
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -19,6 +22,40 @@ spec.loader.exec_module(seed)
 from baseline import PRE_EMAIL_ROWS
 
 class WorkspaceSeedTests(unittest.TestCase):
+    def test_reset_uses_current_workweek_unless_explicitly_overridden(self):
+        cases = [
+            (datetime(2026, 10, 5, 0, 1), None, date(2026, 10, 5)),
+            (datetime(2026, 10, 7, 12, 0), None, date(2026, 10, 5)),
+            (datetime(2026, 10, 11, 23, 59), None, date(2026, 10, 5)),
+            (datetime(2027, 1, 4, 9, 0), None, date(2027, 1, 4)),
+            (datetime(2026, 10, 5, 9, 0), "2026-09-14", date(2026, 9, 14)),
+        ]
+        for now, override, expected in cases:
+            with self.subTest(now=now, override=override):
+                previous = {"week_of": "2026-09-28"}
+                path = Mock()
+                path.exists.return_value = True
+                path.read_text.return_value = json.dumps(previous)
+                result = {"week_of": expected.isoformat(), "folder": {}, "sheet": {},
+                          "doc": {}, "slides": {}, "emails": [], "events": []}
+                argv = [str(MODULE), "--reset", "--confirm"]
+                if override:
+                    argv.extend(["--week-of", override])
+                with (
+                    patch.object(seed, "state_path", return_value=path),
+                    patch.object(seed, "local_now", return_value=now.replace(tzinfo=ZoneInfo(seed.TZ_NAME))),
+                    patch.object(seed, "check_reset"),
+                    patch.object(seed, "check_evidence_cache"),
+                    patch.object(seed, "reset_in_place", return_value=result) as reset,
+                    patch.object(seed, "reset_second_brain", return_value={}),
+                    patch.object(seed, "clear_evidence_cache", return_value={}),
+                    patch.object(sys, "argv", argv),
+                    patch.object(sys, "stdout", new_callable=io.StringIO) as output,
+                ):
+                    self.assertEqual(0, seed.run())
+                reset.assert_called_once_with(previous, expected)
+                self.assertEqual(expected.isoformat(), json.loads(output.getvalue())["week_of"])
+
     def test_seed_assets_use_results_without_old_benchmark_claims(self):
         retired = re.compile(r"1\.8[x×]|2\.1[x×]|38 tokens/second|22% lower energy|inference-performance-claims|product-performance-package", re.I)
         for filename in ("seed_workspace.py", "baseline.py"):
@@ -236,10 +273,27 @@ class WorkspaceSeedTests(unittest.TestCase):
         received_at = [parsedate_to_datetime(message["Date"]) for message in imported]
         self.assertEqual({now.date()}, {value.date() for value in received_at[:seed.MEANINGFUL_EMAIL_COUNT]})
         self.assertEqual({now.date(), now.date() - timedelta(days=1)}, {value.date() for value in received_at[:today_count]})
-        self.assertEqual(seed.seeded_email_times(today_count, now), received_at[:today_count])
+        self.assertEqual(seed.seeded_inbox_times(now), received_at)
+        inbox = sorted(imported, key=lambda message: parsedate_to_datetime(message["Date"]), reverse=True)
+        self.assertEqual([
+            "Celeste Whitmore", "Evan Mercer", "Elena Park", "Amara Okafor",
+            "Aarav Shah", "Aisha Rahman", "Liam Carter", "Samira Noor",
+            "Leah Moreno", "Sofia Alvarez", "Elena Park", "Mateo Silva",
+            "Mike Chen", "Iris Kimura", "Tessa Ellis", "Jonah Foster",
+            "Morgan Reeves", "Nora Dubois", "Daniel Cho", "Rafael Costa",
+            "Ethan Novak", "Priya Nair",
+        ], [parseaddr(message["From"])[0] for message in inbox[:22]])
+        self.assertEqual("Office shuttle information — Americas", str(make_header(decode_header(inbox[0]["Subject"]))))
+        self.assertEqual("Cafeteria menu highlights — Americas", str(make_header(decode_header(inbox[9]["Subject"]))))
+        self.assertEqual({now.date()}, {parsedate_to_datetime(message["Date"]).date() for message in inbox[:22]})
+        required_subjects = {message["Subject"] for message in imported[:seed.MEANINGFUL_EMAIL_COUNT] + imported[today_count:]}
+        self.assertTrue(required_subjects <= {message["Subject"] for message in inbox[:50]})
+        self.assertTrue(all(parsedate_to_datetime(message["Date"]) < now.replace(hour=9, minute=30) for message in inbox))
+        for key, index in {"elena": 0, "mike": 1, "aisha": 2, "daniel": 3, "priya": 4, "prd": 5}.items():
+            self.assertEqual(created[index]["url"], evidence[key])
         for index, item in enumerate(seed.task_scenario.TASKS, today_count):
             self.assertEqual(now.date(), received_at[index].date())
-            self.assertLess(received_at[index].hour, 9)
+            self.assertLess(received_at[index], now.replace(hour=9, minute=30))
             self.assertEqual(created[index]["url"], evidence[item["key"]])
         self.assertEqual(total, len(set(received_at)))
         self.assertTrue(all("IMPORTANT" in value for value in labels[:seed.MEANINGFUL_EMAIL_COUNT]))

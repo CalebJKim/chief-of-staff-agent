@@ -53,11 +53,6 @@ def email_specs(resources, today):
     ]
 
 
-def email_times(now):
-    # Before the demo's 9:30 AM reference time, always on the seed date.
-    return [now.replace(hour=8, minute=m, second=0, microsecond=0) for m in (7, 23, 41)]
-
-
 def task_bodies(resources, evidence, today, marker):
     for task in TASKS:
         links = "\n".join(f"{RESOURCES[key][0]}: {resources[key]['url']}" for key in task["resources"])
@@ -142,7 +137,8 @@ def refresh(seed, state):
     account = svc["gmail"].users().getProfile(userId="me").execute()["emailAddress"]
     run_id = uuid.uuid4().hex
     evidence = {}
-    for i, ((sender, subject, body), when, task) in enumerate(zip(specs, email_times(now), TASKS), 1):
+    times = seed.seeded_inbox_times(now)[-len(TASKS):]
+    for i, ((sender, subject, body), when, task) in enumerate(zip(specs, times, TASKS), 1):
         result = seed.mail_import_request(svc["gmail"], account, sender, subject, body, i, when, run_id, important=False).execute()
         item = {"id": result["id"], "thread_id": result.get("threadId", result["id"]), "task_key": task["key"]}
         item["url"] = f"https://mail.google.com/mail/u/0/#all/{item['thread_id']}"

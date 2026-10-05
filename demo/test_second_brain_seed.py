@@ -101,9 +101,24 @@ class SecondBrainResetTests(unittest.TestCase):
 
     def test_same_confirmed_reset_runs_google_and_local_reset(self):
         (self.vault / "index.md").write_text("Changed")
+        (self.vault / "extra-note.md").write_text("Old run")
+        artifact = self.vault.parent / "tracker_updates.json"
+        artifact.write_text("Stale updates")
+        folder = self.vault.parent / "unexpected-output/nested"
+        folder.mkdir(parents=True)
+        (folder / "report.md").write_text("Old report")
+        token = self.vault.parent / ".chief-of-staff-state/google_token.json"
+        token.parent.mkdir(exist_ok=True)
+        token.write_text("keep credentials")
         self.assertEqual(0, self.run_reset())
         self.assertEqual(1, self.google_reset_calls)
         self.assert_baseline()
+        self.assertFalse((self.vault / "extra-note.md").exists())
+        self.assertFalse(artifact.exists())
+        self.assertFalse(folder.parent.exists())
+        self.assertEqual(token.read_text(), "keep credentials")
+        self.assertEqual({"CoS_SecondBrain", ".chief-of-staff-state"},
+                         {p.name for p in self.vault.parent.iterdir()})
 
     def test_confirmation_still_required(self):
         with self.assertRaisesRegex(SystemExit, "without --confirm"):
@@ -128,9 +143,12 @@ class SecondBrainResetTests(unittest.TestCase):
 
     def test_google_failure_leaves_local_notes_untouched(self):
         (self.vault / "index.md").write_text("Keep my notes")
+        artifact = self.vault.parent / "tracker_updates.json"
+        artifact.write_text("Keep until reset succeeds")
         with self.assertRaisesRegex(RuntimeError, "Google unavailable"):
             self.run_reset(failure=RuntimeError("Google unavailable"))
         self.assertEqual("Keep my notes", (self.vault / "index.md").read_text())
+        self.assertEqual(artifact.read_text(), "Keep until reset succeeds")
         self.assertFalse((self.root / "demo" / ".second-brain-backups").exists())
 
     def test_bundled_archive_is_valid_and_excludes_settings(self):

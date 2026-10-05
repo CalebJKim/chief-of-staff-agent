@@ -6,6 +6,7 @@ import email
 import importlib.util
 import io
 import json
+import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -225,6 +226,34 @@ class IngestTests(unittest.TestCase):
         redacted = ingest.redact_sensitive(text)
         self.assertNotIn("865913", redacted)
         self.assertIn("[REDACTED]", redacted)
+
+    def test_tracker_inputs_accept_optional_bom_without_changing_content(self):
+        expected = [{"lane": "Packing", "status": "In progress", "latest": "Keep \ufeff inside text"}]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "updates.json"
+            for prefix in ("", "\ufeff"):
+                payload = prefix + json.dumps(expected, ensure_ascii=False)
+                path.write_bytes(payload.encode("utf-8"))
+                for source in ("inline", "stdin", "file"):
+                    with self.subTest(bom=bool(prefix), source=source):
+                        args = argparse.Namespace(
+                            updates=payload if source == "inline" else None,
+                            updates_file="-" if source == "stdin" else str(path),
+                        )
+                        with patch.object(actions.sys, "stdin", io.StringIO(payload)):
+                            self.assertEqual(expected, actions._load_tracker_updates(args))
+
+    def test_malformed_tracker_json_is_rejected_before_network_with_or_without_bom(self):
+        for prefix in ("", "\ufeff"):
+            with self.subTest(bom=bool(prefix)):
+                args = actions.build_parser().parse_args([
+                    "sheets", "update-lanes", "sheet-id", "--confirm",
+                    "--updates", prefix + '[{"lane":]',
+                ])
+                with patch.object(actions, "service") as service:
+                    with self.assertRaises(json.JSONDecodeError):
+                        actions.sheets_update_lanes(args)
+                    service.assert_not_called()
 
     def test_gmail_search_is_metadata_only_and_bounded(self):
         calls = {}
@@ -850,6 +879,25 @@ class IngestTests(unittest.TestCase):
 
 
 class TrackerBlockerReviewTests(unittest.TestCase):
+    def test_unknown_lane_error_lists_current_names_without_writing_or_rereading(self):
+        args, api, values = self.setup_update([
+            ["Packing", "Owner", "Awaiting update"],
+            ["Clearance", "Owner", "Awaiting update"],
+        ], [
+            {"lane": "Packing", "status": "Complete"},
+            {"lane": "Missing lane", "status": "Complete"},
+        ])
+        with patch.object(actions, "service", return_value=api), patch.object(actions, "emit") as emit:
+            with self.assertRaises(RuntimeError) as raised:
+                actions.sheets_update_lanes(args)
+        self.assertIn("Tracker lane(s) not found: ['Missing lane']", str(raised.exception))
+        self.assertIn("Use exact lane names from this sheet: ['Clearance', 'Packing']", str(raised.exception))
+        self.assertIn("Nothing was written.", str(raised.exception))
+        values.get.assert_called_once_with(spreadsheetId="ops-sheet", range="'Operations'!A6:H100")
+        values.get.return_value.execute.assert_called_once()
+        values.batchUpdate.assert_not_called()
+        emit.assert_not_called()
+
     def test_omitted_scope_flag_defaults_to_status_only(self):
         args, api, values = self.setup_update([
             ["Packing", "Owner", "Blocked", "Keep", "Next", "=TODAY()", "Old dependency", "source"],

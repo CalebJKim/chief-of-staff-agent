@@ -77,9 +77,11 @@ python demo/reset_workspace.py
 python demo/seed_workspace.py --cleanup --confirm
 ```
 
-Reset also restores `demo/CoS_SecondBrain/` from the bundled baseline ZIP, saving
-the previous demo vault under `demo/.second-brain-backups/`. Other vaults and cron
-jobs are untouched. `--cleanup` removes Google Workspace seed data only.
+Reset also restores `CoS_Workspace/CoS_SecondBrain/` from the bundled baseline ZIP,
+saving the previous demo vault under `demo/.second-brain-backups/`. It deletes all
+other workspace contents except the four required `.chief-of-staff-state` files
+listed in the README. Vaults outside `CoS_Workspace` and cron jobs are untouched.
+`--cleanup` removes Google Workspace seed data only.
 
 ## Manual fallback
 

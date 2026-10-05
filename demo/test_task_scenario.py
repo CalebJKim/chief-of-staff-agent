@@ -72,6 +72,9 @@ class TaskScenarioTests(unittest.TestCase):
             saved = json.loads(seed.state_path().read_text())
         gmail.users().messages().batchDelete.assert_called_once_with(userId="me", body={"ids": ["old-task"]})
         gmail.users().drafts.assert_not_called()
+        now = datetime(2026, 9, 30, 12, tzinfo=ZoneInfo(seed.TZ_NAME))
+        self.assertEqual(seed.seeded_inbox_times(now)[-len(scenario.TASKS):],
+                         [call.args[6] for call in imported.call_args_list])
         self.assertEqual(["rtx", "personal", "new-0", "new-1", "new-2"], [m["id"] for m in saved["emails"]])
         self.assertEqual({"id": "deck"}, saved["slides"])
         self.assertEqual({"id": "sheet"}, saved["sheet"])
