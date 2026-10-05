@@ -646,6 +646,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--calendar", default="primary")
     p.add_argument("--confirm", action="store_true")
     p.set_defaults(func=calendar_create)
+    from workspace_formatting import register_commands
+    register_commands(groups, service)
     return parser
 
 

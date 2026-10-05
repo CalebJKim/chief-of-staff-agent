@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Google Workspace OAuth2 setup for Hermes Agent.
+"""Google Workspace OAuth2 setup for Hermes and Perplexity.
 
-Fully non-interactive — designed to be driven by the agent via terminal commands.
-The agent mediates between this script and the user (works on CLI, Telegram, Discord, etc.)
+Use --connect for guided local sign-in, or the individual commands for manual setup.
+COS_STATE_DIR selects the credential folder. Without it, existing Hermes profile
+resolution is preserved.
 
 Commands:
+  setup.py --connect                        # Guided setup; reuse a working connection
   setup.py --check                          # Is auth valid? Exit 0 = yes, 1 = no
   setup.py --client-secret /path/to.json    # Store OAuth client credentials
   setup.py --auth-url                       # Print the OAuth URL for user to visit
@@ -37,12 +39,24 @@ _SCRIPTS_DIR = str(Path(__file__).resolve().parent)
 if _SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, _SCRIPTS_DIR)
 
-from _hermes_home import display_hermes_home, get_hermes_home
+from _hermes_home import get_hermes_home
 
-HERMES_HOME = get_hermes_home()
-TOKEN_PATH = HERMES_HOME / "google_token.json"
-CLIENT_SECRET_PATH = HERMES_HOME / "google_client_secret.json"
-PENDING_AUTH_PATH = HERMES_HOME / "google_oauth_pending.json"
+
+def get_state_dir() -> Path:
+    """Prefer the explicit demo state directory; preserve legacy Hermes callers."""
+    configured = os.environ.get("COS_STATE_DIR", "").strip()
+    if not configured:
+        return get_hermes_home()
+    path = Path(configured).expanduser()
+    if not path.is_absolute():
+        raise ValueError("COS_STATE_DIR must be an absolute directory path")
+    return path
+
+
+STATE_DIR = get_state_dir()
+TOKEN_PATH = STATE_DIR / "google_token.json"
+CLIENT_SECRET_PATH = STATE_DIR / "google_client_secret.json"
+PENDING_AUTH_PATH = STATE_DIR / "google_oauth_pending.json"
 
 SCOPES = [
     "https://mail.google.com/",
@@ -67,6 +81,8 @@ REQUIRED_PACKAGES = [
     # GHSA-j5g9-f88f-gfj3 — Decompression Bomb DoS via unbounded gzip/deflate
     "httplib2==0.32.0",
     "pyasn1==0.6.4",
+    # Local Google Docs preview rendering for the demo action helper.
+    "PyMuPDF==1.28.0",
 ]
 
 # OAuth redirect for "out of band" manual code copy flow.
@@ -102,7 +118,7 @@ def _format_missing_scopes(missing_scopes: list[str]) -> str:
     return (
         "Token is valid but missing required Google Workspace scopes:\n"
         f"{bullets}\n"
-        "Run the Google Workspace setup again from this same Hermes profile to refresh consent."
+        "Run Google Workspace setup again using the same credential folder to refresh consent."
     )
 
 
@@ -157,7 +173,7 @@ def install_deps():
     if uv:
         try:
             subprocess.check_call(
-                [uv, "pip", "install", "--python", sys.executable, "--quiet"]
+                [uv, "pip", "install", "--link-mode", "copy", "--python", sys.executable, "--quiet"]
                 + missing,
                 stdout=subprocess.DEVNULL,
             )
@@ -177,7 +193,6 @@ def install_deps():
         "On environments without pip (e.g. Nix, or the Hermes Docker image's "
         "uv-managed venv), install the optional extra instead:"
     )
-    print("  hermes setup")
     print(f"Or manually: {sys.executable} -m pip install {' '.join(REQUIRED_PACKAGES)}")
     return False
 
@@ -285,7 +300,7 @@ def check_auth(quiet: bool = False):
 
 
 def store_client_secret(path: str):
-    """Copy and validate client_secret.json to Hermes home."""
+    """Copy and validate client_secret.json in the selected credential folder."""
     src = Path(path).expanduser().resolve()
     if not src.exists():
         print(f"ERROR: File not found: {src}")
@@ -302,12 +317,14 @@ def store_client_secret(path: str):
         print("Download the correct file from: https://console.cloud.google.com/apis/credentials")
         sys.exit(1)
 
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
     CLIENT_SECRET_PATH.write_text(json.dumps(data, indent=2), encoding="utf-8")
     print(f"OK: Client secret saved to {CLIENT_SECRET_PATH}")
 
 
 def _save_pending_auth(*, state: str, code_verifier: str):
     """Persist the OAuth session bits needed for a later token exchange."""
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
     PENDING_AUTH_PATH.write_text(
         json.dumps(
             {
@@ -380,6 +397,7 @@ def get_auth_url():
     _save_pending_auth(state=state, code_verifier=flow.code_verifier)
     # Print just the URL so the agent can extract it cleanly
     print(auth_url)
+    return auth_url
 
 
 def exchange_auth_code(code: str):
@@ -445,7 +463,47 @@ def exchange_auth_code(code: str):
     TOKEN_PATH.write_text(json.dumps(token_payload, indent=2), encoding="utf-8")
     PENDING_AUTH_PATH.unlink(missing_ok=True)
     print(f"OK: Authenticated. Token saved to {TOKEN_PATH}")
-    print(f"Profile-scoped token location: {display_hermes_home()}/google_token.json")
+    print(f"Credential folder: {STATE_DIR}")
+
+
+def connect(client_secret: str | None = None) -> bool:
+    """Guide a person through setup without putting their auth code in argv."""
+    import getpass
+    import webbrowser
+
+    print(f"Google Workspace credential folder: {STATE_DIR}")
+    if client_secret:
+        store_client_secret(client_secret)
+    # An explicitly supplied client starts a new connection. Otherwise reuse a
+    # working token, including its silent refresh, without opening a browser.
+    if not client_secret and TOKEN_PATH.exists() and check_auth():
+        if not _missing_scopes_from_payload(_load_token_payload()):
+            return check_auth_live()
+        print("Additional Google permissions are needed for this demo.")
+    if not CLIENT_SECRET_PATH.exists():
+        print("Create a Desktop OAuth client with the Gmail, Calendar, Drive, Docs, Sheets, Slides, and Tasks APIs enabled.")
+        path = input("Path to the downloaded client-secret JSON: ").strip().strip('"')
+        if not path:
+            print("No client-secret file supplied. Setup stopped.")
+            return False
+        store_client_secret(path)
+    url = get_auth_url()
+    print("Sign in to the Google account you want this demo to use and approve the requested permissions.")
+    try:
+        webbrowser.open(url)
+    except OSError:
+        pass  # The printed link also works when automatic browser opening fails.
+    print("A connection error at localhost:1 after approval is expected.")
+    callback = getpass.getpass("Paste the full redirect URL here (input hidden): ").strip()
+    if not callback.startswith("http://localhost:1/"):
+        print("Expected the full localhost redirect URL. Setup stopped.")
+        return False
+    exchange_auth_code(callback)
+    missing = _missing_scopes_from_payload(_load_token_payload())
+    if missing:
+        print(_format_missing_scopes(missing))
+        return False
+    return check_auth_live()
 
 
 def revoke():
@@ -482,8 +540,9 @@ def revoke():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Google Workspace OAuth setup for Hermes")
+    parser = argparse.ArgumentParser(description="Google Workspace OAuth setup for Hermes and Perplexity")
     group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--connect", action="store_true", help="Guided setup or reconnection")
     group.add_argument("--check", action="store_true", help="Check if auth is valid (exit 0=yes, 1=no)")
     group.add_argument("--check-live", action="store_true", help="Check auth with a real API call (detects disabled_client)")
     group.add_argument("--client-secret", metavar="PATH", help="Store OAuth client_secret.json")
@@ -491,8 +550,17 @@ def main():
     group.add_argument("--auth-code", metavar="CODE", help="Exchange auth code for token")
     group.add_argument("--revoke", action="store_true", help="Revoke and delete stored token")
     group.add_argument("--install-deps", action="store_true", help="Install Python dependencies")
+    parser.add_argument("--client-secret-file", metavar="PATH", help="Client-secret JSON for --connect")
     args = parser.parse_args()
 
+    if args.client_secret_file and not args.connect:
+        parser.error("--client-secret-file requires --connect")
+    if args.connect:
+        try:
+            sys.exit(0 if connect(args.client_secret_file) else 1)
+        except (EOFError, KeyboardInterrupt):
+            print("\nSetup cancelled.")
+            sys.exit(1)
     if args.check:
         sys.exit(0 if check_auth() else 1)
     if getattr(args, "check_live", False):

@@ -17,8 +17,8 @@ TASKS = [
     },
     {
         "key": "gtc_invitation",
-        "title": "Respond to the GTC 2027 demo presenter invitation",
-        "notes": "Tessa Ellis emailed to follow up on presenting a demo at GTC 2027. I said in our meeting last week that I’d need a week to decide. Need to let her know today whether I’m available.",
+        "title": "Draft my GTC 2027 availability reply to Tessa",
+        "notes": "Tessa needs my availability. A yes or no is enough for now; demo details can wait. Draft a short reply once I confirm.",
         "resources": (),
     },
     {

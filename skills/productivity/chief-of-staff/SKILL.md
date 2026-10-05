@@ -112,7 +112,7 @@ Run this command exactly once, and only when the current request asks for a dail
 "$PYTHON" "$DAILY_BRIEF"
 ```
 
-Wait for completion. Use the returned JSON. If truncated, read only the file at `packet_path`, following the tool’s offsets. Never rerun the command or run `ingest.py` or `brief.py` separately.
+Wait for completion. Use the returned JSON. If truncated, read only the file at `packet_path`, following the tool’s offsets. Do not search for or read packets or snapshots from previous runs. Never rerun the command or run `ingest.py` or `brief.py` separately.
 
 For steps 2–5, use only the packet as evidence. Follow its `instruction` field. No further tool calls, raw snapshots, source documents, extra lookups, parsers, output redirection, or task execution. Read or discuss trackers only on request.
 
@@ -167,7 +167,7 @@ Draft about 250 words without counting, using specific action titles. Omit greet
 
 Keep this heading above the callout and news bullets. Do not add a “What Changed” heading or other subheadings.
 
-Include only new facts, decisions, approvals, readiness confirmations, announcements, or meeting changes. Preserve their stated scope. Exclude tasks, requests, reminders, and instructions for unfinished work, even when newly received or phrased as status updates. Apply this to the callout and news bullets. Put actions and their deadlines only in the following two sections.
+Include only new facts, decisions, approvals, completed reviews, readiness confirmations, announcements, meeting changes, or important deadlines. Preserve their stated scope. Prioritize updates that change today’s plans and manager-set deadlines requiring substantial user judgment over routine approvals, reviews, and data updates. Exclude pending or resulting work, such as file edits or email replies, from the callout, headlines, and descriptions, even phrased as status updates.
 
 For example, new data or product announcements belong here. Deck or document updates and emails to send belong below.
 
@@ -177,7 +177,7 @@ After the **What You Need to Know** header, lead with the manager's most importa
 >
 > **[Your manager's update](SOURCE_URL)** — One-sentence news or update.
 
-Add up to two news bullets (three without a callout), grouped by outcome without repeating the callout: **[Specific news or update](SOURCE_URL)** — one-sentence summary.
+Add up to three news bullets (four without a callout), grouped by outcome without repeating the callout: **[Specific news or update](SOURCE_URL)** — one-sentence summary.
 
 ##### What you need to get done today
 
@@ -195,7 +195,7 @@ Number and source-link the agent offers from step 2. For email tasks, offer to s
 
 #### 5. Check once and respond
 
-Compare all three sections once. Remove meeting attendance and presenting from both action sections. Remove tasks and reminders from news, retaining distinct updates. Remove duplicate actions or subtasks within each action section. Check **What I can take care of for you** first. Remove those actions from the brief’s **What you need to get done today** table, including within row titles, explanations, and work-time notes. Keep remaining work requiring substantial user involvement and drop rows with none. Replace placeholders. Check facts, source links, and formatting against the JSON. Fix errors and respond without polishing or redrafting for length.
+Compare all three sections once. Remove meeting attendance and presenting from both action sections. Remove pending or resulting work from news, retaining important deadlines and distinct updates. Remove duplicate actions or subtasks within each action section. Check **What I can take care of for you** first. Remove those actions from the brief’s **What you need to get done today** table, including within row titles, explanations, and work-time notes. Keep remaining work requiring substantial user involvement and drop rows with none. Replace placeholders. Check facts, source links, and formatting against the JSON. Fix errors and respond without polishing or redrafting for length.
 
 ### Other Tasks
 
@@ -207,6 +207,9 @@ Match the user’s intent, including requests worded differently from the exampl
 |---|---|---|
 | Meeting Preparation | **Example cues:** “Help me prepare for the exec review” or “Brief me before my meeting.” **Result:** Read-only meeting briefing in the reference’s format. | [Meeting preparation](references/meeting-preparation.md) |
 | Updating Project Tracker | **Example cues:** “Update the project tracker” or “Bring the tracker up to date.” **Result:** Reconcile the requested entries with current evidence. | [Updating project tracker](references/updating-project-tracker.md) |
+| Drafting Email | **Example cues:** “Draft a reply” or “Draft follow-up emails.” **Result:** Save Gmail drafts for review, or provide text only when requested. | [Drafting email](references/drafting-email.md) |
+| Updating Google Docs | **Example cues:** “Update the document” or “Replace the placeholder.” **Result:** Apply requested document edits and verify the result. | [Updating Google Docs](references/updating-google-docs.md) |
+| Updating Slide Decks | **Example cues:** “Apply the deck edits” or “Merge these slides.” **Result:** Apply requested slide changes and verify the result. | [Updating slide decks](references/updating-slide-decks.md) |
 | Updating Second Brain | **Example cues:** “Update my Second Brain” or “Update the notes in my Second Brain”. **Result:** Reconcile notes with current Google Workspace evidence. | [Updating Second Brain](references/updating-second-brain.md) |
 
 For immediate or scheduled Second Brain updates, read **Updating Second Brain** before choosing commands. Do not route directly to ingest.

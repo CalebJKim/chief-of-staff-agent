@@ -50,6 +50,21 @@ chief-of-staff routing if missing. Use `--overwrite-soul` only if replacement is
 
 ## 3. Connect your own Google account
 
+On Windows, the guided launcher selects Python and the credential folder for you:
+
+```powershell
+.\setup.ps1 -Harness hermes
+# For an installed Perplexity demo, run from its checkout:
+.\setup.ps1 -Harness perplexity
+```
+
+It reuses a working connection or guides you through Google authorization.
+First-time setup asks for the downloaded Desktop OAuth client JSON described
+below. Append `-Check` to inspect the selected paths without changing anything.
+See [connection options](README.md#connect-google-workspace).
+
+For other shells or manual setup:
+
 If the copied Google connection already works, no new authorization is needed.
 Otherwise create a **Desktop OAuth client** in Google Cloud and enable the Gmail,
 Calendar, Drive, Docs, Sheets, and Slides APIs (and Tasks for the sample checklist).

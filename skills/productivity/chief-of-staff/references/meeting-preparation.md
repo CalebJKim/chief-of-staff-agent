@@ -28,7 +28,7 @@ Assume preparation starts now. Suggest work times or meeting changes only when r
 ```markdown
 ### Context
 
-**Purpose:** [Concrete purpose and relevant dependencies. Put desired outcomes under Goals.]
+**Purpose:** [State only why the meeting is happening. Do not include scheduling details or preparation tasks. Put preparation tasks only under **What needs to get done before the meeting**, and desired outcomes under **Goals**.]
 
 **People:** [Other participants and roles, excluding the user.]
 
