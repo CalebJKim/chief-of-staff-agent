@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="Validate local setup without resetting or calling Google")
-    parser.add_argument("--week-of", help="Monday date (YYYY-MM-DD); otherwise reuse the saved demo week")
+    parser.add_argument("--week-of", help="Monday date (YYYY-MM-DD); defaults to the current week in the demo timezone")
     args = parser.parse_args(argv)
     state = ROOT / "CoS_Workspace" / ".chief-of-staff-state"
     # The reset always targets this checkout, regardless of inherited settings.

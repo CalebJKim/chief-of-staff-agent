@@ -27,7 +27,7 @@ Required packages are installed during setup, never during a brief.
 `COS_STATE_DIR` points to writable workspace state. Perplexity scripts require it
 and have no Hermes-directory fallback. For Start of Day, run `scripts/daily_brief.ps1 -WorkspaceRoot <absolute task workspace>`.
 It initializes the workspace and invokes the brief once. Add `-Fixture` for the
-offline fixture test. Other scripts still use `runtime.ps1` in the same shell call.
+offline fixture test. For `actions.py`, use `scripts/run-actions.ps1 -WorkspaceRoot <absolute task workspace> SERVICE COMMAND [arguments]`, or `-Batch { action ... }` for grouped commands. It initializes once per call and stops on failure. Other scripts still use `runtime.ps1` in the same shell call.
 The Google token can refresh silently in the workspace; no new sign-in is needed.
 
 This is the active installation. Editing its `SKILL.md` changes the installed

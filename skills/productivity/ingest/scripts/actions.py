@@ -395,7 +395,7 @@ def _load_tracker_updates(args: argparse.Namespace) -> Any:
         payload = sys.stdin.read()
     else:
         payload = Path(args.updates_file).read_text(encoding="utf-8")
-    return json.loads(payload)
+    return json.loads(payload.removeprefix("\ufeff"))
 
 
 def sheets_update_lanes(args: argparse.Namespace) -> None:
@@ -429,7 +429,11 @@ def sheets_update_lanes(args: argparse.Namespace) -> None:
     row_by_lane = {row[0]: index for index, row in enumerate(current[1:], start=7) if row}
     missing = [lane for lane in lanes if lane not in row_by_lane]
     if missing:
-        raise RuntimeError(f"Tracker lane(s) not found: {missing}")
+        raise RuntimeError(
+            f"Tracker lane(s) not found: {missing}. "
+            f"Use exact lane names from this sheet: {sorted(row_by_lane)}. "
+            "Nothing was written."
+        )
 
     data = []
     unreviewed_blockers = []

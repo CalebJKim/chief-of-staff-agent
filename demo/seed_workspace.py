@@ -46,7 +46,7 @@ TASKS_SCOPE = "https://www.googleapis.com/auth/tasks"
 
 BACKGROUND_IDENTITIES = [
     ("Amara", "Okafor"), ("Aarav", "Shah"), ("Sofia", "Alvarez"), ("Liam", "Carter"),
-    ("Chloe", "Bennett"), ("Mateo", "Silva"), ("Iris", "Kimura"), ("Jonah", "Foster"),
+    ("Celeste", "Whitmore"), ("Mateo", "Silva"), ("Iris", "Kimura"), ("Jonah", "Foster"),
     ("Nora", "Dubois"), ("Ethan", "Novak"), ("Amina", "Hassan"), ("Diego", "Morales"),
     ("Hana", "Park"), ("Ravi", "Desai"), ("Lucia", "Romero"), ("Felix", "Schneider"),
     ("Yara", "Haddad"), ("Kofi", "Mensah"), ("Mei", "Chen"), ("Hugo", "Pereira"),
@@ -291,6 +291,41 @@ def seeded_email_times(count: int, now: datetime | None = None) -> list[datetime
     return times
 
 
+def seeded_inbox_times(now: datetime | None = None) -> list[datetime]:
+    """Assign inbox positions without changing import order or evidence IDs."""
+    background = MEANINGFUL_EMAIL_COUNT
+    contact = background + BACKGROUND_EMAIL_COUNT
+    task = contact + CONTACT_EMAIL_COUNT
+    count = task + len(task_scenario.TASKS)
+    newest_first = [
+        background + 4,  # Celeste: shuttle information
+        task + 2,        # Evan: notes assistant design
+        0,               # Elena: executive review moved
+        background,      # Volunteering
+        background + 1,  # Photography club
+        2,               # Aisha: deck feedback
+        background + 3,  # Wellness recording
+        7,               # Samira: robot demo ready
+        task,            # Leah: ramp-up resources
+        background + 2,  # Cafeteria menu
+        5,               # Elena: security PRD
+        background + 5,  # Book club
+        1,               # Mike: approved results
+        background + 6,  # Sustainability recap
+        task + 1,        # Tessa: presenter availability
+        background + 7,  # Learning library
+        6,               # Morgan: SuperBox delay
+        background + 8,  # Community photos
+        3,               # Daniel: legal clearance
+        contact,         # Rafael: social rollout introduction
+        background + 9,  # Workspace tips
+        4,               # Priya: venue preference
+    ]
+    remaining = [index for index in range(count) if index not in newest_first]
+    received_at = dict(zip(newest_first + remaining, seeded_email_times(count, now)))
+    return [received_at[index] for index in range(count)]
+
+
 def background_email_specs() -> list[tuple[str, str, str]]:
     specs = []
     for index, (first, last) in enumerate(BACKGROUND_IDENTITIES):
@@ -349,11 +384,10 @@ def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str, resources:
         ("Rafael Costa <rafael.example@nvidia.com>", "Introduction: NeoAgent V2 social rollout", "Hi,\n\nI’m Rafael, your point of contact for the NeoAgent V2 social rollout. Feel free to reach out if you have questions or want to discuss the social plans for the campaign.\n\nThanks\nRafael"),
     ]
     data = [(*item, True) for item in meaningful] + [(*item, False) for item in background + contacts]
-    times = seeded_email_times(len(data))
     task_start = len(data)
     now = local_now()
     data.extend((*item, False) for item in task_scenario.email_specs(resources, now.date()))
-    times.extend(task_scenario.email_times(now))
+    times = seeded_inbox_times(now)
     seed_run_id = uuid.uuid4().hex
     requests = [
         mail_import_request(
@@ -808,13 +842,12 @@ def main() -> int:
     if args.reset:
         if not path.exists(): raise SystemExit(f"No workspace state at {path}")
         previous = json.loads(path.read_text(encoding="utf-8"))
-        chosen_week = date.fromisoformat(args.week_of or previous["week_of"])
         check_reset(ROOT, state_root())
         check_evidence_cache(ROOT)
         state = reset_in_place(previous, chosen_week)
         second_brain = reset_second_brain(ROOT, state_root())
-        evidence_cache = clear_evidence_cache(ROOT)
-        print(json.dumps({"ok": True, "status": "reset", "state": str(path), "week_of": state["week_of"], "folder": state["folder"], "sheet": state["sheet"], "doc": state["doc"], "slides": state["slides"], "emails": len(state["emails"]), "events": len(state["events"]), "tasks": len(state.get("tasks", [])), "second_brain": second_brain, "evidence_cache": evidence_cache}, indent=2))
+        workspace_cleanup = clear_evidence_cache(ROOT)
+        print(json.dumps({"ok": True, "status": "reset", "state": str(path), "week_of": state["week_of"], "folder": state["folder"], "sheet": state["sheet"], "doc": state["doc"], "slides": state["slides"], "emails": len(state["emails"]), "events": len(state["events"]), "tasks": len(state.get("tasks", [])), "second_brain": second_brain, "workspace_cleanup": workspace_cleanup}, indent=2))
         return 0
     elif path.exists():
         raise SystemExit(f"Workspace already exists. Run reset or cleanup first: {path}")

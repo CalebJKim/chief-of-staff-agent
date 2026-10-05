@@ -1,13 +1,13 @@
 # Command reference
 
-Commands follow `actions.py`. Uppercase placeholders require values. Brackets mark optional arguments. Defaults are shown where applicable.
+Pass these service commands and arguments to `run-actions.ps1`, which runs the bundled `actions.py`. See Examples below. Uppercase placeholders require values. Brackets mark optional arguments. Defaults are shown where applicable.
 
 | Command | Purpose | Optional arguments |
 |---|---|---|
 | `gmail search 'QUERY'` | Find matching messages’ headers, IDs, and links. | `--max 5` (1–10) |
 | `gmail get MESSAGE_ID` | Read one message. | `--max-chars 12000` |
 | `gmail thread THREAD_ID` | Read latest thread messages. | `--max-messages 12`, `--max-chars 8000` per message |
-| `gmail important` | Read recent messages marked Important in Gmail. | `--max 12` (1–20), `--newer-than-days 2` (1–30 days), `--max-chars 8000` per message |
+| `gmail important` | Read recent messages marked Important in Gmail, including their bodies. | `--max 12` (1–20), `--newer-than-days 2` (1–30 days), `--max-chars 8000` per message |
 | `gmail drafts` | Read all saved drafts, including recipients, subjects, threads, and full bodies. | None |
 | `gmail draft --to EMAIL --subject 'SUBJECT' --body-file -` | Save a new draft. | See Supporting notes 1–2. |
 | `gmail draft --reply-to-message MESSAGE_ID --expected-to EMAIL --body-file -` | Save a reply draft. | See Supporting notes 1–2. |
@@ -59,26 +59,18 @@ Previews save to a new subfolder under `--output-dir` inside the explicit worksp
 
 ## Examples
 
-Include initialization and the needed commands below in the same shell tool call, following the main skill’s **How to run the scripts** subsection. Replace `WORKSPACE_ROOT` as described there.
+Replace `WORKSPACE_ROOT` as described in the main skill's **How to run the scripts** subsection. Each launcher call initializes itself and stops on failure. Follow that subsection's example for batching. Single command:
 
 ```powershell
-. (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\runtime.ps1') -WorkspaceRoot 'WORKSPACE_ROOT'
-& $Python $Action gmail thread THREAD_ID
-if ($LASTEXITCODE -ne 0) { throw 'Chief of Staff command failed; inspect the error above.' }
-& $Python $Action docs get DOCUMENT_ID
-if ($LASTEXITCODE -ne 0) { throw 'Chief of Staff command failed; inspect the error above.' }
-& $Python $Action slides get PRESENTATION_ID
-if ($LASTEXITCODE -ne 0) { throw 'Chief of Staff command failed; inspect the error above.' }
+& "$env:PPLX_SKILLS_DIR/productivity/chief-of-staff/scripts/run-actions.ps1" -WorkspaceRoot 'WORKSPACE_ROOT' gmail thread THREAD_ID
 ```
 
-Formatting example. Replace the target and include only requested styles:
+Formatting example. Replace the target and include only requested styles. Quoted input goes to its own command:
 
 ```powershell
-. (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\runtime.ps1') -WorkspaceRoot 'WORKSPACE_ROOT'
 @'
 {"heading":2,"space_after":8}
-'@ | & $Python $Action docs format DOCUMENT_ID --find 'Section title' --style-file - --confirm
-if ($LASTEXITCODE -ne 0) { throw 'Chief of Staff command failed; inspect the error above.' }
-& $Python $Action docs preview DOCUMENT_ID --workspace-root 'WORKSPACE_ROOT' --output-dir 'previews' --pages '1'
-if ($LASTEXITCODE -ne 0) { throw 'Chief of Staff command failed; inspect the error above.' }
+'@ | & "$env:PPLX_SKILLS_DIR/productivity/chief-of-staff/scripts/run-actions.ps1" -WorkspaceRoot 'WORKSPACE_ROOT' docs format DOCUMENT_ID --find 'Section title' --style-file - --confirm
 ```
+
+Read the result before choosing follow-up commands. Do not rerun failed batches automatically: earlier commands may have succeeded.

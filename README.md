@@ -157,8 +157,8 @@ and slide deck, and resets the workspace's Second Brain as described below. Exis
 Drive file IDs are retained. The campaign Google Doc is **not** restored by the
 current reset. Chats and scheduled jobs are not deleted.
 
-Reset reuses the calendar week saved by the previous seed/reset. To choose another
-week, append `-WeekOf YYYY-MM-DD` using that week's Monday date. If a required state
+Reset uses the current Monday–Friday week in the demo timezone (Pacific by default).
+To choose another week, append `-WeekOf YYYY-MM-DD` using that week's Monday date. If a required state
 file is missing, restore the demo state before resetting. Do not seed duplicates.
 
 Wait for the successful JSON result (`"ok": true`, `"status": "reset"`), then start
@@ -180,11 +180,15 @@ without bundling notes. Select the workspace again after moving it. Existing
 scheduled jobs must use the new workspace path as well.
 
 `.\demo\reset_workspace.ps1`
-resets Google Workspace and restores **only** `CoS_Workspace/CoS_SecondBrain/` from
+resets Google Workspace and restores `CoS_Workspace/CoS_SecondBrain/` from
 `demo/templates/CoS_SecondBrain.zip`. Existing demo notes, including job-created
 files, are first moved into the Git-ignored `demo/.second-brain-backups/` folder.
-Local `.obsidian` settings and sibling runtime state are preserved. Other vaults
-are never reset. Finish running jobs before resetting and do not start new jobs
+Local `.obsidian` settings are preserved. Reset deletes all other files and folders
+inside `CoS_Workspace`, except `google_token.json`, `google_client_secret.json`,
+`chief-of-staff-workspace-state.json`, and `second-brain.json` directly inside
+`.chief-of-staff-state`. This removes old packets, snapshots, tracker updates,
+drafts, and helper scripts. Other vaults outside `CoS_Workspace` are never reset.
+Finish running jobs before resetting and do not start new jobs
 during a reset. No jobs are removed by reset.
 
 Restored notes inherit the selected workspace's Windows permissions. Reset stages

@@ -183,12 +183,27 @@ $rows | ConvertTo-Json -Compress
 
     def test_same_confirmed_reset_runs_google_and_local_reset(self):
         (self.vault / "index.md").write_text("Changed")
+        (self.vault / "extra-note.md").write_text("Old run")
+        artifact = self.vault.parent / "tracker_updates.json"
+        artifact.write_text("Stale updates")
+        folder = self.vault.parent / "unexpected-output/nested"
+        folder.mkdir(parents=True)
+        (folder / "report.md").write_text("Old report")
+        token = self.vault.parent / ".chief-of-staff-state/google_token.json"
+        token.parent.mkdir(exist_ok=True)
+        token.write_text("keep credentials")
         packet = self.vault.parent / ".chief-of-staff-state/chief-of-staff" / ("daily-brief-" + "a" * 32) / "packet.json"
         packet.parent.mkdir(parents=True)
         packet.write_text('{"old": true}')
         self.assertEqual(0, self.run_reset())
         self.assertEqual(1, self.google_reset_calls)
         self.assert_baseline()
+        self.assertFalse((self.vault / "extra-note.md").exists())
+        self.assertFalse(artifact.exists())
+        self.assertFalse(folder.parent.exists())
+        self.assertEqual(token.read_text(), "keep credentials")
+        self.assertEqual({"CoS_SecondBrain", ".chief-of-staff-state"},
+                         {p.name for p in self.vault.parent.iterdir()})
         self.assertFalse(packet.parent.exists())
 
     def test_confirmation_still_required(self):
@@ -214,12 +229,15 @@ $rows | ConvertTo-Json -Compress
 
     def test_google_failure_leaves_local_notes_untouched(self):
         (self.vault / "index.md").write_text("Keep my notes")
+        artifact = self.vault.parent / "tracker_updates.json"
+        artifact.write_text("Keep until reset succeeds")
         snapshot = self.vault.parent / ".chief-of-staff-state/snapshot.json"
         snapshot.parent.mkdir()
         snapshot.write_text('{"old": true}')
         with self.assertRaisesRegex(RuntimeError, "Google unavailable"):
             self.run_reset(failure=RuntimeError("Google unavailable"))
         self.assertEqual("Keep my notes", (self.vault / "index.md").read_text())
+        self.assertEqual(artifact.read_text(), "Keep until reset succeeds")
         self.assertEqual(snapshot.read_text(), '{"old": true}')
         self.assertFalse((self.root / "demo" / ".second-brain-backups").exists())
 
@@ -234,9 +252,9 @@ $rows | ConvertTo-Json -Compress
         self.assertEqual(snapshot.read_text(), '{"old": true}')
 
     def test_invalid_cache_stops_before_google_reset(self):
-        wrong_type = self.vault.parent / ".chief-of-staff-state/snapshot.json"
+        wrong_type = self.vault.parent / ".chief-of-staff-state/google_token.json"
         wrong_type.mkdir(parents=True)
-        with self.assertRaisesRegex(RuntimeError, "Expected an evidence file"):
+        with self.assertRaisesRegex(RuntimeError, "Expected a required state file"):
             self.run_reset()
         self.assertEqual(self.google_reset_calls, 0)
 
