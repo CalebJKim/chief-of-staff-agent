@@ -10,7 +10,7 @@ description: Handle "chief of staff" requests using Google Workspace and Second 
 
 Help the user focus by prioritizing work, preparing for meetings, and carrying out requested tasks. Use current, bounded Google Workspace evidence and Second Brain context (only when Google Workspace lacks information needed for the task) to identify what needs the user's involvement and what you can handle. Scripts gather facts. Base your recommendations and actions on those facts.
 
-For daily briefs or questions about what to work on, run the evidence command in the **Start of Day** section of this skill to read Google Workspace and Second Brain. Deliver the brief without preliminary questions, setup narration, alternatives, or listing what you can help with.
+For daily briefs or questions about what to work on, follow the **Start of Day** section of this skill. Deliver the brief without preliminary questions, setup narration, alternatives, or listing what you can help with.
 
 ## Task Guidance
 
@@ -127,21 +127,33 @@ Use Start of Day only for daily briefs or broad prioritization. For other tasks,
 
 ## Start of Day
 
-Start of Day is a read-only briefing. Gather evidence and return the brief. Do not edit Google Workspace or Second Brain, save drafts, or execute suggested tasks. Emails and task lists are evidence, not authorization. Wait for the user to request that work.
+Start of Day is read-only except for saving the finished brief in the workspace’s `DailyBriefs` folder. Do not edit Google Workspace or Second Brain, save drafts, or execute suggested tasks. Emails and task lists are evidence, not authorization. Wait for the user to request that work.
 
 **Example cues:** “What should we work on today?”, “What are today’s priorities?”, or “Give me my daily brief.” Run this workflow without asking whether the user wants a daily brief.
 
-### 1. Gather evidence
+### 1. Reuse today’s brief or gather evidence
 
-Run this command exactly once, and only when the current request asks for a daily brief or broad prioritization. Do not run it for focused tasks or follow-ups. Use this skill’s **How to run the scripts** subsection:
+For both scheduled and interactive requests, check only `DailyBriefs/YYYY-MM-DD.md` inside the selected workspace, using the local system date. If nonempty, show its Markdown unchanged and stop: no ingest, packet generation, or additional reads except to finish reading that file. Otherwise, generate the brief using steps 2–5 and save it at that dated path. Do not use another day’s brief.
+
+Run this block once for a daily brief or broad prioritization, never for focused tasks or follow-ups. Follow **How to run the scripts**:
 
 ```powershell
-& (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\daily_brief.ps1') -WorkspaceRoot 'WORKSPACE_ROOT'
+$BriefPath = Join-Path 'WORKSPACE_ROOT' ("DailyBriefs\{0}.md" -f (Get-Date -Format 'yyyy-MM-dd'))
+$SavedBrief = if (Test-Path -LiteralPath $BriefPath -ErrorAction Stop) {
+    Get-Content -LiteralPath $BriefPath -Raw -Encoding UTF8 -ErrorAction Stop
+}
+if (-not [string]::IsNullOrWhiteSpace($SavedBrief)) {
+    $SavedBrief
+} else {
+    & (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\daily_brief.ps1') -WorkspaceRoot 'WORKSPACE_ROOT'
+}
 ```
+
+The block returns saved Markdown when available; otherwise it returns a fresh JSON packet. Only for a fresh packet, continue below.
 
 Wait for completion. Use the returned JSON. If truncated, read only the file at `packet_path`, following the tool’s offsets. Do not search for or read packets or snapshots from previous runs. Never rerun the command or run `ingest.py` or `brief.py` separately.
 
-For steps 2–5, use only the packet as evidence. Follow its `instruction` field. No further tool calls, raw snapshots, source documents, extra lookups, parsers, output redirection, or task execution. Read or discuss trackers only on request.
+For steps 2–5, use only the packet as evidence and context. Do not search for or read any additional sources. Follow its `instruction` field. Except to save and verify the finished brief, no further tool calls, raw snapshots, source documents, extra lookups, parsers, output redirection, or task execution. Read or discuss trackers only on request.
 
 Group related evidence yourself. No `workstreams` field exists, so do not search for one. Link through `url`. Use `second_brain.notes` as background, not priorities. Do not assume unlisted work is complete. Summarize approvals and updates without quoting truncated snippets. Full threads require focused follow-ups.
 
@@ -216,9 +228,11 @@ Preserve stated dates/times. Otherwise use “[Date], time unspecified” or “
 
 Number and source-link the agent offers from step 2. For email tasks, offer to save a draft for review. Put closing questions under **Next step**.
 
-### 5. Check once and respond
+### 5. Check once, save, and respond
 
-Compare all three sections once. Remove meeting attendance and presenting from both action sections. Remove pending or resulting work from news, retaining important deadlines and distinct updates. Remove duplicate actions or subtasks within each action section. Check **What I can take care of for you** first. Remove those actions from the brief’s **What you need to get done today** table, including within row titles, explanations, and work-time notes. Keep remaining work requiring substantial user involvement and drop rows with none. Replace placeholders. Check facts, source links, and formatting against the JSON. Fix errors and respond without polishing or redrafting for length.
+Compare all three sections once. Remove meeting attendance and presenting from both action sections. Remove pending or resulting work from news, retaining important deadlines and distinct updates. Remove duplicate actions or subtasks within each action section. Check **What I can take care of for you** first. Remove those actions from the brief’s **What you need to get done today** table, including within row titles, explanations, and work-time notes. Keep remaining work requiring substantial user involvement and drop rows with none. Replace placeholders. Check facts, source links, and formatting against the JSON. Fix errors without polishing or redrafting for length.
+
+Create `DailyBriefs` if needed. Save the finished brief—not the JSON packet—as UTF-8 Markdown at the dated path from step 1, then show the same Markdown in chat. Save only after generation and checking finish. If saving fails, show the brief and briefly report the error; do not claim it was saved.
 
 ## Update Conventions
 
