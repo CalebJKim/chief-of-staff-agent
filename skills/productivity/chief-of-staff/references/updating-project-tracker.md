@@ -4,11 +4,12 @@ A tracker update request authorizes evidence-backed changes to the requested tra
 
 ## 1. Gather evidence
 
-Use [Command reference](command-reference.md) for `actions.py` commands and arguments.
+Use [Command reference](command-reference.md) for `actions.py` commands and arguments. Do not run ingest or Start of Day.
 
 1. **Read the tracker.** Use `sheets get` unless its current contents are already in context. Find an unknown tracker ID with `drive search`. Do not search local notes for it. Use returned tab names and a range for another known tab. Identify each requested entry’s deliverable, status, and blocker, plus the tracker’s status definitions.
-2. **Check existing evidence.** Assess each requested entry using current source evidence already in context. Do not search if it is sufficient. Otherwise, identify the missing or outdated information needed to assess progress, completion, or changed blockers.
-3. **Fill required gaps.** Batch independent, bounded Gmail searches by verified sender or short project term. Read threads only as needed and reuse results. If an input’s status remains unknown, try one simpler sender or deliverable search. Search misses do not prove inputs are missing. Consult Second Brain only for remaining necessary gaps.
+2. **Check existing email evidence.** Use at most one relevant email per lane, reusing it across lanes when applicable. If sufficient evidence is already in context, do not search or reread it.
+3. **Find missing email evidence.** Batch bounded Gmail searches by verified sender or short project term. Select one relevant email per lane and read it once with `gmail get`. Do not read whole threads or additional emails for that lane. Search misses do not prove inputs are missing.
+4. **Email evidence only.** Do not read supporting documents, decks, or Second Brain notes. Preserve statuses when the evidence does not support a change.
 
 ## 2. Reconcile entries
 
@@ -35,6 +36,7 @@ If no changes are supported, report that without modifying the tracker.
 - When changing status with `--include-details`, include any existing `blocker`: preserve or revise its text, or use `""` only when evidence confirms resolution.
 - Omit unchanged or unsupported optional fields. Preserve formulas, source metric names, units, and approval scope.
 - Batch changes in one `sheets update-lanes` call with the verified spreadsheet ID, actual tab name via `--sheet`, and `--confirm`. Use `--updates-file -` with the quoted input format in the [Supporting notes](command-reference.md#supporting-notes) section of the command reference.
+- Submit the example directly to the shell tool, without a `powershell -Command` wrapper. Inside the single-quoted here-string, use plain JSON quotes (`"`), not `\"`.
 - Read back once to verify writes and catch missed evidence-backed changes.
 
 ## 4. Report results
