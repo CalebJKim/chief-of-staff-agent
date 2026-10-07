@@ -6,12 +6,12 @@ When scheduling this task, instruct each run to load this reference and follow i
 
 ## 1. Gather evidence
 
-Use the vault configured in the active profile's `second-brain.json` (`vault_path`). If missing or inaccessible, stop and report the failed path and operation. Do not search other folders, recreate the vault, change permissions, or attempt workarounds.
+Use the vault configured in the active Hermes profile's `second-brain.json` (`vault_path`). If missing or inaccessible, stop and report the failed path and operation. Do not search other folders, recreate the vault, change permissions, or attempt workarounds.
 
-Use the **How to run the scripts** subsection of the main skill to initialize the active profile's Python and script paths. Run the evidence helper once in Second Brain update mode:
+Run the evidence helper once in Second Brain update mode:
 
 ```bash
-"$PYTHON" "$DAILY_BRIEF" --mode second-brain-update
+bash 'SKILL_ROOT/scripts/daily_brief.sh' --mode second-brain-update
 ```
 
 Wait for completion. Use its JSON packet to identify relevant notes. If output is truncated, read the saved `packet_path` using offsets. Do not generate a daily brief, rerun ingestion, read the full snapshot, or scan the entire vault. Report command failures without retries or repairs.

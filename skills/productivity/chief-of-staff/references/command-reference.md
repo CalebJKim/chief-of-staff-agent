@@ -1,15 +1,16 @@
 # Command reference
 
-Pass these service commands and arguments to `run-actions.sh`, which runs the bundled `actions.py`. See Examples below. Uppercase placeholders require values. Brackets mark optional arguments. Defaults are shown where applicable.
+Pass these service commands and arguments to `run-actions.sh`, which runs the bundled native helper. See Examples below. Uppercase placeholders require values. Brackets mark optional arguments. Defaults are shown where applicable.
 
 | Command | Purpose | Optional arguments |
 |---|---|---|
 | `gmail search 'QUERY'` | Find matching messages’ headers, IDs, and links. | `--max 5` (1–10) |
 | `gmail get MESSAGE_ID` | Read one message. | `--max-chars 12000` |
 | `gmail thread THREAD_ID` | Read latest thread messages. | `--max-messages 12`, `--max-chars 8000` per message |
+| `gmail threads THREAD_ID [THREAD_ID ...]` | Read multiple threads using Gmail HTTP batches of up to ten, skipping duplicate IDs. Returns one JSON record per thread in requested order. | Same limits as `gmail thread`. |
 | `gmail important` | Read recent messages marked Important in Gmail, including their bodies. | `--max 12` (1–20), `--newer-than-days 2` (1–30 days), `--max-chars 8000` per message |
 | `gmail drafts` | Read all saved drafts, including recipients, subjects, threads, and full bodies. | None |
-| `gmail draft --to EMAIL --subject 'SUBJECT' --body-file -` | Save a new draft. | See Supporting notes 1–2. |
+| `gmail draft --to EMAIL --subject 'SUBJECT' --body-file -` | Save a new draft (`save-draft` is an alias). | See Supporting notes 1–2. |
 | `gmail draft --reply-to-message MESSAGE_ID --expected-to EMAIL --body-file -` | Save a reply draft. | See Supporting notes 1–2. |
 | `drive search 'QUERY'` | Find files and return names, IDs, and links. | `--max 10`, `--raw-query` for Drive query syntax |
 | `docs get DOCUMENT_ID` | Read document paragraph text. | `--max-chars 30000` |
@@ -31,7 +32,7 @@ Pass these service commands and arguments to `run-actions.sh`, which runs the bu
 
 ## Supporting notes
 
-1. **Draft bodies and tracker updates:** `gmail draft`: choose `--body 'TEXT'` or `--body-file PATH`. `sheets update-lanes`: choose `--updates 'JSON'` or `--updates-file PATH`. Either file argument accepts `-` for terminal input through a quoted heredoc. Draft bodies must be nonempty.
+1. **Draft bodies and tracker updates:** `gmail draft`: choose `--body 'TEXT'` or `--body-file PATH`. `sheets update-lanes`: choose `--updates 'JSON'` or `--updates-file PATH`. Either file argument accepts `-` for terminal input through a quoted Bash heredoc. Draft bodies must be nonempty.
 
 2. **Draft options:** `--cc 'EMAILS'` adds Cc. `--to` and `--subject` override reply defaults. `--expected-to EMAIL` checks recipients before saving. `--thread-id THREAD_ID` sets the thread. `--reply-to-message` also sets reply headers. Explicit To/Cc addresses require Gmail verification. Use `--allow-new-recipient` only for addresses the user supplied or confirmed.
 
@@ -55,17 +56,26 @@ Paragraph properties affect whole containing paragraphs. Headings apply named-st
 
 Formatting uses the current revision and verifies requested styles and unchanged text in one read-back. A failed verification can follow a successful write. Inspect the error before retrying. No new layouts, images, or charts are supported.
 
-Previews save to a new subfolder under `--output-dir` inside the explicit workspace root. Linked folders/junctions are rejected. Files remain there. Docs exports a PDF and renders selected pages using PyMuPDF (default first three, maximum 20). Slides downloads Google-rendered PNGs (maximum 10 slides). These commands do not edit Google files or judge appearance. Inspect PNGs with an image-viewing tool before claiming visual verification.
+Previews save to a new subfolder under `--output-dir` inside the explicit workspace root. Linked folders/junctions are rejected. Files remain there. Docs exports a PDF and renders selected pages using Windows PDF APIs (default first three, maximum 20). Slides downloads Google-rendered PNGs (maximum 10 slides). These commands do not edit Google files or judge appearance. Inspect PNGs with an image-viewing tool before claiming visual verification.
 
 ## Examples
 
-Replace `SKILL_ROOT` with the absolute directory containing this skill's `SKILL.md`. Each launcher call initializes itself and stops on failure. For batching, follow the example in the main skill's **How to run the scripts** subsection. Single command:
+Replace `SKILL_ROOT` with this skill's directory. Each launcher initializes itself.
 
 ```bash
-bash 'SKILL_ROOT/scripts/run-actions.sh' gmail thread THREAD_ID
+bash 'SKILL_ROOT/scripts/run-actions.sh' gmail threads 'THREAD_ID_1' 'THREAD_ID_2'
 ```
 
-Formatting example. Replace the target and include only requested styles. Quoted input goes to its own command:
+For independent commands, initialize once with a batch:
+
+```bash
+bash 'SKILL_ROOT/scripts/run-actions.sh' --batch <<'COMMANDS'
+action gmail search 'PROJECT_TERM' --max 5
+action gmail search 'OTHER_PROJECT_TERM' --max 5
+COMMANDS
+```
+
+Pass JSON input using a quoted heredoc:
 
 ```bash
 bash 'SKILL_ROOT/scripts/run-actions.sh' docs format DOCUMENT_ID --find 'Section title' --style-file - --confirm <<'JSON'
@@ -73,4 +83,4 @@ bash 'SKILL_ROOT/scripts/run-actions.sh' docs format DOCUMENT_ID --find 'Section
 JSON
 ```
 
-Read the result before choosing follow-up commands. Do not rerun failed batches automatically: earlier commands may have succeeded.
+Read the result before choosing follow-up commands. Do not rerun failed batches or `gmail threads` automatically: earlier reads may have succeeded. Use returned results and address only failed or unread items.

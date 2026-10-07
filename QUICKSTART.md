@@ -1,5 +1,13 @@
 # Quick setup
 
+The installed skill now uses the same native Rust backend as the Perplexity demo,
+through Bash launchers. The included executable targets **Windows ARM64** and
+requires Git Bash; other architectures need a matching build. Python is used only
+for setup, seed/reset utilities, and development tests. Ingestion is bundled inside
+Chief of Staff and is no longer exposed as a separate skill. See
+[Runtime details](skills/productivity/chief-of-staff/RUNTIME_README.md).
+
+
 ## 1. Install prerequisites
 
 Install [Hermes Agent](https://hermes-agent.nousresearch.com/docs), Python 3.11+, and clone this repository.
@@ -80,7 +88,7 @@ Open the returned URL, approve your own account, and copy the full localhost red
 ```bash
 python setup/google-workspace/setup.py --auth-code "FULL_REDIRECT_URL"
 python setup/google-workspace/setup.py --check-live
-python "$HERMES_HOME/skills/productivity/ingest/scripts/verify.py"
+bash "$HERMES_HOME/skills/productivity/chief-of-staff/scripts/verify.sh"
 ```
 
 Credentials remain under your local `HERMES_HOME`. Never commit them.

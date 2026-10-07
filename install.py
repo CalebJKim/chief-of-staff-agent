@@ -6,11 +6,12 @@ import os
 import re
 import shutil
 import subprocess
+import uuid
 from pathlib import Path
 
 
 ROUTING_START = 'When the user addresses you as "chief of staff"'
-ENABLED_SKILLS = {"chief-of-staff", "ingest", "google-workspace"}
+ENABLED_SKILLS = {"chief-of-staff", "google-workspace"}
 PROFILE_NAME = "chief-of-staff"
 PROFILE_FILES = (
     "config.yaml", ".env", "SOUL.md", "auth.json", ".no-bundled-skills",
@@ -172,6 +173,38 @@ def connect_second_brain(source: Path, target: Path, vault: Path | None = None) 
     return vault
 
 
+def install_skill(source: Path, target: Path) -> Path:
+    """Install the native skill and archive retired code outside skill discovery."""
+    target = target.resolve()
+    skill_root = target / "skills" / "productivity"
+    skill_root.mkdir(parents=True, exist_ok=True)
+    names = ("chief-of-staff", "ingest")
+    for name in names:
+        destination = skill_root / name
+        if not destination.resolve().is_relative_to(target) or destination.is_symlink():
+            raise ValueError(f"Skill destination must remain inside profile: {destination}")
+    # Stage the complete bundle before moving any installed code.
+    backup = target / "retired-skills" / uuid.uuid4().hex
+    backup.mkdir(parents=True)
+    staged = backup / "new-chief-of-staff"
+    shutil.copytree(source / "skills/productivity/chief-of-staff", staged,
+                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "native", "tests"))
+    moved = []
+    try:
+        for name in names:
+            destination = skill_root / name
+            if destination.exists():
+                shutil.move(str(destination), str(backup / name))
+                moved.append(name)
+        shutil.move(str(staged), str(skill_root / "chief-of-staff"))
+    except Exception:
+        for name in reversed(moved):
+            if not (skill_root / name).exists():
+                shutil.move(str(backup / name), str(skill_root / name))
+        raise
+    return skill_root
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Install the Chief of Staff skills into a Hermes profile")
     parser.add_argument("--hermes-home", type=Path, help="Explicit target override (default: profiles/chief-of-staff under the Hermes root)")
@@ -185,13 +218,7 @@ def main() -> int:
     base = profile_base(default_home())
     target = (args.hermes_home or base / "profiles" / PROFILE_NAME).expanduser().resolve()
     prepare_profile(base, target)
-    skills_target = target / "skills" / "productivity"
-    skills_target.mkdir(parents=True, exist_ok=True)
-    for name in ("ingest", "chief-of-staff"):
-        destination = skills_target / name
-        if destination.exists():
-            shutil.rmtree(destination)
-        shutil.copytree(source / "skills" / "productivity" / name, destination, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    skills_target = install_skill(source, target)
     soul = target / "SOUL.md"
     soul_status = install_soul(source / "SOUL.md", soul, args.overwrite_soul)
     config_path = target / "config.yaml"

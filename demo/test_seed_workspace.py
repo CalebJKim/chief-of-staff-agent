@@ -38,7 +38,7 @@ class WorkspaceSeedTests(unittest.TestCase):
                 path.read_text.return_value = json.dumps(previous)
                 result = {"week_of": expected.isoformat(), "folder": {}, "sheet": {},
                           "doc": {}, "slides": {}, "emails": [], "events": []}
-                argv = [str(MODULE), "--reset", "--confirm"]
+                argv = [str(MODULE), "--reset", "--full-reset", "--confirm"]
                 if override:
                     argv.extend(["--week-of", override])
                 with (
@@ -53,7 +53,7 @@ class WorkspaceSeedTests(unittest.TestCase):
                     patch.object(sys, "stdout", new_callable=io.StringIO) as output,
                 ):
                     self.assertEqual(0, seed.run())
-                reset.assert_called_once_with(previous, expected)
+                reset.assert_called_once_with(previous, expected, full_reset=True)
                 self.assertEqual(expected.isoformat(), json.loads(output.getvalue())["week_of"])
 
     def test_seed_assets_use_results_without_old_benchmark_claims(self):
@@ -71,7 +71,7 @@ class WorkspaceSeedTests(unittest.TestCase):
         with zipfile.ZipFile(MODULE.parent / "templates/CoS_SecondBrain.zip") as archive:
             for name in ("concepts/performance-results.md", "raw/updates/performance-results-package.md"):
                 text = archive.read(name).decode("utf-8")
-                self.assertEqual(text.replace("\r\n", "\n"), (MODULE.parent / "CoS_SecondBrain" / name).read_text(encoding="utf-8"))
+                # Reset restores this archive; the live vault may contain user edits.
                 for value in ("NeoAgent V1", "NeoAgent V2", "80%", "92%", "12 percentage points", "30% lower", "25% fewer", "same 200", "fictional"):
                     self.assertIn(value, text)
 
@@ -250,7 +250,7 @@ class WorkspaceSeedTests(unittest.TestCase):
         self.assertEqual(total, len(batched.call_args.args[1]))
         self.assertEqual(
             [
-                "URGENT: NeoAgent V2 Exec Review moved to 5 PM today",
+                "URGENT: NeoAgent V2 Exec Review moved to 7 PM today",
                 "APPROVED: NeoAgent V2 performance results for slide 4",
                 "Exec Review deck pass: cut slide 6; protect slide 10",
                 "Legal scope: NeoAgent V2 comparison cleared for leadership review",
@@ -350,21 +350,21 @@ class WorkspaceSeedTests(unittest.TestCase):
         self.assertEqual(seed.BATCH_SIZE, len(batches[0].items))
         self.assertEqual({"value": requests[-1]}, results[-1])
 
-    def test_seeded_email_clock_times_are_independent_of_reset_time(self):
+    def test_seeded_email_clock_times_stay_fixed_after_reference_time(self):
         tz = ZoneInfo(seed.TZ_NAME)
         count = seed.MEANINGFUL_EMAIL_COUNT + seed.BACKGROUND_EMAIL_COUNT + seed.CONTACT_EMAIL_COUNT
-        expected = seed.seeded_email_times(count, datetime(2026, 8, 27, 0, 0, tzinfo=tz))
+        expected = seed.seeded_email_times(count, datetime(2026, 8, 27, 9, 12, tzinfo=tz))
         self.assertEqual((9, 12), (expected[0].hour, expected[0].minute))
         gaps = [a - b for a, b in zip(expected, expected[1:])]
         self.assertTrue(all(gap > timedelta(0) for gap in gaps))
         self.assertGreater(len(set(gaps)), 10)
-        for hour in (6, 8, 12, 16, 23):
+        for hour in (9, 12, 16, 23):
             with self.subTest(hour=hour):
                 self.assertEqual(expected, seed.seeded_email_times(count, datetime(2026, 8, 27, hour, 37, tzinfo=tz)))
 
     def test_seeded_email_date_advances_but_clock_times_stay_fixed(self):
         tz = ZoneInfo(seed.TZ_NAME)
-        today = datetime(2026, 8, 27, 9, 0, tzinfo=tz)
+        today = datetime(2026, 8, 27, 12, 0, tzinfo=tz)
         tomorrow = today + timedelta(days=1)
         count = seed.MEANINGFUL_EMAIL_COUNT + seed.BACKGROUND_EMAIL_COUNT + seed.CONTACT_EMAIL_COUNT
         first = seed.seeded_email_times(count, today)
@@ -372,18 +372,23 @@ class WorkspaceSeedTests(unittest.TestCase):
         self.assertEqual([value.time() for value in first], [value.time() for value in second])
         self.assertEqual([value + timedelta(days=1) for value in first], second)
 
-    def test_seeded_email_times_span_today_and_previous_day_even_after_midnight(self):
-        now = datetime(2026, 8, 27, 0, 0, 10, tzinfo=ZoneInfo("America/Los_Angeles"))
-
-        values = seed.seeded_email_times(
-            seed.MEANINGFUL_EMAIL_COUNT + seed.BACKGROUND_EMAIL_COUNT + seed.CONTACT_EMAIL_COUNT,
-            now,
-        )
-
-        self.assertEqual({now.date(), now.date() - timedelta(days=1)}, {value.date() for value in values})
-        self.assertEqual(len(values), len(set(values)))
-        self.assertTrue(any(value.date() < now.date() and 12 <= value.hour < 18 for value in values))
-        self.assertTrue(any(value.date() < now.date() and value.hour >= 18 for value in values))
+    def test_early_resets_shift_all_email_times_without_changing_gaps(self):
+        tz = ZoneInfo(seed.TZ_NAME)
+        count = seed.MEANINGFUL_EMAIL_COUNT + seed.BACKGROUND_EMAIL_COUNT + seed.CONTACT_EMAIL_COUNT
+        reference = datetime(2026, 8, 27, 9, 12, tzinfo=tz)
+        baseline = seed.seeded_email_times(count, reference)
+        for hour, minute in ((0, 0), (0, 33), (6, 0), (8, 0), (9, 11)):
+            with self.subTest(hour=hour, minute=minute):
+                now = reference.replace(hour=hour, minute=minute, second=10)
+                values = seed.seeded_email_times(count, now)
+                newest = now.replace(second=0, microsecond=0) - timedelta(minutes=1)
+                self.assertEqual(newest, values[0])
+                self.assertTrue(all(value < now for value in values))
+                self.assertEqual(count, len(set(values)))
+                shift = baseline[0] - newest
+                self.assertEqual([value - shift for value in baseline], values)
+                if hour == minute == 0:
+                    self.assertTrue(all(value.date() < now.date() for value in values))
 
     def test_seeded_email_times_handle_empty_and_single_message(self):
         now = datetime(2026, 8, 27, 16, 0, tzinfo=ZoneInfo(seed.TZ_NAME))

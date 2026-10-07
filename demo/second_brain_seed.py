@@ -29,7 +29,7 @@ def check_reset(root: Path, profile: Path) -> None:
             raise RuntimeError("Second Brain baseline is missing index.md or contains corrupt files")
 
 
-def reset_second_brain(root: Path, profile: Path) -> dict:
+def reset_second_brain(root: Path, profile: Path, *, resources: dict | None = None) -> dict:
     check_reset(root, profile)
     demo = root.resolve() / "demo"
     workspace = root.resolve() / "CoS_Workspace"
@@ -44,6 +44,10 @@ def reset_second_brain(root: Path, profile: Path) -> dict:
     try:
         with ZipFile(demo / "templates" / "CoS_SecondBrain.zip") as archive:
             archive.extractall(restored)
+        links_updated = 0
+        if resources is not None:
+            from second_brain_links import refresh_links
+            links_updated = refresh_links(restored, demo, resources)
         settings = vault / ".obsidian"
         if settings.is_dir():
             shutil.copytree(settings, restored / ".obsidian", symlinks=True)
@@ -62,4 +66,4 @@ def reset_second_brain(root: Path, profile: Path) -> dict:
             if restored.resolve() != restored or restored.parent != workspace:
                 raise RuntimeError(f"Refusing cleanup through a linked staging path: {restored}")
             shutil.rmtree(restored)
-    return {"vault": str(vault), "backup": str(backup) if backup else None}
+    return {"vault": str(vault), "backup": str(backup) if backup else None, "links_updated": links_updated}

@@ -1,12 +1,20 @@
 # Hermes Chief of Staff Agent
 
+The installed skill now uses the same native Rust backend as the Perplexity demo,
+through Bash launchers. The included executable targets **Windows ARM64** and
+requires Git Bash; other architectures need a matching build. Python is used only
+for setup, seed/reset utilities, and development tests. Ingestion is bundled inside
+Chief of Staff and is no longer exposed as a separate skill. See
+[Runtime details](skills/productivity/chief-of-staff/RUNTIME_README.md).
+
+
 A portable Hermes Agent configuration for a lightweight Google Workspace chief of staff. It reads bounded Gmail, Calendar, Drive, Docs, Sheets, and Slides evidence; highlights meaningful daily outcomes; accounts for calendar constraints; prepares meeting work; drafts email; and proposes guarded tracker/document updates.
 
 ## Included
 
 - `SOUL.md` routes natural-language chief-of-staff requests.
 - `skills/productivity/chief-of-staff/` contains decision policy, packet builder, and tests.
-- `skills/productivity/ingest/` contains bounded ingestion, focused actions, verification, and tests.
+- `compat/python-runtime/` retains the previous Python implementation for offline parity tests and setup utilities.
 - `setup/google-workspace/` contains the portable OAuth helper.
 - `config.example.yaml` documents the minimal recommended tool surface.
 - [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) contains the presentation script and staged demo flow.
@@ -44,10 +52,9 @@ local authentication, and demo workspace-state file. The default profile remains
 unchanged; session history and caches are not copied. An existing shared Hermes
 Python runtime is linked into the new profile, not duplicated.
 
-Rerunning the installer refreshes the two demo skills but preserves the profile's
+Rerunning the installer refreshes the chief-of-staff skill but preserves the profile's
 existing credentials, workspace state, model settings, and customized Soul. It
-adds chief-of-staff routing if missing and enables only `chief-of-staff` and
-`ingest`. Other installed skills stay installed but disabled. An explicit
+adds chief-of-staff routing if missing and enables `chief-of-staff` and the Google Workspace fallback. Other installed skills stay installed but disabled. An explicit
 `--hermes-home PATH` still installs directly into that exact target.
 The installer also
 disables `desktop_ui` and sets `HERMES_TUI_TOOLSETS=skills,terminal,cronjob` in the
@@ -119,7 +126,7 @@ address bar, then run:
 ```bash
 "$PYTHON" setup/google-workspace/setup.py --auth-code "FULL_REDIRECT_URL"
 "$PYTHON" setup/google-workspace/setup.py --check-live
-"$PYTHON" skills/productivity/ingest/scripts/verify.py
+bash skills/productivity/chief-of-staff/scripts/verify.sh
 ```
 
 The resulting google_token.json and google_client_secret.json live under HERMES_HOME and are ignored by git.
@@ -147,14 +154,19 @@ You can still use `--second-brain "/path/to/your/Second Brain"` to connect anoth
 vault without copying or overwriting it. Reading context does not edit notes;
 a separately configured scheduled job can update them when authorized.
 
-Reset uses the current Monday–Friday week in the demo timezone (Pacific by default).
-Pass `--week-of YYYY-MM-DD` to select another week's Monday.
+Default reset preserves emails, tasks, calendar IDs, and their dates. Use
+`python demo/reset_workspace.py --full-reset` at the start of a new demo day or
+after email/task seed changes. Full reset uses the current Pacific workweek
+(optionally `--week-of YYYY-MM-DD`), recreates emails/tasks, and removes cached
+briefs. Quick reset preserves the latest saved brief; neither mode saves a new
+one. See [Reset and cleanup](demo/DEMO_SPEC.md#reset-and-cleanup).
 
 `python demo/reset_workspace.py` (or `python demo/seed_workspace.py --reset --confirm`)
 resets Google Workspace and restores `CoS_Workspace/CoS_SecondBrain/` from
 `demo/templates/CoS_SecondBrain.zip`. Existing demo notes, including job-created
 files, are first moved into the Git-ignored `demo/.second-brain-backups/` folder.
-Local `.obsidian` settings are preserved. Reset deletes all other files and folders
+Local `.obsidian` settings are preserved. Quick reset also preserves the latest
+dated brief in `DailyBriefs`. Reset deletes all other files and folders
 inside `CoS_Workspace`, except `google_token.json`, `google_client_secret.json`,
 `chief-of-staff-workspace-state.json`, and `second-brain.json` directly inside
 `.chief-of-staff-state`. This removes old packets, snapshots, tracker updates,
@@ -262,7 +274,7 @@ triggering another or resetting the workspace.
 Live smoke test after OAuth:
 
 ```bash
-"$PYTHON" skills/productivity/ingest/scripts/ingest.py
+bash skills/productivity/chief-of-staff/scripts/daily_brief.sh
 "$PYTHON" skills/productivity/chief-of-staff/scripts/brief.py --max-chars 14000
 ```
 

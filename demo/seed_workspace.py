@@ -24,7 +24,7 @@ from zipfile import ZipFile
 from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "skills" / "productivity" / "ingest" / "scripts"))
+sys.path.insert(0, str(ROOT / "compat" / "python-runtime" / "scripts"))
 from actions import credentials  # noqa: E402
 from baseline import reset_sheet_baseline  # noqa: E402
 import task_scenario
@@ -301,9 +301,11 @@ def reset_original_sheet(drive, sheets, state: dict, evidence: dict, refreshed: 
     reset_sheet_baseline(sheets, comparison_state, evidence, refreshed)
 
 def seeded_email_times(count: int, now: datetime | None = None) -> list[datetime]:
-    """Repeat an irregular local-time schedule relative to each reset date."""
+    """Repeat an irregular schedule, shifting early resets to avoid future mail."""
     current = (now or local_now()).astimezone(ZoneInfo(TZ_NAME))
     cursor = current.replace(hour=EMAIL_REFERENCE_HOUR, minute=EMAIL_REFERENCE_MINUTE, second=0, microsecond=0)
+    if cursor > current:
+        cursor = current.replace(second=0, microsecond=0) - timedelta(minutes=1)
     # A local fixed seed keeps each email's time stable without uniform spacing.
     rng = random.Random("chief-of-staff-email-times")
     times = []
@@ -393,7 +395,7 @@ EXEC_REVIEW_ROLES = "You will present the storyline and proposed demo slate. Pla
 def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str, resources: dict) -> tuple[list[dict], dict[str, str]]:
     account = gmail.users().getProfile(userId="me").execute()["emailAddress"]
     meaningful = [
-        ("Elena Park <elena.example@nvidia.com>", "URGENT: NeoAgent V2 Exec Review moved to 5 PM today", f"Hi,\n\nFollowing up on our one-on-one, please prioritize today’s leadership decisions. If other requests are competing for your time, let me know and I’ll help reprioritize. Leadership moved the NeoAgent V2 Exec Review from Thursday to 5:00 PM today. This is a decision meeting, not a working session. We need two outcomes: approval of the agent-first keynote storyline, and alignment on the GTC demo slate and owners.\n\n{EXEC_REVIEW_ROLES}\n\nDeck: {deck_url}\n\n— Elena"),
+        ("Elena Park <elena.example@nvidia.com>", "URGENT: NeoAgent V2 Exec Review moved to 7 PM today", f"Hi,\n\nFollowing up on our one-on-one, please prioritize today’s leadership decisions. If other requests are competing for your time, let me know and I’ll help reprioritize. Leadership moved the NeoAgent V2 Exec Review from Thursday to 7:00–8:00 PM today. This is a decision meeting, not a working session. We need two outcomes: approval of the agent-first keynote storyline, and alignment on the GTC demo slate and owners.\n\n{EXEC_REVIEW_ROLES}\n\nDeck: {deck_url}\n\n— Elena"),
         ("Mike Chen <mike.example@nvidia.com>", "APPROVED: NeoAgent V2 performance results for slide 4", "Hi,\n\nThe V2 comparison is ready for today's review.\n\nTask success: NeoAgent V2 92% (184/200), versus NeoAgent V1 80% (160/200), a 12-percentage-point improvement.\nMedian completion time: 30% lower than NeoAgent V1 (V1 index 100, V2 70).\nModel tokens per completed task: 25% fewer than NeoAgent V1 (V1 index 100, V2 75).\n\nBoth versions used the same model, the same 200 internal document, email, and scheduling workflows, and the same execution environment. Success means the expected end state was reached without an incorrect write. Time compares tasks completed by both versions. Token usage includes input, output, and retries per completed task.\n\nPlease use these figures on slide 4 in the exec review deck. Keep the V1 baseline and evaluation scope with the figures. Daniel has cleared this wording for leadership review. These are the fictional internal figures for our demo.\n\nThanks,\nMike"),
         ("Aisha Rahman <aisha.example@nvidia.com>", "Exec Review deck pass: cut slide 6; protect slide 10", f"Hi,\n\nMy review is complete, but I haven't edited the deck.\n\nThe performance comparison is missing the approved results, and the customer example is too long.\n\nThese edits still need to be applied: put Mike's approved NeoAgent V2-versus-V1 results on slide 4, keeping the baseline and evaluation scope.\n\nSummarize the proposed customer-use example from slide 6 in the Customer Example section of slide 7, then remove slide 6 from the live flow. Keep the local laptop comparison, the draft follow-up reviewed by the associate, and customer details staying on the device. It's a proposed use case, not customer validation or an approved demo selection. The demo slate and owners still need a decision.\n\nKeep the opening short so there's time for the decisions on slide 10.\n\nDeck: {deck_url}\n\nThanks,\nAisha"),
         ("Daniel Cho <daniel.example@nvidia.com>", "Legal scope: NeoAgent V2 comparison cleared for leadership review", "Hi,\n\nI've cleared Mike's NeoAgent V2-versus-V1 comparison for today's leadership review. Keep the V1 baseline, the shared model and evaluation setup, and the internal-workflow scope. Please retain 'median' for completion time and 'per completed task' for token usage. The success improvement is 12 percentage points, not 12%.\n\nThis clearance is for leadership review only. Send the final external copy back to me before publication.\n\nThanks,\nDaniel"),
@@ -430,6 +432,11 @@ def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str, resources:
         {"id": result["id"], "thread_id": result.get("threadId", result["id"]), "url": f"https://mail.google.com/mail/u/0/#all/{result.get('threadId', result['id'])}"}
         for result in results
     ]
+    for index, (item, data_item) in enumerate(zip(created, data), 1):
+        item["rfc_message_id"] = f"<{MARKER}-{seed_run_id}-{index}@demo.invalid>"
+        item["baseline_labels"] = ["INBOX", "UNREAD"] + (["IMPORTANT"] if data_item[3] else [])
+    for item, key in zip(created, ("elena", "mike", "aisha", "daniel", "priya", "prd")):
+        item["evidence_key"] = key
     evidence = {"elena": created[0]["url"], "mike": created[1]["url"], "aisha": created[2]["url"], "daniel": created[3]["url"], "priya": created[4]["url"], "prd": created[5]["url"]}
     for index, news in enumerate(NEWS_EMAILS, MEANINGFUL_EMAIL_COUNT - len(NEWS_EMAILS)):
         created[index]["news_key"] = news["key"]
@@ -570,7 +577,7 @@ WEEKDAY_ADDITIONAL_EVENTS = [
     ],
     [
         ("08:15", "08:45", "Leadership agenda check", "Confirm decisions and presenters for upcoming leadership reviews."),
-        ("09:45", "10:30", "Product specifications messaging sync", "Align approved specifications with the executive narrative."),
+        ("09:45", "10:30", "Performance results messaging sync", "Align approved results with the executive narrative."),
         ("11:00", "12:00", "Executive communications review", "Polish the decision story while the deck is being updated."),
         ("12:00", "12:30", "Executive sponsor check-in", "Review the decisions that need sponsorship before the working lunch."),
         ("12:30", "13:30", "Demo owner working lunch", "Resolve ownership and readiness questions for the demo slate."),
@@ -604,7 +611,7 @@ TODAY_EVENTS = [
     ("14:00", "14:30", "Legal qualification check", "Confirm leadership-review wording keeps the V1 baseline and metric definitions intact."),
     ("15:00", "16:00", "Launch storyboard working session — notes available", "Optional working session; notes will be posted afterward."),
     ("16:00", "17:00", "Executive prep block", "Prepare the proposed keynote agenda, talking points, and demo slate. Weigh the alternatives and make a recommendation for the leadership decisions."),
-    ("17:00", "17:45", "NeoAgent V2 Exec Review — leadership decisions", f"Decision meeting: approve the agent-first keynote storyline and align on GTC demos and owners. {EXEC_REVIEW_ROLES}"),
+    ("19:00", "20:00", "NeoAgent V2 Exec Review — leadership decisions", f"Decision meeting: approve the agent-first keynote storyline and align on GTC demos and owners. {EXEC_REVIEW_ROLES}"),
     ("17:00", "17:30", "Decision follow-up triage", "Capture decisions, unresolved owners, and required follow-ups."),
 ]
 
@@ -754,23 +761,9 @@ def seed(week_of: date) -> dict:
         raise
 
 
-def reset_in_place(state: dict, week_of: date) -> dict:
-    svc = services(tasks_required=bool(state.get("task_list")))
-    template_hash = deck_template_hash()
-    reset_deck_baseline(svc["slides"], state["slides"]["id"], drive=svc["drive"],
-                        restore_template=state["slides"].get("template_sha256") != template_hash)
-    state["slides"]["template_sha256"] = template_hash
-    clear_seeded_tasks(svc["tasks"], state)
-    remove_dynamic_items(state, svc, clear_drafts=True)
-    task_scenario.ensure_resources(SimpleNamespace(ROOT=ROOT, upload_template=upload_template), svc, state, restore=True)
-    state["emails"], evidence = create_emails(svc["gmail"], state["slides"]["url"], state["sheet"]["url"], state["doc"]["url"], state["task_resources"])
-    create_tasks(svc["tasks"], state, evidence)
-    reset_sheet_baseline(svc["sheets"], state, evidence, local_now().date().isoformat())
-    reset_original_sheet(svc["drive"], svc["sheets"], state, evidence, local_now().date().isoformat())
-    state["events"] = create_calendar(svc["calendar"], week_of, state["slides"]["url"], state["doc"]["url"], state["sheet"]["url"])
-    state["week_of"] = week_of.isoformat()
-    state_path().write_text(json.dumps(state, indent=2), encoding="utf-8")
-    return state
+def reset_in_place(state: dict, week_of: date, *, full_reset: bool = False) -> dict:
+    from reset_modes import reset_in_place as reset_resources
+    return reset_resources(SimpleNamespace(**globals()), state, week_of, full_reset=full_reset)
 
 
 def deck_template_hash() -> str:
@@ -867,12 +860,14 @@ def run() -> int:
     parser.add_argument("--week-of", help="Monday date (YYYY-MM-DD); defaults to the current week")
     parser.add_argument("--refresh-task-scenario", action="store_true", help="Replace only demo tasks and their supporting resources/mail")
     parser.add_argument("--reset", action="store_true")
+    parser.add_argument("--full-reset", action="store_true", help="Recreate emails/tasks, refresh dates, and invalidate saved briefs")
     parser.add_argument("--cleanup", action="store_true")
     parser.add_argument("--confirm", action="store_true", help="Required because this writes to Google Workspace")
     args = parser.parse_args()
     if not args.confirm:
         raise SystemExit("Refusing Google Workspace writes without --confirm")
     path = state_path()
+    args.reset = args.reset or args.full_reset
     if sum((args.reset, args.cleanup, args.refresh_task_scenario)) > 1:
         raise SystemExit("Choose only one of reset, cleanup or refresh-task-scenario")
     if args.refresh_task_scenario:
@@ -892,10 +887,14 @@ def run() -> int:
         previous = json.loads(path.read_text(encoding="utf-8"))
         check_reset(ROOT, hermes_home())
         check_evidence_cache(ROOT)
-        state = reset_in_place(previous, chosen_week)
-        second_brain = reset_second_brain(ROOT, hermes_home())
-        workspace_cleanup = clear_evidence_cache(ROOT)
-        print(json.dumps({"ok": True, "status": "reset", "state": str(path), "week_of": state["week_of"], "folder": state["folder"], "sheet": state["sheet"], "doc": state["doc"], "slides": state["slides"], "emails": len(state["emails"]), "events": len(state["events"]), "tasks": len(state.get("tasks", [])), "second_brain": second_brain, "workspace_cleanup": workspace_cleanup}, indent=2))
+        if not args.full_reset and not args.week_of:
+            chosen_week = date.fromisoformat(previous["week_of"])
+        state = reset_in_place(previous, chosen_week, full_reset=args.full_reset)
+        second_brain = reset_second_brain(ROOT, hermes_home(), resources=state)
+        workspace_cleanup = clear_evidence_cache(ROOT, preserve_latest_brief=not args.full_reset)
+        state.pop("reset_incomplete", None)
+        path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+        print(json.dumps({"ok": True, "status": "reset", "mode": "full" if args.full_reset else "quick", "id_changes": state.get("last_reset", {}).get("changed_ids", {}), "state": str(path), "week_of": state["week_of"], "folder": state["folder"], "sheet": state["sheet"], "doc": state["doc"], "slides": state["slides"], "emails": len(state["emails"]), "events": len(state["events"]), "tasks": len(state.get("tasks", [])), "second_brain": second_brain, "workspace_cleanup": workspace_cleanup}, indent=2))
         return 0
     elif path.exists():
         raise SystemExit(f"Workspace already exists. Run reset or cleanup first: {path}")

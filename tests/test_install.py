@@ -16,6 +16,7 @@ from install import (
     connect_second_brain,
     default_home,
     install_soul,
+    install_skill,
     installed_skill_names,
     prepare_profile,
     profile_base,
@@ -264,6 +265,22 @@ class InstallSkillsTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
 
+    def test_native_install_retires_ingest_and_preserves_profile(self):
+        source = Path(__file__).resolve().parents[1]
+        soul = self.hermes_home / "SOUL.md"
+        soul.write_text("Custom Hermes identity")
+        install_skill(source, self.hermes_home)
+        self.assertEqual(soul.read_text(), "Custom Hermes identity")
+        self.assertNotIn("ingest", installed_skill_names(self.hermes_home))
+        installed = self.hermes_home / "skills/productivity/chief-of-staff"
+        self.assertTrue((installed / "scripts/cos-actions.exe").is_file())
+        self.assertTrue((installed / "scripts/run-actions.sh").is_file())
+        self.assertFalse((installed / "native").exists())
+        self.assertFalse(list(installed.rglob("*.py")))
+        self.assertTrue(list((self.hermes_home / "retired-skills").glob("*/ingest/SKILL.md")))
+        install_skill(source, self.hermes_home)
+        self.assertTrue((installed / "SKILL.md").exists())
+
     def test_desktop_tools_setting_preserves_other_environment_values(self) -> None:
         env = self.hermes_home / ".env"
         env.write_text("UNRELATED_SETTING=keep-me\nHERMES_TUI_TOOLSETS=browser\n", encoding="utf-8")
@@ -311,14 +328,14 @@ class InstallSkillsTests(unittest.TestCase):
         disabled = configure_enabled_skills(config, installed_skill_names(self.hermes_home))
         result = config.read_text(encoding="utf-8")
 
-        self.assertEqual({"pdf"}, disabled)
+        self.assertEqual({"pdf", "ingest"}, disabled)
         self.assertIn("model:\n  default: local-model", result)
         self.assertIn("  creation_nudge_interval: 15", result)
-        self.assertIn("  disabled:\n    - pdf", result)
+        self.assertIn("  disabled:\n    - ingest\n    - pdf", result)
         self.assertNotIn("    - google-workspace", result)
         self.assertNotIn("old-skill", result)
         self.assertNotIn("    - chief-of-staff", result)
-        self.assertNotIn("    - ingest", result)
+        self.assertIn("    - ingest", result)
         self.assertIn("agent:\n  max_turns: 40", result)
 
     def test_creates_skills_config_when_config_is_missing(self) -> None:
@@ -327,7 +344,7 @@ class InstallSkillsTests(unittest.TestCase):
         configure_enabled_skills(config, installed_skill_names(self.hermes_home))
 
         self.assertEqual(
-            "skills:\n  disabled:\n    - pdf\n",
+            "skills:\n  disabled:\n    - ingest\n    - pdf\n",
             config.read_text(encoding="utf-8"),
         )
 

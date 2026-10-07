@@ -38,3 +38,7 @@ Thumbs.db
 # Active Desktop demo workspace UI settings and reset staging
 /CoS_Workspace/CoS_SecondBrain/.obsidian/
 /CoS_Workspace/.second-brain-reset-*/
+
+# Native build outputs and local experiment artifacts
+/out/
+/skills/productivity/chief-of-staff/native/target/
