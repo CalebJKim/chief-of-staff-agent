@@ -6,16 +6,16 @@ A tracker update request authorizes evidence-backed changes to the requested tra
 
 Use [Command reference](command-reference.md) for `run-actions.ps1` commands and arguments. Do not run ingest or Start of Day.
 
-1. **Read the tracker.** Use `sheets get` unless its current contents are already in context. Find an unknown tracker ID with `drive search`. Do not search local notes for it. Use returned tab names and a range for another known tab. Identify each requested entry’s deliverable, status, and blocker, plus the tracker’s status definitions.
-2. **Check existing email evidence.** Start with one relevant email per lane, reusing it across lanes when applicable. If sufficient evidence is already in context, do not search or reread it.
-3. **Find missing email evidence.** Batch bounded Gmail searches by verified sender or short project term. Select one relevant email per lane and read it once with `gmail get`. Do not reread evidence already in context. Search misses do not prove inputs are missing.
-4. **Fill remaining gaps.** After the first email, read more emails or files only if information required to assess that lane is still missing. Preserve statuses when the evidence does not support a change.
+1. **Read the tracker:** Use `sheets get` unless its current contents are already in context. Find an unknown tracker ID with `drive search`, not local notes. Use returned tab names and a range for another known tab. Identify each requested lane’s deliverable, status, blocker, and the tracker’s status definitions.
+2. **Identify evidence gaps:** For each lane, internally identify what existing context establishes and what information is still required to assess its status. Do not search or read for lanes with sufficient evidence.
+3. **Gather missing evidence:** Start with one relevant email per lane, reusing it across lanes where applicable. Use links or IDs already in context before searching. Batch independent, bounded Gmail searches by verified sender or short project term, then batch necessary reads. Do not reread email content already in context.
+4. **Reassess before reading more:** Check whether the collected evidence is sufficient for each lane. Read additional emails or files only for remaining required information. Stop reading once sufficient; preserve statuses when evidence does not support a change. Search misses do not prove inputs are missing.
 
 ## 2. Reconcile entries
 
 1. **Establish scope.** Identify the lane's deliverable and required dependencies. Exclude other lanes' work and downstream uses of its output. Do not add unstated requirements or hypothetical steps.
 2. **Check completion first.** If current evidence confirms the deliverable is finished, use **Complete**. Do not add downstream work to keep it open. An outdated tracker entry does not mean the deliverable is unfinished.
-3. **Check whether a change is supported.** If evidence establishes no change to the lane's progress, inputs, or blockers, preserve its status. Contact introductions alone do not establish progress. Tracker timestamps do not establish status accuracy.
+3. **Check whether a change is supported.** If evidence establishes no change to the lane's progress, inputs, or blockers, preserve its status. Introduction emails alone do not indicate that work is in progress or on track. Tracker timestamps do not establish status accuracy.
 4. **Classify unfinished work.**
    - **Awaiting update:** Required input is still missing.
    - **In progress:** Required input has arrived; the lane's drafting or edits remain.

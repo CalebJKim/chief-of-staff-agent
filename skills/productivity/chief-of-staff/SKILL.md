@@ -73,7 +73,7 @@ Perplexity's `shell` tool runs Windows PowerShell 5.1. Submit commands directly,
 
 Run action commands through `run-actions.ps1 -WorkspaceRoot WORKSPACE_ROOT SERVICE COMMAND [arguments]`, using the installed path shown below. The launcher handles initialization and stops on failure.
 
-1. **Choose necessary reads:** Use existing context to identify the minimum reads needed. Stop reading when required information is available.
+1. **Choose necessary reads:** Use evidence already in context. If a necessary source has not been read, use its existing link or ID if already in context. Search only when neither is available. Stop reading when required information is available.
 2. **Batch those reads:** Combine independent reads with small combined output in one launcher batch. For Second Brain, combine necessary launcher commands in one shell call. Keep potentially large outputs separate.
 3. **Respect dependencies:** Wait for results before choosing dependent reads. Add reads only for necessary gaps or required verification.
 4. **Prevent rereading:** Do not reread content already in context just to check freshness. Allow rereading only for a user-requested refresh, already-obtained evidence of a change, or verification required by task guidance.
