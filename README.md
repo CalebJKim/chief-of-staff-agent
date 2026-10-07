@@ -150,16 +150,21 @@ No environment setup is required. Append `-Check` to validate local setup withou
 resetting or calling Google. If multiple accounts have the skill installed, pass
 `-SkillsDir` with the demo account's skills folder.
 
-The wrapper supplies `--reset --confirm` automatically; it does not ask for
-another confirmation. It replaces seeded emails, calendar events, and seeded
-Google Tasks (when configured), restores the campaign tracker, Reference Tracker,
-and slide deck, and resets the workspace's Second Brain as described below. Existing
-Drive file IDs are retained. The campaign Google Doc is **not** restored by the
-current reset. Chats and scheduled jobs are not deleted.
+The wrapper supplies `--reset --confirm` automatically. Default quick reset
+preserves email/task/calendar IDs and dates, restores edited demo files in place,
+and refreshes Second Brain's source links. It keeps the latest saved daily brief.
 
-Reset uses the current Monday–Friday week in the demo timezone (Pacific by default).
-To choose another week, append `-WeekOf YYYY-MM-DD` using that week's Monday date. If a required state
-file is missing, restore the demo state before resetting. Do not seed duplicates.
+Use `.\demo\reset_workspace.ps1 -FullReset` at the start of a new demo day or after
+email/task seed changes. This recreates emails/tasks, uses the current Pacific
+workweek, and removes cached daily briefs. Append `-WeekOf YYYY-MM-DD` with
+`-FullReset` to override the week. The Python equivalent is
+`python demo/reset_workspace.py --full-reset`.
+
+Neither reset saves a new daily brief; the scheduled job or an explicit save
+request does that. See [Reset and cleanup](demo/DEMO_SPEC.md#reset-and-cleanup)
+for the resource preservation rules. Missing state must be restored before
+resetting. Quick reset rejects stale cached links or missing resources rather
+than silently changing IDs. Chats and scheduled jobs are not deleted.
 
 Wait for the successful JSON result (`"ok": true`, `"status": "reset"`), then start
 a fresh Perplexity chat with `CoS_Workspace` selected. Do not start a trial after a failed
@@ -183,7 +188,8 @@ scheduled jobs must use the new workspace path as well.
 resets Google Workspace and restores `CoS_Workspace/CoS_SecondBrain/` from
 `demo/templates/CoS_SecondBrain.zip`. Existing demo notes, including job-created
 files, are first moved into the Git-ignored `demo/.second-brain-backups/` folder.
-Local `.obsidian` settings are preserved. Reset deletes all other files and folders
+Local `.obsidian` settings are preserved. Quick reset also preserves the latest
+dated brief in `DailyBriefs`. Reset deletes all other files and folders
 inside `CoS_Workspace`, except `google_token.json`, `google_client_secret.json`,
 `chief-of-staff-workspace-state.json`, and `second-brain.json` directly inside
 `.chief-of-staff-state`. This removes old packets, snapshots, tracker updates,

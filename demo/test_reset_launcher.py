@@ -48,9 +48,9 @@ class ResetStateTests(unittest.TestCase):
 
     def test_reset_delegates_once_with_same_python_state_and_week(self):
         with patch.object(reset, 'ROOT', self.root), patch.object(reset.subprocess, 'call', return_value=7) as delegate:
-            self.assertEqual(reset.main(['--week-of', '2026-09-28']), 7)
+            self.assertEqual(reset.main(['--full-reset', '--week-of', '2026-09-28']), 7)
         delegate.assert_called_once_with([sys.executable, str(self.root / 'demo/seed_workspace.py'),
-                                         '--reset', '--confirm', '--week-of', '2026-09-28'])
+                                         '--reset', '--confirm', '--full-reset', '--week-of', '2026-09-28'])
         self.assertEqual(os.environ['COS_STATE_DIR'], str(self.state))
 
     def test_missing_state_and_bad_baseline_prevent_google_reset(self):
@@ -91,17 +91,17 @@ class PowerShellResetTests(unittest.TestCase):
                               env=self.env, cwd=self.root, capture_output=True, text=True, timeout=30)
 
     def test_auto_discovers_perplexity_and_forwards_arguments(self):
-        result = self.run_script('-Check', '-WeekOf', '2026-09-28')
+        result = self.run_script('-Check', '-FullReset', '-WeekOf', '2026-09-28')
         self.assertEqual(result.returncode, 0, result.stderr)
         info = json.loads(result.stdout)
         self.assertIn('template\\venv\\scripts\\python.exe', info['python'].lower())
-        self.assertEqual(info['args'], ['--check', '--week-of', '2026-09-28'])
+        self.assertEqual(info['args'], ['--check', '--full-reset', '--week-of', '2026-09-28'])
 
     def test_absent_managed_python_uses_system_python(self):
-        self.env['PATH'] = str(Path(sys.executable).parent)
+        self.env['PATH'] = str(Path(sys._base_executable).parent)
         result = self.run_script('-SkillsDir', str(self.root / 'account/skills'))
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(Path(json.loads(result.stdout)['python']), Path(sys.executable))
+        self.assertEqual(Path(json.loads(result.stdout)['python']), Path(sys._base_executable))
 
     def test_failure_is_propagated_without_retry(self):
         (self.demo / 'reset_workspace.py').write_text('raise SystemExit(9)')

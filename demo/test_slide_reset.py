@@ -2,6 +2,7 @@ import importlib.util
 import sys
 import unittest
 from copy import deepcopy
+from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -11,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 spec = importlib.util.spec_from_file_location("slide_reset_seed", Path(__file__).with_name("seed_workspace.py"))
 seed = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(seed)
+import reset_modes
 
 
 def deck(count=10, prefix="page"):
@@ -115,14 +117,26 @@ class SlideResetTests(unittest.TestCase):
             seed.reset_deck_baseline(self.slides, "deck", drive=self.drive)
         self.presentations.batchUpdate.assert_not_called()
 
+    @contextmanager
+    def reset_support(self):
+        # These tests isolate slide restoration; reset preflight/cleanup has its
+        # own fake-API tests. Never touch live Google resources or local caches.
+        with patch.object(reset_modes, "preflight", return_value={}), \
+             patch.object(reset_modes, "clear_demo_drafts"), \
+             patch.object(reset_modes, "restore_calendar") as calendar, \
+             patch.object(seed, "clear_evidence_cache"), \
+             patch.object(seed, "seeded_gmail_message_ids", return_value=set()), \
+             patch.object(seed, "state_path"):
+            yield calendar
+
     def test_deck_restore_failure_precedes_other_reset_writes(self):
         state = {"slides": {"id": "deck"}}
         svc = {"slides": self.slides, "drive": self.drive}
-        with patch.object(seed, "services", return_value=svc), \
+        with self.reset_support() as calendar, patch.object(seed, "services", return_value=svc), \
              patch.object(seed, "reset_deck_baseline", side_effect=RuntimeError("restore failed")), \
              patch.object(seed, "clear_seeded_tasks") as tasks, patch.object(seed, "remove_dynamic_items") as remove:
             with self.assertRaisesRegex(RuntimeError, "restore failed"):
-                seed.reset_in_place(state, date(2026, 9, 14))
+                seed.reset_in_place(state, date(2026, 9, 14), full_reset=True)
         tasks.assert_not_called()
         remove.assert_not_called()
         self.assertNotIn("template_sha256", state["slides"])
@@ -136,22 +150,22 @@ class SlideResetTests(unittest.TestCase):
         }
         original_slides = deepcopy(state["slides"])
         svc = {name: Mock() for name in ("tasks", "slides", "drive", "gmail", "calendar", "sheets")}
-        with patch.object(seed, "services", return_value=svc), \
+        with self.reset_support() as calendar, patch.object(seed, "services", return_value=svc), \
              patch.object(seed, "reset_deck_baseline") as restore, \
              patch.object(seed, "clear_seeded_tasks"), patch.object(seed, "remove_dynamic_items"), \
              patch.object(seed.task_scenario, "ensure_resources", side_effect=lambda api, svc, state, **kw: state.setdefault("task_resources", {})), \
              patch.object(seed, "create_emails", return_value=([{"id": "new-mail"}], {})) as emails, \
              patch.object(seed, "create_tasks") as tasks, patch.object(seed, "reset_sheet_baseline") as sheet, \
              patch.object(seed, "reset_original_sheet") as original, \
-             patch.object(seed, "create_calendar", return_value=[]) as calendar, patch.object(seed, "state_path") as path:
-            result = seed.reset_in_place(state, date(2026, 9, 14))
+             patch.object(seed, "state_path") as path:
+            result = seed.reset_in_place(state, date(2026, 9, 14), full_reset=True)
         restore.assert_called_once_with(svc["slides"], "same-deck", drive=svc["drive"], restore_template=True)
         self.assertEqual({**original_slides, "template_sha256": seed.deck_template_hash()}, result["slides"])
         self.assertEqual(original_slides["url"], emails.call_args.args[1])
-        self.assertEqual(original_slides["url"], calendar.call_args.args[2])
+        self.assertEqual(original_slides["url"], calendar.call_args.args[2]["slides"]["url"])
         self.assertEqual(result["slides"], tasks.call_args.args[1]["slides"])
         self.assertEqual(result["slides"], sheet.call_args.args[1]["slides"])
-        path().write_text.assert_called_once()
+        self.assertGreaterEqual(path().write_text.call_count, 1)
         original.assert_called_once_with(svc["drive"], svc["sheets"], state, {}, sheet.call_args.args[3])
 
     def test_only_missing_or_changed_template_fingerprint_triggers_design_refresh(self):
@@ -164,7 +178,7 @@ class SlideResetTests(unittest.TestCase):
                 if previous is not None:
                     state["slides"]["template_sha256"] = previous
                 svc = {name: Mock() for name in ("tasks", "slides", "drive", "gmail", "calendar", "sheets")}
-                with patch.object(seed, "services", return_value=svc), \
+                with self.reset_support() as calendar, patch.object(seed, "services", return_value=svc), \
                      patch.object(seed, "reset_deck_baseline") as restore, \
                      patch.object(seed, "clear_seeded_tasks"), patch.object(seed, "remove_dynamic_items"), \
                      patch.object(seed.task_scenario, "ensure_resources", side_effect=lambda api, svc, state, **kw: state.setdefault("task_resources", {})), \
@@ -172,7 +186,7 @@ class SlideResetTests(unittest.TestCase):
                      patch.object(seed, "create_tasks"), patch.object(seed, "reset_sheet_baseline"), \
                      patch.object(seed, "reset_original_sheet"), \
                      patch.object(seed, "create_calendar", return_value=[]), patch.object(seed, "state_path"):
-                    seed.reset_in_place(state, date(2026, 9, 14))
+                    seed.reset_in_place(state, date(2026, 9, 14), full_reset=True)
                 self.assertEqual(previous != current, restore.call_args.kwargs["restore_template"])
                 self.assertEqual(current, state["slides"]["template_sha256"])
 

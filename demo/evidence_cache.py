@@ -28,7 +28,7 @@ def _check_path(path: Path, workspace: Path) -> None:
         raise RuntimeError(f"Workspace cleanup path must stay inside the workspace: {path}")
 
 
-def check_evidence_cache(root: Path) -> tuple[list[Path], list[Path], int]:
+def check_evidence_cache(root: Path, *, preserve_latest_brief: bool = True) -> tuple[list[Path], list[Path], int]:
     """Validate all artifact removals before reset writes or recursive deletion."""
     workspace = root.resolve() / "CoS_Workspace"
     vault = workspace / "CoS_SecondBrain"
@@ -79,7 +79,7 @@ def check_evidence_cache(root: Path) -> tuple[list[Path], list[Path], int]:
 
     if workspace.exists():
         for path in sorted(workspace.iterdir()):
-            if path == briefs and latest_brief is not None:
+            if path == briefs and latest_brief is not None and preserve_latest_brief:
                 for child in sorted(briefs.iterdir()):
                     if child != latest_brief:
                         collect(child)
@@ -96,9 +96,9 @@ def check_evidence_cache(root: Path) -> tuple[list[Path], list[Path], int]:
     return directories, standalone, file_count
 
 
-def clear_evidence_cache(root: Path) -> dict:
+def clear_evidence_cache(root: Path, *, preserve_latest_brief: bool = True) -> dict:
     """Remove artifacts only; the caller separately restores the baseline vault."""
-    directories, standalone, file_count = check_evidence_cache(root)
+    directories, standalone, file_count = check_evidence_cache(root, preserve_latest_brief=preserve_latest_brief)
     # Every target and descendant was checked before any recursive deletion.
     for directory in directories:
         shutil.rmtree(directory)

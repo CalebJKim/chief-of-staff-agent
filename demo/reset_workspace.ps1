@@ -2,6 +2,7 @@
 [CmdletBinding()]
 param(
     [switch]$Check,
+    [switch]$FullReset,
     [string]$WeekOf,
     [string]$SkillsDir = $env:PPLX_SKILLS_DIR
 )
@@ -36,6 +37,7 @@ if ($ManagedPython -and (Test-Path -LiteralPath $ManagedPython -PathType Leaf)) 
 # Existing but broken interpreters fail here; never retry a reset with another Python.
 $ResetArgs = @('-B', (Join-Path $PSScriptRoot 'reset_workspace.py'))
 if ($Check) { $ResetArgs += '--check' }
+if ($FullReset) { $ResetArgs += '--full-reset' }
 if ($WeekOf) { $ResetArgs += @('--week-of', $WeekOf) }
 & $Python @ResetArgs
 if ($LASTEXITCODE -ne 0) { throw "Demo reset command failed (exit $LASTEXITCODE). See the error above." }

@@ -6,12 +6,16 @@ Prepare a read-only, meeting-specific briefing. Do not run Start of Day or inspe
 
 Use [Command reference](command-reference.md) for `actions.py` commands and arguments.
 
-- Find the latest relevant feedback and organizer or decision-maker requests in Gmail. Reuse current full threads already read. Otherwise, read the relevant full threads.
+1. Reuse relevant evidence in context, including current full email threads.
+2. If more evidence is needed, find the latest relevant feedback and organizer or decision-maker requests in Gmail. Batch necessary short thread reads; keep potentially large outputs separate. Wait for email results before choosing supporting files.
+3. Read a supporting file only for a specific missing fact about the meeting’s purpose, participants, user’s role, incomplete preparation tasks, or goals. Once the briefing is supported, stop reading and write it.
+
+**Evidence rules:**
+
 - Reuse evidence links. Search Drive only for a missing, needed file link.
 - Distinguish requested work from confirmed completion and planned from confirmed attendance. Flag missing context without guessing.
 - If the meeting time has passed, flag it and still brief. Elapsed time does not prove preparation or decisions are complete.
-
-Check whether the evidence already available establishes the meeting’s purpose, participants, the user’s role, incomplete preparation tasks, and goals. If so, write the briefing without further reads. Otherwise, read a supporting file only to resolve a specific missing fact in those fields. Do not inspect files merely for background or to check whether previously suggested edits were applied. Treat requested edits as incomplete unless available evidence confirms completion.
+- Do not inspect files merely for background or to check whether previously suggested edits were applied. Treat requested edits as incomplete unless available evidence confirms completion.
 
 ## 2. Write the briefing
 

@@ -38,7 +38,7 @@ class WorkspaceSeedTests(unittest.TestCase):
                 path.read_text.return_value = json.dumps(previous)
                 result = {"week_of": expected.isoformat(), "folder": {}, "sheet": {},
                           "doc": {}, "slides": {}, "emails": [], "events": []}
-                argv = [str(MODULE), "--reset", "--confirm"]
+                argv = [str(MODULE), "--reset", "--full-reset", "--confirm"]
                 if override:
                     argv.extend(["--week-of", override])
                 with (
@@ -53,7 +53,7 @@ class WorkspaceSeedTests(unittest.TestCase):
                     patch.object(sys, "stdout", new_callable=io.StringIO) as output,
                 ):
                     self.assertEqual(0, seed.main())
-                reset.assert_called_once_with(previous, expected)
+                reset.assert_called_once_with(previous, expected, full_reset=True)
                 self.assertEqual(expected.isoformat(), json.loads(output.getvalue())["week_of"])
 
     def test_seed_assets_use_results_without_old_benchmark_claims(self):

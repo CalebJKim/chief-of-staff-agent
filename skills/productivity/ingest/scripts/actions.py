@@ -110,11 +110,10 @@ def gmail_get(args: argparse.Namespace) -> None:
     })
 
 
-def gmail_thread(args: argparse.Namespace) -> None:
-    api = service("gmail", "v1")
-    thread = api.users().threads().get(userId="me", id=args.thread_id, format="full").execute()
+def read_gmail_thread(api: Any, thread_id: str, max_messages: int, max_chars: int) -> dict[str, Any]:
+    thread = api.users().threads().get(userId="me", id=thread_id, format="full").execute()
     output = []
-    for msg in thread.get("messages", [])[-args.max_messages :]:
+    for msg in thread.get("messages", [])[-max_messages :]:
         hdr = headers(msg.get("payload", {}))
         output.append({
             "id": msg.get("id"),
@@ -122,9 +121,24 @@ def gmail_thread(args: argparse.Namespace) -> None:
             "to": hdr.get("to", ""),
             "subject": hdr.get("subject", ""),
             "date": hdr.get("date", ""),
-            "body": decode_body(msg.get("payload", {}))[: args.max_chars],
+            "body": decode_body(msg.get("payload", {}))[:max_chars],
         })
-    emit({"thread_id": args.thread_id, "url": gmail_url(thread.get("id") or args.thread_id), "messages": output})
+    return {"thread_id": thread_id, "url": gmail_url(thread.get("id") or thread_id), "messages": output}
+
+
+def gmail_thread(args: argparse.Namespace) -> None:
+    emit(read_gmail_thread(service("gmail", "v1"), args.thread_id, args.max_messages, args.max_chars))
+
+
+def gmail_threads(args: argparse.Namespace) -> None:
+    """Read distinct threads sequentially, reusing one client and preserving completed output."""
+    api = service("gmail", "v1")
+    for thread_id in dict.fromkeys(args.thread_ids):
+        try:
+            result = read_gmail_thread(api, thread_id, args.max_messages, args.max_chars)
+        except Exception as exc:
+            raise RuntimeError(f"Could not read Gmail thread {thread_id}: {exc}") from exc
+        emit(result)
 
 
 def gmail_search(args: argparse.Namespace) -> None:
@@ -579,6 +593,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--max-messages", type=int, default=12)
     p.add_argument("--max-chars", type=int, default=8000)
     p.set_defaults(func=gmail_thread)
+    p = gmail.add_parser("threads", help="Read multiple threads using one client; emit one JSON record per thread")
+    p.add_argument("thread_ids", nargs="+")
+    p.add_argument("--max-messages", type=int, default=12)
+    p.add_argument("--max-chars", type=int, default=8000)
+    p.set_defaults(func=gmail_threads)
     p = gmail.add_parser("search")
     p.add_argument("query")
     p.add_argument("--max", type=int, default=5)
@@ -611,7 +630,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=drive_search)
 
     docs = groups.add_parser("docs").add_subparsers(dest="action", required=True)
-    p = docs.add_parser("get")
+    p = docs.add_parser("get", aliases=["read"])
     p.add_argument("document_id")
     p.add_argument("--max-chars", type=int, default=30000)
     p.set_defaults(func=docs_get)
@@ -652,7 +671,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=sheets_update_lanes)
 
     slides = groups.add_parser("slides").add_subparsers(dest="action", required=True)
-    p = slides.add_parser("get")
+    p = slides.add_parser("get", aliases=["read"])
     p.add_argument("presentation_id")
     p.add_argument("--max-chars-per-slide", type=int, default=4000)
     p.set_defaults(func=slides_get)

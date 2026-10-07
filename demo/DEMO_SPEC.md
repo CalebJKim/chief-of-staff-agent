@@ -35,17 +35,10 @@ Generated IDs are stored only in the local file:
 CoS_Workspace/.chief-of-staff-state/chief-of-staff-workspace-state.json
 ```
 
-The reset and cleanup commands use this file to delete imported mail/events and move generated Drive files to trash. Google credentials live alongside it. Direct seed commands default to this directory, or use an explicit `COS_STATE_DIR`.
-
-Google Tasks uses the account's default list, resolved through the API and saved in
-the same state file. Reset replaces
-only its seeded tasks, including completed ones, with fresh links to the new emails;
-unrelated tasks are preserved. Cleanup also removes only seeded tasks and keeps the
-list itself. Older states that refer to a separate demo list are cleaned there on
-reset, then newly seeded tasks are placed in the default list. With an existing
-connection that lacks Tasks permission, the first Tasks seed is skipped with setup
-instructions; Gmail, Calendar, and Drive resets still work. Once a demo task list
-exists, Tasks access is checked before any reset starts.
+Reset uses the saved IDs to restore existing resources in place. Cleanup removes
+seeded mail/events/tasks and trashes the generated Drive folder. Google Tasks uses
+the account's default list; unrelated tasks and the list itself are preserved.
+Tasks access is checked before reset writes when a task list is configured.
 
 
 ## Template fidelity
@@ -71,17 +64,47 @@ python demo/seed_workspace.py --week-of 2026-08-17 --confirm
 ## Reset and cleanup
 
 ```powershell
+# Between trials: keep email, task, calendar, and Drive file IDs.
 .\demo\reset_workspace.ps1
 
-# Permanently remove the seeded workspace instead:
+# New demo day or updated email/task seed content:
+.\demo\reset_workspace.ps1 -FullReset
+
+# Permanently remove the seeded Google Workspace instead:
 python demo/seed_workspace.py --cleanup --confirm
 ```
 
-Reset also restores `CoS_Workspace/CoS_SecondBrain/` from the bundled baseline ZIP,
-saving the previous demo vault under `demo/.second-brain-backups/`. It deletes all
-other workspace contents except the four required `.chief-of-staff-state` files
-listed in the README. Vaults outside `CoS_Workspace` and cron jobs are untouched.
-`--cleanup` removes Google Workspace seed data only.
+Quick reset is the default. It preserves emails (including their dates), restores
+INBOX/UNREAD/IMPORTANT labels, and leaves Google Tasks unchanged. It restores
+calendar events at their original dates and IDs, updating only changed events.
+It restores the campaign document, deck, tracker, Reference Tracker, and task
+resource templates at their existing Drive file IDs. Individual slide/element IDs
+can change when a deck structure is rebuilt. Demo-related drafts are removed;
+unrelated drafts are retained.
+
+Full reset replaces seeded emails and tasks, updates the calendar for the current
+Pacific workweek, and removes saved daily briefs before changing IDs. Calendar
+IDs are reused by event identity where possible; missing events are recreated.
+Use `--week-of YYYY-MM-DD` with `--full-reset` to override the workweek.
+
+Both modes restore `CoS_Workspace/CoS_SecondBrain/` from the baseline ZIP and refresh
+its Google links using `templates/second-brain-links.json` and current resource
+IDs. Add a binding when adding a Google source link to the baseline. The previous
+vault is backed up under `demo/.second-brain-backups/`; note paths and local
+`.obsidian` settings are preserved.
+
+Reset removes other workspace run artifacts, retaining required runtime state.
+Quick reset also preserves the latest dated Markdown brief in `DailyBriefs`;
+full reset removes all cached briefs. Reset never generates or saves a new brief.
+Use the scheduled job or an explicit save request to replace it. Neither mode
+changes other vaults, chats, or scheduled jobs.
+
+Quick reset stops before writes if required resources or cached email/task links
+are missing or stale. Use full reset to refresh them. Inaccessible/trashed core
+Drive files must be restored first; reset will not silently replace those IDs.
+An interrupted reset is recorded in state and requires full reset recovery.
+Wait for `"ok": true` before starting a new trial. The result reports the reset
+mode, changed email/task/event IDs, refreshed note links, and artifact cleanup.
 
 ## Manual fallback
 
@@ -125,7 +148,7 @@ Using Python with the Google dependencies installed, run from this repository:
 python demo/seed_workspace.py --refresh-task-scenario --confirm
 ```
 
-This creates missing task resources, replaces only the marked task-supporting emails, and replaces seeded tasks. It preserves the RTX documents/deck/tracker, calendar events, drafts and personal tasks. It checkpoints new file/message IDs in the state file. A full reset also restores the task resource templates, including the ETA placeholder. The three task notes keep essential context within the brief packet’s 240-character note limit; resource URLs follow it.
+This creates missing task resources, replaces only the marked task-supporting emails, and replaces seeded tasks. It preserves the RTX documents/deck/tracker, calendar events, drafts and personal tasks. It checkpoints new file/message IDs in the state file. Both reset modes restore the task resource templates, including the design TODOs. The three task notes keep essential context within the brief packet’s 240-character note limit; resource URLs follow it.
 
 The DOCX source is `build_task_documents.py` (python-docx). The four-slide deck source is `build_task_deck.mjs` (the bundled artifact runtime). Runtime paths are supplied to the builders rather than stored in generated project documents. The seed process imports the checked-in templates and does not need the authoring runtimes.
 

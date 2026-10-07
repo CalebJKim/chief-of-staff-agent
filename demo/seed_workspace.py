@@ -408,6 +408,11 @@ def create_emails(gmail, deck_url: str, sheet_url: str, doc_url: str, resources:
         {"id": result["id"], "thread_id": result.get("threadId", result["id"]), "url": f"https://mail.google.com/mail/u/0/#all/{result.get('threadId', result['id'])}"}
         for result in results
     ]
+    for index, (item, data_item) in enumerate(zip(created, data), 1):
+        item["rfc_message_id"] = f"<{MARKER}-{seed_run_id}-{index}@demo.invalid>"
+        item["baseline_labels"] = ["INBOX", "UNREAD"] + (["IMPORTANT"] if data_item[3] else [])
+    for item, key in zip(created, ("elena", "mike", "aisha", "daniel", "priya", "prd")):
+        item["evidence_key"] = key
     evidence = {"elena": created[0]["url"], "mike": created[1]["url"], "aisha": created[2]["url"], "daniel": created[3]["url"], "priya": created[4]["url"], "prd": created[5]["url"]}
     for index, news in enumerate(NEWS_EMAILS, MEANINGFUL_EMAIL_COUNT - len(NEWS_EMAILS)):
         created[index]["news_key"] = news["key"]
@@ -711,23 +716,9 @@ def seed(week_of: date) -> dict:
         raise
 
 
-def reset_in_place(state: dict, week_of: date) -> dict:
-    svc = services(tasks_required=bool(state.get("task_list")))
-    template_hash = deck_template_hash()
-    reset_deck_baseline(svc["slides"], state["slides"]["id"], drive=svc["drive"],
-                        restore_template=state["slides"].get("template_sha256") != template_hash)
-    state["slides"]["template_sha256"] = template_hash
-    clear_seeded_tasks(svc["tasks"], state)
-    remove_dynamic_items(state, svc, clear_drafts=True)
-    task_scenario.ensure_resources(SimpleNamespace(ROOT=ROOT, upload_template=upload_template), svc, state, restore=True)
-    state["emails"], evidence = create_emails(svc["gmail"], state["slides"]["url"], state["sheet"]["url"], state["doc"]["url"], state["task_resources"])
-    create_tasks(svc["tasks"], state, evidence)
-    reset_sheet_baseline(svc["sheets"], state, evidence, local_now().date().isoformat())
-    reset_original_sheet(svc["drive"], svc["sheets"], state, evidence, local_now().date().isoformat())
-    state["events"] = create_calendar(svc["calendar"], week_of, state["slides"]["url"], state["doc"]["url"], state["sheet"]["url"])
-    state["week_of"] = week_of.isoformat()
-    state_path().write_text(json.dumps(state, indent=2), encoding="utf-8")
-    return state
+def reset_in_place(state: dict, week_of: date, *, full_reset: bool = False) -> dict:
+    from reset_modes import reset_in_place as reset_resources
+    return reset_resources(SimpleNamespace(**globals()), state, week_of, full_reset=full_reset)
 
 
 def deck_template_hash() -> str:
@@ -819,12 +810,14 @@ def main() -> int:
     parser.add_argument("--week-of", help="Monday date (YYYY-MM-DD); defaults to the current week")
     parser.add_argument("--refresh-task-scenario", action="store_true", help="Replace only demo tasks and their supporting resources/mail")
     parser.add_argument("--reset", action="store_true")
+    parser.add_argument("--full-reset", action="store_true", help="Recreate emails/tasks, refresh dates, and invalidate saved briefs")
     parser.add_argument("--cleanup", action="store_true")
     parser.add_argument("--confirm", action="store_true", help="Required because this writes to Google Workspace")
     args = parser.parse_args()
     if not args.confirm:
         raise SystemExit("Refusing Google Workspace writes without --confirm")
     path = state_path()
+    args.reset = args.reset or args.full_reset
     if sum((args.reset, args.cleanup, args.refresh_task_scenario)) > 1:
         raise SystemExit("Choose only one of reset, cleanup or refresh-task-scenario")
     if args.refresh_task_scenario:
@@ -844,10 +837,14 @@ def main() -> int:
         previous = json.loads(path.read_text(encoding="utf-8"))
         check_reset(ROOT, state_root())
         check_evidence_cache(ROOT)
-        state = reset_in_place(previous, chosen_week)
-        second_brain = reset_second_brain(ROOT, state_root())
-        workspace_cleanup = clear_evidence_cache(ROOT)
-        print(json.dumps({"ok": True, "status": "reset", "state": str(path), "week_of": state["week_of"], "folder": state["folder"], "sheet": state["sheet"], "doc": state["doc"], "slides": state["slides"], "emails": len(state["emails"]), "events": len(state["events"]), "tasks": len(state.get("tasks", [])), "second_brain": second_brain, "workspace_cleanup": workspace_cleanup}, indent=2))
+        if not args.full_reset and not args.week_of:
+            chosen_week = date.fromisoformat(previous["week_of"])
+        state = reset_in_place(previous, chosen_week, full_reset=args.full_reset)
+        second_brain = reset_second_brain(ROOT, state_root(), resources=state)
+        workspace_cleanup = clear_evidence_cache(ROOT, preserve_latest_brief=not args.full_reset)
+        state.pop("reset_incomplete", None)
+        path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+        print(json.dumps({"ok": True, "status": "reset", "mode": "full" if args.full_reset else "quick", "id_changes": state.get("last_reset", {}).get("changed_ids", {}), "state": str(path), "week_of": state["week_of"], "folder": state["folder"], "sheet": state["sheet"], "doc": state["doc"], "slides": state["slides"], "emails": len(state["emails"]), "events": len(state["events"]), "tasks": len(state.get("tasks", [])), "second_brain": second_brain, "workspace_cleanup": workspace_cleanup}, indent=2))
         return 0
     elif path.exists():
         raise SystemExit(f"Workspace already exists. Run reset or cleanup first: {path}")

@@ -77,13 +77,10 @@ Run `actions.py` commands through `run-actions.ps1 -WorkspaceRoot WORKSPACE_ROOT
 3. **Respect dependencies:** Wait for results before choosing dependent reads. Add reads only for necessary gaps or required verification.
 4. **Prevent rereading:** Do not reread content already in context just to check freshness. Allow rereading only for a user-requested refresh, already-obtained evidence of a change, or verification required by task guidance.
 
-**Email-read batching example:** When two short email threads are needed and their IDs are known, replace the placeholders and submit this entire block in one shell call. Use the same pattern for other independent reads.
+**Email-read batching example:** Use `gmail threads` for multiple necessary short threads with known IDs. It reuses one Python process and Gmail client. Keep potentially large outputs separate.
 
 ```powershell
-& "$env:PPLX_SKILLS_DIR/productivity/chief-of-staff/scripts/run-actions.ps1" -WorkspaceRoot 'WORKSPACE_ROOT' -Batch {
-    action gmail thread 'THREAD_ID_1'
-    action gmail thread 'THREAD_ID_2'
-}
+& "$env:PPLX_SKILLS_DIR/productivity/chief-of-staff/scripts/run-actions.ps1" -WorkspaceRoot 'WORKSPACE_ROOT' gmail threads 'THREAD_ID_1' 'THREAD_ID_2'
 ```
 
 **Tracker-update example:** Follow [Updating Project Tracker](references/updating-project-tracker.md) before preparing changes. Replace placeholders and example values with verified IDs, exact tab/lane names, and evidence-backed changes. Clear a blocker with `""` only when evidence confirms resolution.
@@ -131,11 +128,24 @@ Start of Day is a read-only briefing. Gather evidence and return the brief. Do n
 
 **Example cues:** “What should we work on today?”, “What are today’s priorities?”, or “Give me my daily brief.” Run this workflow without asking whether the user wants a daily brief.
 
-### 1. Check for today’s brief, otherwise gather evidence
+### 1. Check for today’s brief. If it doesn't exist, gather evidence
 
-First check for `DailyBriefs/YYYY-MM-DD.md` inside the selected workspace, using today’s local system date. If it exists, read it and return only its contents unchanged. Do not add anything before or after the saved brief, including introductions, priority summaries, follow-up questions, or offers. Stop after displaying it; do nothing else. Do not run scripts, generate a packet, or write any files. If reading fails, report the error and stop.
+Run this command first, replacing `WORKSPACE_ROOT` with the selected workspace’s absolute path:
 
-Only if today’s file does not exist, run this command exactly once. Do not run it for focused tasks or follow-ups. Use this skill’s **How to run the scripts** subsection:
+```powershell
+$brief = 'WORKSPACE_ROOT\DailyBriefs\{0:yyyy-MM-dd}.md' -f (Get-Date)
+if (Test-Path -LiteralPath $brief -PathType Leaf -ErrorAction Stop) {
+    Get-Content -LiteralPath $brief -Raw -Encoding UTF8 -ErrorAction Stop
+} else {
+    'NO_SAVED_BRIEF'
+}
+```
+
+If it returns a saved brief, return only its contents unchanged. Do not add anything before or after it, including introductions, priority summaries, follow-up questions, or offers. Stop after displaying it; do nothing else. Do not run scripts, generate a packet, or write any files. On error, report it and stop.
+
+Only if the check returns `NO_SAVED_BRIEF`, run the generation command below exactly once. Do not run it for focused tasks or follow-ups. Use this skill’s **How to run the scripts** subsection:
+
+If the command runs in the background, wait for its automatic completion result. Do not terminate, restart, or replace it. Use `terminate_job` only when the user explicitly asks to stop.
 
 ```powershell
 & (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\daily_brief.ps1') -WorkspaceRoot 'WORKSPACE_ROOT'

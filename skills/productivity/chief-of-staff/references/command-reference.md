@@ -7,6 +7,7 @@ Pass these service commands and arguments to `run-actions.ps1`, which runs the b
 | `gmail search 'QUERY'` | Find matching messages’ headers, IDs, and links. | `--max 5` (1–10) |
 | `gmail get MESSAGE_ID` | Read one message. | `--max-chars 12000` |
 | `gmail thread THREAD_ID` | Read latest thread messages. | `--max-messages 12`, `--max-chars 8000` per message |
+| `gmail threads THREAD_ID [THREAD_ID ...]` | Read multiple threads in one process, skipping duplicate IDs. Returns one JSON record per thread. | Same limits as `gmail thread`. |
 | `gmail important` | Read recent messages marked Important in Gmail, including their bodies. | `--max 12` (1–20), `--newer-than-days 2` (1–30 days), `--max-chars 8000` per message |
 | `gmail drafts` | Read all saved drafts, including recipients, subjects, threads, and full bodies. | None |
 | `gmail draft --to EMAIL --subject 'SUBJECT' --body-file -` | Save a new draft. | See Supporting notes 1–2. |
@@ -59,7 +60,7 @@ Previews save to a new subfolder under `--output-dir` inside the explicit worksp
 
 ## Examples
 
-Replace `WORKSPACE_ROOT` as described in the main skill's **How to run the scripts** subsection. Each launcher call initializes itself and stops on failure. Follow that subsection's example for batching. Single command:
+Replace `WORKSPACE_ROOT` as described in the main skill's **How to run the scripts** subsection. Each launcher call initializes itself and stops on failure. Follow that subsection's example for reading multiple email threads. Single command:
 
 ```powershell
 & "$env:PPLX_SKILLS_DIR/productivity/chief-of-staff/scripts/run-actions.ps1" -WorkspaceRoot 'WORKSPACE_ROOT' gmail thread THREAD_ID
@@ -73,4 +74,4 @@ Formatting example. Replace the target and include only requested styles. Quoted
 '@ | & "$env:PPLX_SKILLS_DIR/productivity/chief-of-staff/scripts/run-actions.ps1" -WorkspaceRoot 'WORKSPACE_ROOT' docs format DOCUMENT_ID --find 'Section title' --style-file - --confirm
 ```
 
-Read the result before choosing follow-up commands. Do not rerun failed batches automatically: earlier commands may have succeeded.
+Read the result before choosing follow-up commands. Do not rerun failed batches or `gmail threads` automatically: earlier reads may have succeeded. Use returned results and address only the failed or unread items.
