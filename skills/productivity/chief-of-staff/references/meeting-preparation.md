@@ -1,6 +1,6 @@
 # Meeting Preparation
 
-Prepare a read-only, meeting-specific briefing. Do not run Start of Day or inspect trackers. List applying needed file edits as preparation tasks. Do not assume suggested edits have been completed. Apply edits or save drafts only when the user explicitly requests or approves those actions. A request for meeting preparation does not accept an earlier offer to edit files.
+Prepare a read-only, meeting-specific briefing. Do not run Start of Day or read tracker contents. Locate a spreadsheet tracker by filename only, as described below. List applying needed file edits as preparation tasks. Do not assume suggested edits have been completed. Apply edits or save drafts only when the user explicitly requests or approves those actions. A request for meeting preparation does not accept an earlier offer to edit files.
 
 ## 1. Gather evidence
 
@@ -8,7 +8,8 @@ Use [Command reference](command-reference.md) for `run-actions.sh` commands and 
 
 1. Use existing context first, including the daily brief’s content. A source link is not a reason to read its contents.
 2. If information needed for the meeting brief is missing, gather only relevant emails first. Batch necessary short thread reads; keep potentially large outputs separate.
-3. If context and emails support the “Context,” “What needs to get done before the meeting,” and “Goals for the meeting” sections, stop gathering evidence and write the brief. Otherwise, read other files only if information needed to complete those sections is missing.
+3. Look for a spreadsheet tracker for the meeting's work or initiative. Reuse a known spreadsheet link when its filename clearly matches. Otherwise, make at most one targeted Drive search for spreadsheets using the work or initiative's name. Judge relevance only by filename; do not read file contents or investigate further. If no filename clearly matches, omit the “Status of Workstreams:” line.
+4. If context and emails support the “Context,” “What needs to get done before the meeting,” and “Goals for the meeting” sections, stop gathering evidence and write the brief. Otherwise, read other files only if information needed to complete those sections is missing.
 
 **Evidence rules:**
 
@@ -33,6 +34,8 @@ Assume preparation starts now. Suggest work times or meeting changes only when r
 **Purpose:** [State only why the meeting is happening. Do not include scheduling details or preparation tasks. Put preparation tasks only under “What needs to get done before the meeting”, and desired outcomes under “Goals for the meeting”.]
 
 **People:** [Other participants and roles, excluding the user.]
+
+**Status of Workstreams:** [Spreadsheet filename](SPREADSHEET_URL)
 
 > [!IMPORTANT]
 >

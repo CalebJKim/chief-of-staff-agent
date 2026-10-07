@@ -235,11 +235,21 @@ Preserve stated dates/times. Otherwise use “[Date], time unspecified” or “
 
 #### What I can take care of for you
 
-Number and source-link the agent offers from step 2. For email tasks, offer to save a draft for review. End the response after the brief. Do not add a “Next steps” section, follow-up questions, additional offers, priority summaries, or closing remarks.
+Number and source-link the agent offers from step 2. For email tasks, offer to save a draft for review.
+
+#### Next Steps:
+
+End with one short question offering to help with the user's most important work today—the item highlighted in the opening callout under “What You Need to Know.” Offer help with the overall task rather than choosing a specific subtask.
+
+Example: “Can I help you prepare for the [meeting/deadline here]?”
+
+Replace “[meeting/deadline here]” with the specific meeting or deadline named in the callout. Never include the literal placeholder in the response.
+
+If there is no callout, use the highest-priority item in “What you need to get done today.” If neither contains actionable work, omit this section. Do not execute the work or add further closing remarks.
 
 ### 5. Check once and respond
 
-Compare all three sections once. Remove meeting attendance and presenting from both action sections. Remove pending or resulting work from news, retaining important deadlines and distinct updates. Remove duplicate actions or subtasks within each action section. Check “What I can take care of for you” first. Remove those actions from the brief’s “What you need to get done today” table, including within row titles, explanations, and work-time notes. Keep remaining work requiring substantial user involvement and drop rows with none. Replace placeholders. Check facts, source links, and formatting against the JSON. Fix errors and respond without polishing or redrafting for length.
+Compare all sections once. Check that “Next Steps:” offers help with the opening callout’s priority when actionable. Remove meeting attendance and presenting from both action sections. Remove pending or resulting work from news, retaining important deadlines and distinct updates. Remove duplicate actions or subtasks within each action section. Check “What I can take care of for you” first. Remove those actions from the brief’s “What you need to get done today” table, including within row titles, explanations, and work-time notes. Keep remaining work requiring substantial user involvement and drop rows with none. Replace placeholders. Check facts, source links, and formatting against the JSON. Fix errors and respond without polishing or redrafting for length.
 
 ## Update Conventions
 
