@@ -8,7 +8,7 @@ When scheduling this task, instruct each run to load this reference and follow i
 
 Use `CoS_SecondBrain` directly inside the selected workspace. If missing or inaccessible, stop and report the failed path and operation. Do not search other folders, recreate the vault, change permissions, or attempt workarounds.
 
-Use the **How to run the scripts** subsection of the main skill to supply the selected workspace. Run the Start of Day evidence helper once in Second Brain update mode. This command initializes the runtime and collects evidence in the same shell call:
+Use the “How to run the scripts” subsection of the main skill to supply the selected workspace. Run the Start of Day evidence helper once in Second Brain update mode. This command initializes the runtime and collects evidence in the same shell call:
 
 ```powershell
 & (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\daily_brief.ps1') -WorkspaceRoot 'WORKSPACE_ROOT' -Mode second-brain-update

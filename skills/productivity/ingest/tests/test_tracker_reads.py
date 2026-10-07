@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 
-script_dir = Path(__file__).resolve().parents[1] / "scripts"
+script_dir = Path(__file__).resolve().parents[2] / "chief-of-staff" / "scripts"
 sys.path.insert(0, str(script_dir))
 spec = importlib.util.spec_from_file_location("tracker_read_actions", script_dir / "actions.py")
 actions = importlib.util.module_from_spec(spec)

@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 
-scripts = Path(__file__).resolve().parents[1] / "scripts"
+scripts = Path(__file__).resolve().parents[2] / "chief-of-staff" / "scripts"
 spec = importlib.util.spec_from_file_location("thread_actions", scripts / "actions.py")
 actions = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(actions)

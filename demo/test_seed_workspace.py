@@ -218,6 +218,7 @@ class WorkspaceSeedTests(unittest.TestCase):
         exec_reviews = [item for item in specs if item[3].startswith("NeoAgent V2 Exec Review")]
         self.assertEqual(1, len(exec_reviews))
         self.assertEqual(monday + timedelta(days=3), exec_reviews[0][0])
+        self.assertEqual(("19:00", "20:00"), exec_reviews[0][1:3])
         self.assertIn(seed.EXEC_REVIEW_ROLES, exec_reviews[0][4])
         self.assertIn("You will present", seed.EXEC_REVIEW_ROLES)
         self.assertIn("Planned attendees:", seed.EXEC_REVIEW_ROLES)
@@ -250,7 +251,7 @@ class WorkspaceSeedTests(unittest.TestCase):
         self.assertEqual(total, len(batched.call_args.args[1]))
         self.assertEqual(
             [
-                "URGENT: NeoAgent V2 Exec Review moved to 5 PM today",
+                "URGENT: NeoAgent V2 Exec Review moved to 7 PM today",
                 "APPROVED: NeoAgent V2 performance results for slide 4",
                 "Exec Review deck pass: cut slide 6; protect slide 10",
                 "Legal scope: NeoAgent V2 comparison cleared for leadership review",

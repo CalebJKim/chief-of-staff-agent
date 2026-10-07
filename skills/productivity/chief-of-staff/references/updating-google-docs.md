@@ -1,6 +1,6 @@
 # Updating Google Docs
 
-Use the main skill's **How to run the scripts** subsection and [Command reference](command-reference.md).
+Use the main skill's “How to run the scripts” subsection and [Command reference](command-reference.md).
 
 ## 1. Gather context
 

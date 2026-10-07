@@ -9,7 +9,7 @@ import sys
 import unittest
 from unittest.mock import Mock, patch
 
-ROOT = Path(__file__).resolve().parents[1] / "scripts"
+ROOT = Path(__file__).resolve().parents[2] / "chief-of-staff" / "scripts"
 sys.path.insert(0, str(ROOT))
 import workspace_formatting as f
 

@@ -27,7 +27,13 @@ def adapt(text: str, name: str) -> str:
     text = re.sub(r'\A---\n.*?\n---\n',
                   f"---\nname: {name}\n{description_line}\n---\n<!-- Original authors: NVIDIA, Hermes Agent. License: MIT. -->\n",
                   text, count=1, flags=re.S)
-    return adapt_body(text)
+    text = adapt_body(text)
+    if name == 'chief-of-staff':
+        text = re.sub(r'^\| `(ingest|brief)\.py` \|.*\n', '', text, flags=re.M)
+        text = re.sub(r'^\| `actions\.py` \|([^|]*)\|.*$',
+                      r'| `run-actions.ps1` |\1| Initializes and runs bundled `actions.py` with `SERVICE COMMAND [arguments]`. Before use, read [Command reference](references/command-reference.md) unless already in context. |',
+                      text, flags=re.M)
+    return text
 
 
 def adapt_body(text: str) -> str:
@@ -130,6 +136,21 @@ def adapt_script(text: str) -> str:
     return result
 
 
+def consolidate_helpers(files: dict[str, bytes]) -> dict[str, bytes]:
+    """Normalize older Git refs to the current self-contained source layout."""
+    files = dict(files)
+    old = 'skills/productivity/ingest/scripts/'
+    new = 'skills/productivity/chief-of-staff/scripts/'
+    for helper in ('actions.py', 'ingest.py', 'verify.py', 'workspace_formatting.py'):
+        if old + helper in files:
+            files.setdefault(new + helper, files.pop(old + helper))
+    for path, data in files.items():
+        if path.startswith('skills/productivity/ingest/tests/') and path.endswith('.py'):
+            files[path] = data.replace(b'Path(__file__).resolve().parents[1]',
+                                      b'Path(__file__).resolve().parents[2] / "chief-of-staff"')
+    return files
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repository', type=Path, required=True)
@@ -143,11 +164,13 @@ def main() -> None:
     git = lambda *a: subprocess.check_output(['git', '-C', str(args.repository), *a])
     commit = git('rev-parse', args.ref + '^{commit}').decode().strip()
     paths = git('ls-tree', '-r', '--name-only', commit, 'skills/productivity').decode().splitlines()
-    raw = {p: git('show', f'{commit}:{p}') for p in paths}
+    raw = consolidate_helpers({p: git('show', f'{commit}:{p}') for p in paths})
+    paths = list(raw)
     desired = dict(raw)
     for name in ('chief-of-staff', 'ingest'):
         p = f'skills/productivity/{name}/SKILL.md'
-        desired[p] = adapt(raw[p].decode('utf-8'), name).encode('utf-8')
+        if p in raw:
+            desired[p] = adapt(raw[p].decode('utf-8'), name).encode('utf-8')
     for p in paths:
         if '/references/' in p and p.endswith('.md'):
             desired[p] = adapt_body(raw[p].decode('utf-8')).encode('utf-8')
@@ -203,8 +226,7 @@ def main() -> None:
         installer = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(installer)
         installer.install(source, args.skills_dir)
-        for name in ('chief-of-staff', 'ingest'):
-            installer.copy_code(source / 'skills/productivity' / name, source / '.pplx-runtime/skills/productivity' / name)
+        installer.install_code(source, source / '.pplx-runtime/skills')
         if not all(digest(Path(p)) == h for p, h in protected.items()):
             raise RuntimeError('Installed runtime, notes, or state changed during refresh')
         receipt['runtime_notes_state_preserved'] = True

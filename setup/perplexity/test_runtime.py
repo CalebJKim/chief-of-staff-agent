@@ -33,8 +33,6 @@ class RuntimeTests(unittest.TestCase):
         self.chief = self.root / 'skill'
         shutil.copytree(ROOT / 'skills/productivity/chief-of-staff/scripts', self.chief / 'scripts',
                         ignore=shutil.ignore_patterns('__pycache__'))
-        for name in ('ingest.py', 'actions.py', 'verify.py'):
-            shutil.copy2(ROOT / 'skills/productivity/ingest/scripts' / name, self.chief / 'scripts' / name)
         (self.chief / 'runtime/state').mkdir(parents=True)
         (self.chief / 'tests/fixtures').mkdir(parents=True)
         shutil.copy2(ROOT / 'skills/productivity/chief-of-staff/tests/fixtures/workspace.json',
@@ -70,6 +68,35 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(Path(info['python']), MANAGED)
         self.assertEqual(info['source'], 'perplexity')
         self.assertEqual(Path(info['state']), self.workspace / '.chief-of-staff-state')
+
+    def test_second_brain_launcher_search_and_read_in_fresh_shells(self):
+        note = self.vault / 'Café project.md'
+        content = '# Café project\nNeoAgent launch decisions and owners.\n'
+        note.write_text(content, encoding='utf-8')
+        launcher = '& ' + quoted(self.chief / 'scripts/run-second-brain.ps1')
+        setup = launcher + ' -WorkspaceRoot ' + quoted(self.workspace)
+        search = self.ps(setup + " search 'NeoAgent launch' --max 1")
+        self.assertEqual(search.returncode, 0, search.stderr)
+        self.assertEqual([n['note'] for n in json.loads(search.stdout)['notes']], [note.name])
+        read = self.ps(setup + ' read ' + quoted(note.name) + ' --max-chars 25')
+        self.assertEqual(read.returncode, 0, read.stderr)
+        result = json.loads(read.stdout)
+        self.assertEqual(result['text'], content.strip()[:25])
+        self.assertTrue(result['truncated'])
+        self.assertEqual(note.read_text(encoding='utf-8'), content)
+
+    def test_second_brain_launcher_stops_on_initialization_error(self):
+        result = self.ps('& ' + quoted(self.chief / 'scripts/run-second-brain.ps1') +
+                         ' -WorkspaceRoot ' + quoted(self.root / 'missing') + " read 'index.md'")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stdout.strip(), '')
+        self.assertFalse((self.root / 'missing').exists())
+
+    def test_second_brain_launcher_propagates_helper_errors(self):
+        result = self.ps('& ' + quoted(self.chief / 'scripts/run-second-brain.ps1') +
+                         ' -WorkspaceRoot ' + quoted(self.workspace) + " read '../outside.md'")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('inside the configured Second Brain', json.loads(result.stdout)['error'])
 
     def test_extended_workspace_path_initializes_and_update_launcher_runs_once(self):
         extended = '\\\\?\\' + str(self.workspace)
@@ -208,7 +235,7 @@ class RuntimeTests(unittest.TestCase):
             (run / 'packet.json').write_text(stale, encoding='utf-8')
 
         removed = evidence_cache.clear_evidence_cache(self.root)
-        self.assertEqual(removed, {'run_folders_removed': 1, 'files_removed': 3})
+        self.assertEqual(removed, {'folders_removed': 1, 'files_removed': 3})
         for _ in range(2):
             result = self.initialize()
             self.assertEqual(result.returncode, 0, result.stderr)

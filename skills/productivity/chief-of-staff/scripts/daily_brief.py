@@ -29,10 +29,7 @@ def main() -> int:
     parser.add_argument("--fixture", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
     scripts = Path(__file__).resolve().parent
-    # Perplexity bundles ingest here. Hermes keeps it in the sibling skill.
     ingest = scripts / "ingest.py"
-    if not ingest.is_file():
-        ingest = scripts.parents[1] / "ingest/scripts/ingest.py"
     stage = "prepare"
     try:
         state = hermes_home() / "chief-of-staff"

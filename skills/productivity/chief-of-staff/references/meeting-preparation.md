@@ -6,9 +6,9 @@ Prepare a read-only, meeting-specific briefing. Do not run Start of Day or inspe
 
 Use [Command reference](command-reference.md) for `actions.py` commands and arguments.
 
-1. Reuse relevant evidence in context, including current full email threads.
-2. If more evidence is needed, find the latest relevant feedback and organizer or decision-maker requests in Gmail. Batch necessary short thread reads; keep potentially large outputs separate. Wait for email results before choosing supporting files.
-3. Read a supporting file only for a specific missing fact about the meeting’s purpose, participants, user’s role, incomplete preparation tasks, or goals. Once the briefing is supported, stop reading and write it.
+1. Use existing context first, including the daily brief’s content. A source link is not a reason to read its contents.
+2. If information needed for the meeting brief is missing, gather only relevant emails first. Batch necessary short thread reads; keep potentially large outputs separate.
+3. If context and emails support the “Context,” “What needs to get done before the meeting,” and “Goals for the meeting” sections, stop gathering evidence and write the brief. Otherwise, read other files only if information needed to complete those sections is missing.
 
 **Evidence rules:**
 
@@ -19,7 +19,7 @@ Use [Command reference](command-reference.md) for `actions.py` commands and argu
 
 ## 2. Write the briefing
 
-Aim for 200–300 words. Fill this template in your reply with evidence-backed content. Preserve headings, labels, list styles, and order. Add list entries as needed. Omit unsupported fields, meeting time, and an unnecessary **Next step**. Render Markdown without code fences. Add no sections, tables, timelines, or outside commentary.
+Aim for 200–300 words. Fill this template in your reply with evidence-backed content. Preserve headings, labels, list styles, and order. Add list entries as needed. Omit unsupported fields, meeting time, and an unnecessary “Next steps”. Render Markdown without code fences. Add no sections, tables, timelines, or outside commentary.
 
 Assume preparation starts now. Suggest work times or meeting changes only when requested.
 
@@ -30,7 +30,7 @@ Assume preparation starts now. Suggest work times or meeting changes only when r
 ```markdown
 ### Context
 
-**Purpose:** [State only why the meeting is happening. Do not include scheduling details or preparation tasks. Put preparation tasks only under **What needs to get done before the meeting**, and desired outcomes under **Goals**.]
+**Purpose:** [State only why the meeting is happening. Do not include scheduling details or preparation tasks. Put preparation tasks only under “What needs to get done before the meeting”, and desired outcomes under “Goals for the meeting”.]
 
 **People:** [Other participants and roles, excluding the user.]
 
@@ -44,7 +44,7 @@ Assume preparation starts now. Suggest work times or meeting changes only when r
 
 - **[Outcome still to achieve](SOURCE_URL)** — [What must be decided or accomplished.]
 
-**Next step:** [Relevant offer or question, if needed.]
+**Next steps:** [Relevant offer or question, if needed.]
 ```
 
 ## 3. Check and respond

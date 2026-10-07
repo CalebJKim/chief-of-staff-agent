@@ -35,7 +35,7 @@ If no changes are supported, report that without modifying the tracker.
 - Use `--include-details` for supported `latest`, `next`, `due`, `blocker`, and `evidence` changes. When explicitly asked for status-only changes, use `--status-only` with only `lane` and `status`.
 - When changing status with `--include-details`, include any existing `blocker`: preserve or revise its text, or use `""` only when evidence confirms resolution.
 - Omit unchanged or unsupported optional fields. Preserve formulas, source metric names, units, and approval scope.
-- Batch changes in one `sheets update-lanes` call with the verified spreadsheet ID, actual tab name via `--sheet`, and `--confirm`. Use `--updates-file -` with the quoted input format in the [Supporting notes](command-reference.md#supporting-notes) section of the command reference.
+- Batch changes in one `sheets update-lanes` call with the verified spreadsheet ID, actual tab name via `--sheet`, and `--confirm`. Use `--updates-file -` with the quoted input format in the “[Supporting notes](command-reference.md#supporting-notes)” section of the command reference.
 - Submit the example directly to the shell tool, without a `powershell -Command` wrapper. Inside the single-quoted here-string, use plain JSON quotes (`"`), not `\"`.
 - Read back once to verify writes and catch missed evidence-backed changes.
 
@@ -43,9 +43,9 @@ If no changes are supported, report that without modifying the tracker.
 
 Report only requested tracker work using collected evidence.
 
-- **Updated:** Table: **Lane | Original status | Updated status | Reason**. One row per changed lane with pre-edit and confirmed read-back statuses and a source-linked reason. Say if nothing changed.
-- **Still needs action:** Missing updates or blockers requiring others’ action. Mark unclear ownership as unconfirmed.
-- **Waiting on you:** Only actions or decisions explicitly assigned to the user. Presenting, attending, or receiving email does not establish ownership.
-- **Next step:** At most one question offering a draft to a verified contact who owes information. No unrelated edits, requests for the user’s decisions from others, or drafts saved without approval.
+- “Updated”: Table: **Lane | Original status | Updated status | Reason**. One row per changed lane with pre-edit and confirmed read-back statuses and a source-linked reason. Say if nothing changed.
+- “Still needs action”: Missing updates or blockers requiring others’ action. Mark unclear ownership as unconfirmed.
+- “Waiting on you”: Only actions or decisions explicitly assigned to the user. Presenting, attending, or receiving email does not establish ownership.
+- “Next step”: At most one question offering a draft to a verified contact who owes information. No unrelated edits, requests for the user’s decisions from others, or drafts saved without approval.
 
-List open items as bullet points, each under either **Still needs action** or **Waiting on you**, never both. Exclude healthy, unblocked lanes from both. Use confirmed statuses, not stale summary counts. Do not suggest maintaining those counts or imply other files were edited.
+List open items as bullet points, each under either “Still needs action” or “Waiting on you”, never both. Exclude healthy, unblocked lanes from both. Use confirmed statuses, not stale summary counts. Do not suggest maintaining those counts or imply other files were edited.

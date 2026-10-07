@@ -77,7 +77,7 @@ Open the returned URL, approve your own account, and copy the full localhost red
 ```powershell
 python setup/google-workspace/setup.py --auth-code "FULL_REDIRECT_URL"
 python setup/google-workspace/setup.py --check-live
-python "$env:HERMES_HOME/skills/productivity/ingest/scripts/verify.py"
+python "$env:HERMES_HOME/skills/productivity/chief-of-staff/scripts/verify.py"
 ```
 
 Credentials remain under your local `HERMES_HOME`. Never commit them.

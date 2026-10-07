@@ -60,7 +60,7 @@ Previews save to a new subfolder under `--output-dir` inside the explicit worksp
 
 ## Examples
 
-Replace `WORKSPACE_ROOT` as described in the main skill's **How to run the scripts** subsection. Each launcher call initializes itself and stops on failure. Follow that subsection's example for reading multiple email threads. Single command:
+Replace `WORKSPACE_ROOT` as described in the main skill's “How to run the scripts” subsection. Each launcher call initializes itself and stops on failure. Follow that subsection's example for reading multiple email threads. Single command:
 
 ```powershell
 & "$env:PPLX_SKILLS_DIR/productivity/chief-of-staff/scripts/run-actions.ps1" -WorkspaceRoot 'WORKSPACE_ROOT' gmail thread THREAD_ID

@@ -7,8 +7,8 @@ A portable Hermes Agent configuration for a lightweight Google Workspace chief o
 ## Included
 
 - `SOUL.md` routes natural-language chief-of-staff requests.
-- `skills/productivity/chief-of-staff/` contains decision policy, packet builder, and tests.
-- `skills/productivity/ingest/` contains bounded ingestion, focused actions, verification, and tests.
+- `skills/productivity/chief-of-staff/` contains decision policy, all executable helpers, and tests.
+- `skills/productivity/ingest/` retains legacy guidance and ingestion/action tests; its scripts now live under chief-of-staff.
 - `setup/google-workspace/` contains the portable OAuth helper.
 - `config.example.yaml` documents the minimal recommended tool surface.
 - [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) contains the presentation script and staged demo flow.
@@ -115,7 +115,7 @@ address bar, then run:
 ```powershell
 & $Python setup/google-workspace/setup.py --auth-code "FULL_REDIRECT_URL"
 & $Python setup/google-workspace/setup.py --check-live
-& $Python skills/productivity/ingest/scripts/verify.py
+& $Python skills/productivity/chief-of-staff/scripts/verify.py
 ```
 
 The resulting google_token.json and google_client_secret.json live under HERMES_HOME and are ignored by git.
@@ -300,7 +300,7 @@ triggering another or resetting the workspace.
 Live smoke test after OAuth:
 
 ```powershell
-& $Python skills/productivity/ingest/scripts/ingest.py
+& $Python skills/productivity/chief-of-staff/scripts/ingest.py
 & $Python skills/productivity/chief-of-staff/scripts/brief.py --max-chars 14000
 ```
 

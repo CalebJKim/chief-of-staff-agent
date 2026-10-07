@@ -2,7 +2,7 @@
 
 Save drafts in Gmail unless the user requests text only. Do not send emails.
 
-Use the main skill’s **How to run the scripts** subsection and the [Command reference](command-reference.md) for command syntax.
+Use the main skill’s “How to run the scripts” subsection and the [Command reference](command-reference.md) for command syntax.
 
 ## 1. Gather context and verify recipients
 

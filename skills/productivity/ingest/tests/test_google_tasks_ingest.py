@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import Mock, call, patch
 
 
-SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
+SCRIPTS = Path(__file__).resolve().parents[2] / "chief-of-staff" / "scripts"
 spec = importlib.util.spec_from_file_location("tasks_ingest", SCRIPTS / "ingest.py")
 ingest = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ingest)

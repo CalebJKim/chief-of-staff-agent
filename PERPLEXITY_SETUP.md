@@ -1,5 +1,21 @@
 # Perplexity demo setup
 
+## Consolidated skill installation
+
+Perplexity exposes only `chief-of-staff` for this demo. Its bundled scripts include
+ingestion and packet generation; the agent follows Start of Day or Updating Second
+Brain guidance to invoke the evidence launcher. Focused tasks use the action launcher.
+All helper source files live in `skills/productivity/chief-of-staff/scripts`,
+matching the installed skill. The legacy ingest folder retains its guidance and tests only.
+
+Installation and refresh retire any existing standalone ingest installation to
+`.pplx-state/retired-skills` outside the installed skills directory. The code-only
+staging bundle follows the same convention. Credentials and demo data are preserved.
+Start a new Perplexity session after deployment so previously loaded ingest guidance
+is not retained in the conversation.
+
+## Previous setup notes
+
 Installed skill source: GitHub branch `editors_day_gtc_demo`, commit `3e161d733dfee1f39c2bbc67b8bfde773341ec42` (Prepare condensed start-of-day skill for demo testing), fetched again after the user's new commit on 2026-09-29. The installed skills use this committed version, with Perplexity frontmatter, PowerShell, self-contained runtime, and callout formatting adaptations. The manager callout uses a standard Markdown blockquote with a bold linked label; the GitHub alert marker is omitted. `setup/perplexity/source-version.json` and the installed `SOURCE_VERSION.json` record the exact deployed commit. The Desktop PPLX checkout's broader demo/setup files retain their earlier base; this update does not reset or reseed Google Workspace. Original repo and Hermes installation are preserved, as are installed notes, credentials, runtime, and state.
 
 The current manual test is the first prompt only. This branch deliberately uses 9:30 AM on the snapshot's local date for demo planning while keeping the actual collection timestamp. Its condensed skill replaces the older detailed multi-task guidance; those removed sections have not been merged back in.

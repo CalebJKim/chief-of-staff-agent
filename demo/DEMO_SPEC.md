@@ -5,7 +5,7 @@ The seeder creates a self-contained realistic Chief of Staff workspace in the Go
 ## What it creates
 
 - **8 imported Gmail messages** marked Inbox, Unread, and Important:
-  - Exec Review moved to 5 PM
+  - Exec Review moved to 7 PM
   - Approved performance metrics
   - Slide 6/7/10 review feedback
   - Leadership-review legal clearance
@@ -15,7 +15,7 @@ The seeder creates a self-contained realistic Chief of Staff workspace in the Go
   - Autonomous Robot Demo complete, engineering walkthrough passed, and ready for marketing shoots
 - **70 low-priority background messages** and **1 contact message** so the inbox is realistic without hiding the important work. Synthetic senders use the visibly fake local-part pattern `name.example@nvidia.com`.
 - **3 task-supporting emails** from Leah Moreno, Tessa Ellis and Evan Mercer, dated the seed/reset morning. They support a financial-analysis project ramp-up email, a GTC 2027 presenter reply awaiting the user's decision, and a request for the user’s proposed meeting-notes assistant design. The new fictional contacts use `example.com` addresses. These replace the old FAQ, pilot-lessons and workshop-budget requests. The 79 core/background/contact emails keep their repeatable, irregular timestamps, which normally run backward from 9:12 AM today into the previous afternoon/evening, in the configured workspace time zone. Before 9:12 AM, reset shifts this schedule so the newest message is one minute before the current minute, avoiding future timestamps while preserving gaps and ordering. Near midnight, some or all important messages may therefore be dated yesterday. Resets at or after 9:12 AM preserve the fixed clock times, with all eight important messages dated today.
-- **89–90 Calendar events** across the workweek. Each day has a distinct, busy schedule with overlaps; the current workday also contains the 5 PM Exec Review.
+- **89–90 Calendar events** across the workweek. Each day has a distinct, busy schedule with overlaps; the current workday also contains the 7–8 PM Exec Review.
 - **3 unfinished Google Tasks in the default list (My Tasks)**, all due on the seed/reset date: draft Leah Moreno’s ramp-up email for the AI for Financial Analysis assistant, respond to the GTC 2027 presenter invitation, and define the Local AI Meeting Notes Assistant’s rough design in the project doc. Notes link to the source email and relevant files. They replace all six former demo tasks. Personal tasks are preserved.
 - **3 additional Google Docs and a four-slide deck**: AI for Financial Analysis Assistant — Project Overview, Progress and Findings, and Next Steps, plus Local AI Meeting Notes Assistant — Design Outline. The latter contains the project’s purpose and four unfilled TODOs for the user experience diagram, local processing approach, review flow, and first-prototype scope and tradeoffs. Evan’s email follows up on the user’s proposed design and asks for a rough outline today. Tessa's email references the conversation seven days before seeding without deciding the user's availability. Resources are imported from editable Office templates and restored at the same Drive IDs on reset.
 - **1 Google Sheet**: `NeoAgent V2 Campaign Tracker`
@@ -113,7 +113,7 @@ If OAuth scopes or organization policy prevent the script from creating a resour
 1. **Sheet** — Create `NeoAgent V2 Campaign Tracker`, tab `Campaign Lanes`, with the A:J columns listed above. Add at least these lanes: Product performance claims (Awaiting update), Exec Review deck (Awaiting update), Agent Messaging (Awaiting update), Marketing shoot (Blocked), Partner enablement (On track), Social rollout (Awaiting update), Retail demo readiness (Blocked), Legal intake (Awaiting update).
 2. **Slides** — Create a 10-slide `NeoAgent V2 Exec Review`. Put `Performance to go here - Mike Chen to provide` on slide 4, a proposed retail customer-use example on slide 6 (local laptop comparison, an associate-reviewed follow-up draft, and customer details staying on the device), a pending Customer Example section on slide 7, and two decision asks on slide 10. Aisha's feedback asks to summarize that example in slide 7 before removing slide 6. The example is not customer validation or approval of the demo slate or owners.
 3. **Doc** — Create `NeoAgent V2 Campaign Plan` with an agent-first narrative and open work for claims, retail demo ownership, shoot date, and Exec Review preparation.
-4. **Calendar** — Add a varied schedule across the workweek rather than repeating the same meetings every day. On the current workday, include the NeoAgent V2 Exec Review at 5 PM and an overlapping decision-triage event.
+4. **Calendar** — Add a varied schedule across the workweek rather than repeating the same meetings every day. On the current workday, include the NeoAgent V2 Exec Review from 7–8 PM.
 5. **Gmail** — Send or import messages to yourself containing the six topics above. Mark them unread/important. Include the generated Sheet/Slides/Doc links where relevant. Use clearly synthetic addresses such as `elena.example@nvidia.com`.
 
 ## Fictional NeoAgent benchmark package

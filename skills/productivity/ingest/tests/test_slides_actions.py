@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 
 
 spec = importlib.util.spec_from_file_location(
-    "slides_actions", Path(__file__).resolve().parents[1] / "scripts" / "actions.py"
+    "slides_actions", Path(__file__).resolve().parents[2] / "chief-of-staff" / "scripts" / "actions.py"
 )
 actions = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(actions)
