@@ -10,9 +10,9 @@ $ErrorActionPreference = 'Stop'
 if ($env:COS_STATE_DIR -ne $CosHome -or -not (Test-Path -LiteralPath $CosHome -PathType Container)) {
     throw 'Chief of Staff workspace initialization failed. The brief was not started.'
 }
-$BriefArguments = @('daily-brief', '--mode', $Mode)
+$BriefArguments = @('-X', 'utf8', '-B', (Join-Path $CosRoot 'scripts\daily_brief.py'), '--mode', $Mode)
 if ($Fixture) {
     $BriefArguments += @('--fixture', (Join-Path $CosRoot 'tests\fixtures\workspace.json'))
 }
-& $CosExecutable @BriefArguments
+& $Python @BriefArguments
 if ($LASTEXITCODE -ne 0) { throw 'Chief of Staff command failed; inspect the error above.' }

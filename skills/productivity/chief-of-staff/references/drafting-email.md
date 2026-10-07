@@ -26,6 +26,6 @@ Use the main skill’s “How to run the scripts” subsection and the [Command 
 
 ## 4. Confirm the result
 
-Account for every requested draft using the saved result’s recipient and subject. Report unsaved items honestly. Do not expose draft IDs.
+Use the successful save receipt to confirm each draft’s recipient and subject. Do not list or reread drafts after saving to verify success. Report failed or unconfirmed saves honestly. Do not expose draft IDs.
 
 When asked to show drafts for review, display each recipient, subject, and full body.

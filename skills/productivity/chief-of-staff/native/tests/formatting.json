@@ -1,0 +1,2373 @@
+[
+  {
+    "kind": "docs",
+    "data": {
+      "body": {
+        "content": [
+          {
+            "startIndex": 1,
+            "endIndex": 10,
+            "paragraph": {
+              "elements": [
+                {
+                  "startIndex": 1,
+                  "endIndex": 10,
+                  "textRun": {
+                    "content": "😀 Target",
+                    "textStyle": {}
+                  }
+                }
+              ],
+              "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT"
+              }
+            }
+          }
+        ]
+      },
+      "namedStyles": {
+        "styles": [
+          {
+            "namedStyleType": "NORMAL_TEXT",
+            "textStyle": {
+              "foregroundColor": {
+                "color": {
+                  "rgbColor": {
+                    "red": 0.2
+                  }
+                }
+              },
+              "underline": true
+            }
+          }
+        ]
+      }
+    },
+    "records": [
+      {
+        "tab_id": null,
+        "start": 1,
+        "end": 10,
+        "runs": [
+          {
+            "start": 1,
+            "end": 10,
+            "text": "😀 Target",
+            "style": {
+              "foregroundColor": {
+                "color": {
+                  "rgbColor": {
+                    "red": 0.2
+                  }
+                }
+              },
+              "underline": true
+            },
+            "explicit_style": {}
+          }
+        ],
+        "paragraph_style": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "bullet": null,
+        "list_kind": "none"
+      }
+    ],
+    "style": {
+      "bold": true,
+      "font_size": 18,
+      "alignment": "CENTER"
+    },
+    "requests": [
+      {
+        "updateParagraphStyle": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10
+          },
+          "paragraphStyle": {
+            "alignment": "CENTER"
+          },
+          "fields": "alignment"
+        }
+      },
+      {
+        "updateTextStyle": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10
+          },
+          "textStyle": {
+            "bold": true,
+            "fontSize": {
+              "magnitude": 18,
+              "unit": "PT"
+            }
+          },
+          "fields": "bold,fontSize"
+        }
+      }
+    ]
+  },
+  {
+    "kind": "docs",
+    "data": {
+      "body": {
+        "content": [
+          {
+            "startIndex": 1,
+            "endIndex": 10,
+            "paragraph": {
+              "elements": [
+                {
+                  "startIndex": 1,
+                  "endIndex": 10,
+                  "textRun": {
+                    "content": "😀 Target",
+                    "textStyle": {}
+                  }
+                }
+              ],
+              "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT"
+              }
+            }
+          }
+        ]
+      },
+      "namedStyles": {
+        "styles": [
+          {
+            "namedStyleType": "NORMAL_TEXT",
+            "textStyle": {
+              "foregroundColor": {
+                "color": {
+                  "rgbColor": {
+                    "red": 0.2
+                  }
+                }
+              },
+              "underline": true
+            }
+          }
+        ]
+      }
+    },
+    "records": [
+      {
+        "tab_id": null,
+        "start": 1,
+        "end": 10,
+        "runs": [
+          {
+            "start": 1,
+            "end": 10,
+            "text": "😀 Target",
+            "style": {
+              "foregroundColor": {
+                "color": {
+                  "rgbColor": {
+                    "red": 0.2
+                  }
+                }
+              },
+              "underline": true
+            },
+            "explicit_style": {}
+          }
+        ],
+        "paragraph_style": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "bullet": null,
+        "list_kind": "none"
+      }
+    ],
+    "style": {
+      "list": "numbered",
+      "space_before": 10
+    },
+    "requests": [
+      {
+        "createParagraphBullets": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10
+          },
+          "bulletPreset": "NUMBERED_DECIMAL_ALPHA_ROMAN"
+        }
+      },
+      {
+        "updateParagraphStyle": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10
+          },
+          "paragraphStyle": {
+            "spaceAbove": {
+              "magnitude": 10,
+              "unit": "PT"
+            }
+          },
+          "fields": "spaceAbove"
+        }
+      }
+    ]
+  },
+  {
+    "kind": "docs",
+    "data": {
+      "body": {
+        "content": [
+          {
+            "startIndex": 1,
+            "endIndex": 10,
+            "paragraph": {
+              "elements": [
+                {
+                  "startIndex": 1,
+                  "endIndex": 10,
+                  "textRun": {
+                    "content": "😀 Target",
+                    "textStyle": {}
+                  }
+                }
+              ],
+              "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT"
+              }
+            }
+          }
+        ]
+      },
+      "namedStyles": {
+        "styles": [
+          {
+            "namedStyleType": "NORMAL_TEXT",
+            "textStyle": {
+              "foregroundColor": {
+                "color": {
+                  "rgbColor": {
+                    "red": 0.2
+                  }
+                }
+              },
+              "underline": true
+            }
+          }
+        ]
+      }
+    },
+    "records": [
+      {
+        "tab_id": null,
+        "start": 1,
+        "end": 10,
+        "runs": [
+          {
+            "start": 1,
+            "end": 10,
+            "text": "😀 Target",
+            "style": {
+              "foregroundColor": {
+                "color": {
+                  "rgbColor": {
+                    "red": 0.2
+                  }
+                }
+              },
+              "underline": true
+            },
+            "explicit_style": {}
+          }
+        ],
+        "paragraph_style": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "bullet": null,
+        "list_kind": "none"
+      }
+    ],
+    "style": {
+      "link": "https://example.com"
+    },
+    "requests": [
+      {
+        "updateTextStyle": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10
+          },
+          "textStyle": {
+            "link": {
+              "url": "https://example.com"
+            }
+          },
+          "fields": "link"
+        }
+      },
+      {
+        "updateTextStyle": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10
+          },
+          "textStyle": {
+            "foregroundColor": {
+              "color": {
+                "rgbColor": {
+                  "red": 0.2
+                }
+              }
+            },
+            "underline": true
+          },
+          "fields": "foregroundColor,underline"
+        }
+      }
+    ]
+  },
+  {
+    "kind": "docs",
+    "data": {
+      "body": {
+        "content": [
+          {
+            "startIndex": 1,
+            "endIndex": 10,
+            "paragraph": {
+              "elements": [
+                {
+                  "startIndex": 1,
+                  "endIndex": 10,
+                  "textRun": {
+                    "content": "😀 Target",
+                    "textStyle": {}
+                  }
+                }
+              ],
+              "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT"
+              }
+            }
+          }
+        ]
+      },
+      "namedStyles": {
+        "styles": [
+          {
+            "namedStyleType": "NORMAL_TEXT",
+            "textStyle": {
+              "foregroundColor": {
+                "color": {
+                  "rgbColor": {
+                    "red": 0.2
+                  }
+                }
+              },
+              "underline": true
+            }
+          }
+        ]
+      }
+    },
+    "records": [
+      {
+        "tab_id": null,
+        "start": 1,
+        "end": 10,
+        "runs": [
+          {
+            "start": 1,
+            "end": 10,
+            "text": "😀 Target",
+            "style": {
+              "foregroundColor": {
+                "color": {
+                  "rgbColor": {
+                    "red": 0.2
+                  }
+                }
+              },
+              "underline": true
+            },
+            "explicit_style": {}
+          }
+        ],
+        "paragraph_style": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "bullet": null,
+        "list_kind": "none"
+      }
+    ],
+    "style": {
+      "link": null,
+      "color": "#00FF80",
+      "underline": false
+    },
+    "requests": [
+      {
+        "updateTextStyle": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10
+          },
+          "textStyle": {
+            "foregroundColor": {
+              "color": {
+                "rgbColor": {
+                  "red": 0.0,
+                  "green": 1.0,
+                  "blue": 0.5019607843137255
+                }
+              }
+            },
+            "underline": false
+          },
+          "fields": "foregroundColor,link,underline"
+        }
+      }
+    ]
+  },
+  {
+    "kind": "docs",
+    "data": {
+      "tabs": [
+        {
+          "tabProperties": {
+            "tabId": "tab1"
+          },
+          "documentTab": {
+            "body": {
+              "content": [
+                {
+                  "startIndex": 1,
+                  "endIndex": 10,
+                  "paragraph": {
+                    "elements": [
+                      {
+                        "startIndex": 1,
+                        "endIndex": 10,
+                        "textRun": {
+                          "content": "😀 Target",
+                          "textStyle": {}
+                        }
+                      }
+                    ],
+                    "paragraphStyle": {
+                      "namedStyleType": "NORMAL_TEXT"
+                    }
+                  }
+                }
+              ]
+            },
+            "namedStyles": {
+              "styles": [
+                {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "textStyle": {
+                    "foregroundColor": {
+                      "color": {
+                        "rgbColor": {
+                          "red": 0.2
+                        }
+                      }
+                    },
+                    "underline": true
+                  }
+                }
+              ]
+            }
+          },
+          "childTabs": [
+            {
+              "tabProperties": {
+                "tabId": "child"
+              },
+              "documentTab": {
+                "body": {
+                  "content": [
+                    {
+                      "table": {
+                        "tableRows": [
+                          {
+                            "tableCells": [
+                              {
+                                "content": [
+                                  {
+                                    "startIndex": 1,
+                                    "endIndex": 10,
+                                    "paragraph": {
+                                      "elements": [
+                                        {
+                                          "startIndex": 1,
+                                          "endIndex": 10,
+                                          "textRun": {
+                                            "content": "😀 Target",
+                                            "textStyle": {}
+                                          }
+                                        }
+                                      ],
+                                      "paragraphStyle": {
+                                        "namedStyleType": "NORMAL_TEXT"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "namedStyles": {
+                  "styles": [
+                    {
+                      "namedStyleType": "NORMAL_TEXT",
+                      "textStyle": {
+                        "foregroundColor": {
+                          "color": {
+                            "rgbColor": {
+                              "red": 0.2
+                            }
+                          }
+                        },
+                        "underline": true
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "records": [
+      {
+        "tab_id": "tab1",
+        "start": 1,
+        "end": 10,
+        "runs": [
+          {
+            "start": 1,
+            "end": 10,
+            "text": "😀 Target",
+            "style": {
+              "foregroundColor": {
+                "color": {
+                  "rgbColor": {
+                    "red": 0.2
+                  }
+                }
+              },
+              "underline": true
+            },
+            "explicit_style": {}
+          }
+        ],
+        "paragraph_style": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "bullet": null,
+        "list_kind": "none"
+      },
+      {
+        "tab_id": "child",
+        "start": 1,
+        "end": 10,
+        "runs": [
+          {
+            "start": 1,
+            "end": 10,
+            "text": "😀 Target",
+            "style": {
+              "foregroundColor": {
+                "color": {
+                  "rgbColor": {
+                    "red": 0.2
+                  }
+                }
+              },
+              "underline": true
+            },
+            "explicit_style": {}
+          }
+        ],
+        "paragraph_style": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "bullet": null,
+        "list_kind": "none"
+      }
+    ],
+    "style": {
+      "bold": true,
+      "font_size": 18,
+      "alignment": "CENTER"
+    },
+    "requests": [
+      {
+        "updateParagraphStyle": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10,
+            "tabId": "tab1"
+          },
+          "paragraphStyle": {
+            "alignment": "CENTER"
+          },
+          "fields": "alignment"
+        }
+      },
+      {
+        "updateTextStyle": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10,
+            "tabId": "tab1"
+          },
+          "textStyle": {
+            "bold": true,
+            "fontSize": {
+              "magnitude": 18,
+              "unit": "PT"
+            }
+          },
+          "fields": "bold,fontSize"
+        }
+      },
+      {
+        "updateParagraphStyle": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10,
+            "tabId": "child"
+          },
+          "paragraphStyle": {
+            "alignment": "CENTER"
+          },
+          "fields": "alignment"
+        }
+      },
+      {
+        "updateTextStyle": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10,
+            "tabId": "child"
+          },
+          "textStyle": {
+            "bold": true,
+            "fontSize": {
+              "magnitude": 18,
+              "unit": "PT"
+            }
+          },
+          "fields": "bold,fontSize"
+        }
+      }
+    ]
+  },
+  {
+    "kind": "docs",
+    "data": {
+      "tabs": [
+        {
+          "tabProperties": {
+            "tabId": "tab1"
+          },
+          "documentTab": {
+            "body": {
+              "content": [
+                {
+                  "startIndex": 1,
+                  "endIndex": 10,
+                  "paragraph": {
+                    "elements": [
+                      {
+                        "startIndex": 1,
+                        "endIndex": 10,
+                        "textRun": {
+                          "content": "😀 Target",
+                          "textStyle": {}
+                        }
+                      }
+                    ],
+                    "paragraphStyle": {
+                      "namedStyleType": "NORMAL_TEXT"
+                    }
+                  }
+                }
+              ]
+            },
+            "namedStyles": {
+              "styles": [
+                {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "textStyle": {
+                    "foregroundColor": {
+                      "color": {
+                        "rgbColor": {
+                          "red": 0.2
+                        }
+                      }
+                    },
+                    "underline": true
+                  }
+                }
+              ]
+            }
+          },
+          "childTabs": [
+            {
+              "tabProperties": {
+                "tabId": "child"
+              },
+              "documentTab": {
+                "body": {
+                  "content": [
+                    {
+                      "table": {
+                        "tableRows": [
+                          {
+                            "tableCells": [
+                              {
+                                "content": [
+                                  {
+                                    "startIndex": 1,
+                                    "endIndex": 10,
+                                    "paragraph": {
+                                      "elements": [
+                                        {
+                                          "startIndex": 1,
+                                          "endIndex": 10,
+                                          "textRun": {
+                                            "content": "😀 Target",
+                                            "textStyle": {}
+                                          }
+                                        }
+                                      ],
+                                      "paragraphStyle": {
+                                        "namedStyleType": "NORMAL_TEXT"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "namedStyles": {
+                  "styles": [
+                    {
+                      "namedStyleType": "NORMAL_TEXT",
+                      "textStyle": {
+                        "foregroundColor": {
+                          "color": {
+                            "rgbColor": {
+                              "red": 0.2
+                            }
+                          }
+                        },
+                        "underline": true
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "records": [
+      {
+        "tab_id": "tab1",
+        "start": 1,
+        "end": 10,
+        "runs": [
+          {
+            "start": 1,
+            "end": 10,
+            "text": "😀 Target",
+            "style": {
+              "foregroundColor": {
+                "color": {
+                  "rgbColor": {
+                    "red": 0.2
+                  }
+                }
+              },
+              "underline": true
+            },
+            "explicit_style": {}
+          }
+        ],
+        "paragraph_style": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "bullet": null,
+        "list_kind": "none"
+      },
+      {
+        "tab_id": "child",
+        "start": 1,
+        "end": 10,
+        "runs": [
+          {
+            "start": 1,
+            "end": 10,
+            "text": "😀 Target",
+            "style": {
+              "foregroundColor": {
+                "color": {
+                  "rgbColor": {
+                    "red": 0.2
+                  }
+                }
+              },
+              "underline": true
+            },
+            "explicit_style": {}
+          }
+        ],
+        "paragraph_style": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "bullet": null,
+        "list_kind": "none"
+      }
+    ],
+    "style": {
+      "list": "numbered",
+      "space_before": 10
+    },
+    "requests": [
+      {
+        "createParagraphBullets": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10,
+            "tabId": "tab1"
+          },
+          "bulletPreset": "NUMBERED_DECIMAL_ALPHA_ROMAN"
+        }
+      },
+      {
+        "updateParagraphStyle": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10,
+            "tabId": "tab1"
+          },
+          "paragraphStyle": {
+            "spaceAbove": {
+              "magnitude": 10,
+              "unit": "PT"
+            }
+          },
+          "fields": "spaceAbove"
+        }
+      },
+      {
+        "createParagraphBullets": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10,
+            "tabId": "child"
+          },
+          "bulletPreset": "NUMBERED_DECIMAL_ALPHA_ROMAN"
+        }
+      },
+      {
+        "updateParagraphStyle": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10,
+            "tabId": "child"
+          },
+          "paragraphStyle": {
+            "spaceAbove": {
+              "magnitude": 10,
+              "unit": "PT"
+            }
+          },
+          "fields": "spaceAbove"
+        }
+      }
+    ]
+  },
+  {
+    "kind": "docs",
+    "data": {
+      "tabs": [
+        {
+          "tabProperties": {
+            "tabId": "tab1"
+          },
+          "documentTab": {
+            "body": {
+              "content": [
+                {
+                  "startIndex": 1,
+                  "endIndex": 10,
+                  "paragraph": {
+                    "elements": [
+                      {
+                        "startIndex": 1,
+                        "endIndex": 10,
+                        "textRun": {
+                          "content": "😀 Target",
+                          "textStyle": {}
+                        }
+                      }
+                    ],
+                    "paragraphStyle": {
+                      "namedStyleType": "NORMAL_TEXT"
+                    }
+                  }
+                }
+              ]
+            },
+            "namedStyles": {
+              "styles": [
+                {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "textStyle": {
+                    "foregroundColor": {
+                      "color": {
+                        "rgbColor": {
+                          "red": 0.2
+                        }
+                      }
+                    },
+                    "underline": true
+                  }
+                }
+              ]
+            }
+          },
+          "childTabs": [
+            {
+              "tabProperties": {
+                "tabId": "child"
+              },
+              "documentTab": {
+                "body": {
+                  "content": [
+                    {
+                      "table": {
+                        "tableRows": [
+                          {
+                            "tableCells": [
+                              {
+                                "content": [
+                                  {
+                                    "startIndex": 1,
+                                    "endIndex": 10,
+                                    "paragraph": {
+                                      "elements": [
+                                        {
+                                          "startIndex": 1,
+                                          "endIndex": 10,
+                                          "textRun": {
+                                            "content": "😀 Target",
+                                            "textStyle": {}
+                                          }
+                                        }
+                                      ],
+                                      "paragraphStyle": {
+                                        "namedStyleType": "NORMAL_TEXT"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "namedStyles": {
+                  "styles": [
+                    {
+                      "namedStyleType": "NORMAL_TEXT",
+                      "textStyle": {
+                        "foregroundColor": {
+                          "color": {
+                            "rgbColor": {
+                              "red": 0.2
+                            }
+                          }
+                        },
+                        "underline": true
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "records": [
+      {
+        "tab_id": "tab1",
+        "start": 1,
+        "end": 10,
+        "runs": [
+          {
+            "start": 1,
+            "end": 10,
+            "text": "😀 Target",
+            "style": {
+              "foregroundColor": {
+                "color": {
+                  "rgbColor": {
+                    "red": 0.2
+                  }
+                }
+              },
+              "underline": true
+            },
+            "explicit_style": {}
+          }
+        ],
+        "paragraph_style": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "bullet": null,
+        "list_kind": "none"
+      },
+      {
+        "tab_id": "child",
+        "start": 1,
+        "end": 10,
+        "runs": [
+          {
+            "start": 1,
+            "end": 10,
+            "text": "😀 Target",
+            "style": {
+              "foregroundColor": {
+                "color": {
+                  "rgbColor": {
+                    "red": 0.2
+                  }
+                }
+              },
+              "underline": true
+            },
+            "explicit_style": {}
+          }
+        ],
+        "paragraph_style": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "bullet": null,
+        "list_kind": "none"
+      }
+    ],
+    "style": {
+      "link": "https://example.com"
+    },
+    "requests": [
+      {
+        "updateTextStyle": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10,
+            "tabId": "tab1"
+          },
+          "textStyle": {
+            "link": {
+              "url": "https://example.com"
+            }
+          },
+          "fields": "link"
+        }
+      },
+      {
+        "updateTextStyle": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10,
+            "tabId": "tab1"
+          },
+          "textStyle": {
+            "foregroundColor": {
+              "color": {
+                "rgbColor": {
+                  "red": 0.2
+                }
+              }
+            },
+            "underline": true
+          },
+          "fields": "foregroundColor,underline"
+        }
+      },
+      {
+        "updateTextStyle": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10,
+            "tabId": "child"
+          },
+          "textStyle": {
+            "link": {
+              "url": "https://example.com"
+            }
+          },
+          "fields": "link"
+        }
+      },
+      {
+        "updateTextStyle": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10,
+            "tabId": "child"
+          },
+          "textStyle": {
+            "foregroundColor": {
+              "color": {
+                "rgbColor": {
+                  "red": 0.2
+                }
+              }
+            },
+            "underline": true
+          },
+          "fields": "foregroundColor,underline"
+        }
+      }
+    ]
+  },
+  {
+    "kind": "docs",
+    "data": {
+      "tabs": [
+        {
+          "tabProperties": {
+            "tabId": "tab1"
+          },
+          "documentTab": {
+            "body": {
+              "content": [
+                {
+                  "startIndex": 1,
+                  "endIndex": 10,
+                  "paragraph": {
+                    "elements": [
+                      {
+                        "startIndex": 1,
+                        "endIndex": 10,
+                        "textRun": {
+                          "content": "😀 Target",
+                          "textStyle": {}
+                        }
+                      }
+                    ],
+                    "paragraphStyle": {
+                      "namedStyleType": "NORMAL_TEXT"
+                    }
+                  }
+                }
+              ]
+            },
+            "namedStyles": {
+              "styles": [
+                {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "textStyle": {
+                    "foregroundColor": {
+                      "color": {
+                        "rgbColor": {
+                          "red": 0.2
+                        }
+                      }
+                    },
+                    "underline": true
+                  }
+                }
+              ]
+            }
+          },
+          "childTabs": [
+            {
+              "tabProperties": {
+                "tabId": "child"
+              },
+              "documentTab": {
+                "body": {
+                  "content": [
+                    {
+                      "table": {
+                        "tableRows": [
+                          {
+                            "tableCells": [
+                              {
+                                "content": [
+                                  {
+                                    "startIndex": 1,
+                                    "endIndex": 10,
+                                    "paragraph": {
+                                      "elements": [
+                                        {
+                                          "startIndex": 1,
+                                          "endIndex": 10,
+                                          "textRun": {
+                                            "content": "😀 Target",
+                                            "textStyle": {}
+                                          }
+                                        }
+                                      ],
+                                      "paragraphStyle": {
+                                        "namedStyleType": "NORMAL_TEXT"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "namedStyles": {
+                  "styles": [
+                    {
+                      "namedStyleType": "NORMAL_TEXT",
+                      "textStyle": {
+                        "foregroundColor": {
+                          "color": {
+                            "rgbColor": {
+                              "red": 0.2
+                            }
+                          }
+                        },
+                        "underline": true
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "records": [
+      {
+        "tab_id": "tab1",
+        "start": 1,
+        "end": 10,
+        "runs": [
+          {
+            "start": 1,
+            "end": 10,
+            "text": "😀 Target",
+            "style": {
+              "foregroundColor": {
+                "color": {
+                  "rgbColor": {
+                    "red": 0.2
+                  }
+                }
+              },
+              "underline": true
+            },
+            "explicit_style": {}
+          }
+        ],
+        "paragraph_style": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "bullet": null,
+        "list_kind": "none"
+      },
+      {
+        "tab_id": "child",
+        "start": 1,
+        "end": 10,
+        "runs": [
+          {
+            "start": 1,
+            "end": 10,
+            "text": "😀 Target",
+            "style": {
+              "foregroundColor": {
+                "color": {
+                  "rgbColor": {
+                    "red": 0.2
+                  }
+                }
+              },
+              "underline": true
+            },
+            "explicit_style": {}
+          }
+        ],
+        "paragraph_style": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "bullet": null,
+        "list_kind": "none"
+      }
+    ],
+    "style": {
+      "link": null,
+      "color": "#00FF80",
+      "underline": false
+    },
+    "requests": [
+      {
+        "updateTextStyle": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10,
+            "tabId": "tab1"
+          },
+          "textStyle": {
+            "foregroundColor": {
+              "color": {
+                "rgbColor": {
+                  "red": 0.0,
+                  "green": 1.0,
+                  "blue": 0.5019607843137255
+                }
+              }
+            },
+            "underline": false
+          },
+          "fields": "foregroundColor,link,underline"
+        }
+      },
+      {
+        "updateTextStyle": {
+          "range": {
+            "startIndex": 4,
+            "endIndex": 10,
+            "tabId": "child"
+          },
+          "textStyle": {
+            "foregroundColor": {
+              "color": {
+                "rgbColor": {
+                  "red": 0.0,
+                  "green": 1.0,
+                  "blue": 0.5019607843137255
+                }
+              }
+            },
+            "underline": false
+          },
+          "fields": "foregroundColor,link,underline"
+        }
+      }
+    ]
+  },
+  {
+    "kind": "slides",
+    "data": {
+      "slides": [
+        {
+          "objectId": "slide1",
+          "pageElements": [
+            {
+              "objectId": "group",
+              "elementGroup": {
+                "children": [
+                  {
+                    "objectId": "shape",
+                    "shape": {
+                      "text": {
+                        "textElements": [
+                          {
+                            "startIndex": 0,
+                            "endIndex": 6,
+                            "paragraphMarker": {
+                              "style": {
+                                "alignment": "START"
+                              },
+                              "bullet": {
+                                "glyph": "1."
+                              }
+                            }
+                          },
+                          {
+                            "startIndex": 0,
+                            "endIndex": 6,
+                            "textRun": {
+                              "content": "Target",
+                              "style": {
+                                "foregroundColor": {
+                                  "opaqueColor": {
+                                    "rgbColor": {
+                                      "blue": 1
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "objectId": "table",
+              "table": {
+                "tableRows": [
+                  {
+                    "tableCells": [
+                      {
+                        "text": {
+                          "textElements": [
+                            {
+                              "startIndex": 0,
+                              "endIndex": 6,
+                              "paragraphMarker": {
+                                "style": {
+                                  "alignment": "START"
+                                },
+                                "bullet": {
+                                  "glyph": "1."
+                                }
+                              }
+                            },
+                            {
+                              "startIndex": 0,
+                              "endIndex": 6,
+                              "textRun": {
+                                "content": "Target",
+                                "style": {
+                                  "foregroundColor": {
+                                    "opaqueColor": {
+                                      "rgbColor": {
+                                        "blue": 1
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "records": [
+      {
+        "slide_id": "slide1",
+        "element_id": "shape",
+        "cell": null,
+        "runs": [
+          {
+            "start": 0,
+            "end": 6,
+            "text": "Target",
+            "style": {
+              "foregroundColor": {
+                "opaqueColor": {
+                  "rgbColor": {
+                    "blue": 1
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "paragraphs": [
+          {
+            "start": 0,
+            "end": 6,
+            "paragraph_style": {
+              "alignment": "START"
+            },
+            "bullet": {
+              "glyph": "1."
+            },
+            "list_kind": "numbered"
+          }
+        ]
+      },
+      {
+        "slide_id": "slide1",
+        "element_id": "table",
+        "cell": {
+          "rowIndex": 0,
+          "columnIndex": 0
+        },
+        "runs": [
+          {
+            "start": 0,
+            "end": 6,
+            "text": "Target",
+            "style": {
+              "foregroundColor": {
+                "opaqueColor": {
+                  "rgbColor": {
+                    "blue": 1
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "paragraphs": [
+          {
+            "start": 0,
+            "end": 6,
+            "paragraph_style": {
+              "alignment": "START"
+            },
+            "bullet": {
+              "glyph": "1."
+            },
+            "list_kind": "numbered"
+          }
+        ]
+      }
+    ],
+    "style": {
+      "bold": true,
+      "font_size": 18,
+      "alignment": "CENTER"
+    },
+    "requests": [
+      {
+        "updateParagraphStyle": {
+          "objectId": "shape",
+          "textRange": {
+            "type": "FIXED_RANGE",
+            "startIndex": 0,
+            "endIndex": 6
+          },
+          "style": {
+            "alignment": "CENTER"
+          },
+          "fields": "alignment"
+        }
+      },
+      {
+        "updateTextStyle": {
+          "objectId": "shape",
+          "textRange": {
+            "type": "FIXED_RANGE",
+            "startIndex": 0,
+            "endIndex": 6
+          },
+          "style": {
+            "bold": true,
+            "fontSize": {
+              "magnitude": 18,
+              "unit": "PT"
+            }
+          },
+          "fields": "bold,fontSize"
+        }
+      },
+      {
+        "updateParagraphStyle": {
+          "objectId": "table",
+          "textRange": {
+            "type": "FIXED_RANGE",
+            "startIndex": 0,
+            "endIndex": 6
+          },
+          "cellLocation": {
+            "rowIndex": 0,
+            "columnIndex": 0
+          },
+          "style": {
+            "alignment": "CENTER"
+          },
+          "fields": "alignment"
+        }
+      },
+      {
+        "updateTextStyle": {
+          "objectId": "table",
+          "textRange": {
+            "type": "FIXED_RANGE",
+            "startIndex": 0,
+            "endIndex": 6
+          },
+          "cellLocation": {
+            "rowIndex": 0,
+            "columnIndex": 0
+          },
+          "style": {
+            "bold": true,
+            "fontSize": {
+              "magnitude": 18,
+              "unit": "PT"
+            }
+          },
+          "fields": "bold,fontSize"
+        }
+      }
+    ]
+  },
+  {
+    "kind": "slides",
+    "data": {
+      "slides": [
+        {
+          "objectId": "slide1",
+          "pageElements": [
+            {
+              "objectId": "group",
+              "elementGroup": {
+                "children": [
+                  {
+                    "objectId": "shape",
+                    "shape": {
+                      "text": {
+                        "textElements": [
+                          {
+                            "startIndex": 0,
+                            "endIndex": 6,
+                            "paragraphMarker": {
+                              "style": {
+                                "alignment": "START"
+                              },
+                              "bullet": {
+                                "glyph": "1."
+                              }
+                            }
+                          },
+                          {
+                            "startIndex": 0,
+                            "endIndex": 6,
+                            "textRun": {
+                              "content": "Target",
+                              "style": {
+                                "foregroundColor": {
+                                  "opaqueColor": {
+                                    "rgbColor": {
+                                      "blue": 1
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "objectId": "table",
+              "table": {
+                "tableRows": [
+                  {
+                    "tableCells": [
+                      {
+                        "text": {
+                          "textElements": [
+                            {
+                              "startIndex": 0,
+                              "endIndex": 6,
+                              "paragraphMarker": {
+                                "style": {
+                                  "alignment": "START"
+                                },
+                                "bullet": {
+                                  "glyph": "1."
+                                }
+                              }
+                            },
+                            {
+                              "startIndex": 0,
+                              "endIndex": 6,
+                              "textRun": {
+                                "content": "Target",
+                                "style": {
+                                  "foregroundColor": {
+                                    "opaqueColor": {
+                                      "rgbColor": {
+                                        "blue": 1
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "records": [
+      {
+        "slide_id": "slide1",
+        "element_id": "shape",
+        "cell": null,
+        "runs": [
+          {
+            "start": 0,
+            "end": 6,
+            "text": "Target",
+            "style": {
+              "foregroundColor": {
+                "opaqueColor": {
+                  "rgbColor": {
+                    "blue": 1
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "paragraphs": [
+          {
+            "start": 0,
+            "end": 6,
+            "paragraph_style": {
+              "alignment": "START"
+            },
+            "bullet": {
+              "glyph": "1."
+            },
+            "list_kind": "numbered"
+          }
+        ]
+      },
+      {
+        "slide_id": "slide1",
+        "element_id": "table",
+        "cell": {
+          "rowIndex": 0,
+          "columnIndex": 0
+        },
+        "runs": [
+          {
+            "start": 0,
+            "end": 6,
+            "text": "Target",
+            "style": {
+              "foregroundColor": {
+                "opaqueColor": {
+                  "rgbColor": {
+                    "blue": 1
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "paragraphs": [
+          {
+            "start": 0,
+            "end": 6,
+            "paragraph_style": {
+              "alignment": "START"
+            },
+            "bullet": {
+              "glyph": "1."
+            },
+            "list_kind": "numbered"
+          }
+        ]
+      }
+    ],
+    "style": {
+      "list": "numbered",
+      "space_before": 10
+    },
+    "requests": [
+      {
+        "createParagraphBullets": {
+          "objectId": "shape",
+          "textRange": {
+            "type": "FIXED_RANGE",
+            "startIndex": 0,
+            "endIndex": 6
+          },
+          "bulletPreset": "NUMBERED_DIGIT_ALPHA_ROMAN"
+        }
+      },
+      {
+        "updateParagraphStyle": {
+          "objectId": "shape",
+          "textRange": {
+            "type": "FIXED_RANGE",
+            "startIndex": 0,
+            "endIndex": 6
+          },
+          "style": {
+            "spaceAbove": {
+              "magnitude": 10,
+              "unit": "PT"
+            }
+          },
+          "fields": "spaceAbove"
+        }
+      },
+      {
+        "createParagraphBullets": {
+          "objectId": "table",
+          "textRange": {
+            "type": "FIXED_RANGE",
+            "startIndex": 0,
+            "endIndex": 6
+          },
+          "cellLocation": {
+            "rowIndex": 0,
+            "columnIndex": 0
+          },
+          "bulletPreset": "NUMBERED_DIGIT_ALPHA_ROMAN"
+        }
+      },
+      {
+        "updateParagraphStyle": {
+          "objectId": "table",
+          "textRange": {
+            "type": "FIXED_RANGE",
+            "startIndex": 0,
+            "endIndex": 6
+          },
+          "cellLocation": {
+            "rowIndex": 0,
+            "columnIndex": 0
+          },
+          "style": {
+            "spaceAbove": {
+              "magnitude": 10,
+              "unit": "PT"
+            }
+          },
+          "fields": "spaceAbove"
+        }
+      }
+    ]
+  },
+  {
+    "kind": "slides",
+    "data": {
+      "slides": [
+        {
+          "objectId": "slide1",
+          "pageElements": [
+            {
+              "objectId": "group",
+              "elementGroup": {
+                "children": [
+                  {
+                    "objectId": "shape",
+                    "shape": {
+                      "text": {
+                        "textElements": [
+                          {
+                            "startIndex": 0,
+                            "endIndex": 6,
+                            "paragraphMarker": {
+                              "style": {
+                                "alignment": "START"
+                              },
+                              "bullet": {
+                                "glyph": "1."
+                              }
+                            }
+                          },
+                          {
+                            "startIndex": 0,
+                            "endIndex": 6,
+                            "textRun": {
+                              "content": "Target",
+                              "style": {
+                                "foregroundColor": {
+                                  "opaqueColor": {
+                                    "rgbColor": {
+                                      "blue": 1
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "objectId": "table",
+              "table": {
+                "tableRows": [
+                  {
+                    "tableCells": [
+                      {
+                        "text": {
+                          "textElements": [
+                            {
+                              "startIndex": 0,
+                              "endIndex": 6,
+                              "paragraphMarker": {
+                                "style": {
+                                  "alignment": "START"
+                                },
+                                "bullet": {
+                                  "glyph": "1."
+                                }
+                              }
+                            },
+                            {
+                              "startIndex": 0,
+                              "endIndex": 6,
+                              "textRun": {
+                                "content": "Target",
+                                "style": {
+                                  "foregroundColor": {
+                                    "opaqueColor": {
+                                      "rgbColor": {
+                                        "blue": 1
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "records": [
+      {
+        "slide_id": "slide1",
+        "element_id": "shape",
+        "cell": null,
+        "runs": [
+          {
+            "start": 0,
+            "end": 6,
+            "text": "Target",
+            "style": {
+              "foregroundColor": {
+                "opaqueColor": {
+                  "rgbColor": {
+                    "blue": 1
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "paragraphs": [
+          {
+            "start": 0,
+            "end": 6,
+            "paragraph_style": {
+              "alignment": "START"
+            },
+            "bullet": {
+              "glyph": "1."
+            },
+            "list_kind": "numbered"
+          }
+        ]
+      },
+      {
+        "slide_id": "slide1",
+        "element_id": "table",
+        "cell": {
+          "rowIndex": 0,
+          "columnIndex": 0
+        },
+        "runs": [
+          {
+            "start": 0,
+            "end": 6,
+            "text": "Target",
+            "style": {
+              "foregroundColor": {
+                "opaqueColor": {
+                  "rgbColor": {
+                    "blue": 1
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "paragraphs": [
+          {
+            "start": 0,
+            "end": 6,
+            "paragraph_style": {
+              "alignment": "START"
+            },
+            "bullet": {
+              "glyph": "1."
+            },
+            "list_kind": "numbered"
+          }
+        ]
+      }
+    ],
+    "style": {
+      "link": "https://example.com"
+    },
+    "requests": [
+      {
+        "updateTextStyle": {
+          "objectId": "shape",
+          "textRange": {
+            "type": "FIXED_RANGE",
+            "startIndex": 0,
+            "endIndex": 6
+          },
+          "style": {
+            "link": {
+              "url": "https://example.com"
+            }
+          },
+          "fields": "link"
+        }
+      },
+      {
+        "updateTextStyle": {
+          "objectId": "shape",
+          "textRange": {
+            "type": "FIXED_RANGE",
+            "startIndex": 0,
+            "endIndex": 6
+          },
+          "style": {
+            "foregroundColor": {
+              "opaqueColor": {
+                "rgbColor": {
+                  "blue": 1
+                }
+              }
+            },
+            "underline": false
+          },
+          "fields": "foregroundColor,underline"
+        }
+      },
+      {
+        "updateTextStyle": {
+          "objectId": "table",
+          "textRange": {
+            "type": "FIXED_RANGE",
+            "startIndex": 0,
+            "endIndex": 6
+          },
+          "cellLocation": {
+            "rowIndex": 0,
+            "columnIndex": 0
+          },
+          "style": {
+            "link": {
+              "url": "https://example.com"
+            }
+          },
+          "fields": "link"
+        }
+      },
+      {
+        "updateTextStyle": {
+          "objectId": "table",
+          "textRange": {
+            "type": "FIXED_RANGE",
+            "startIndex": 0,
+            "endIndex": 6
+          },
+          "cellLocation": {
+            "rowIndex": 0,
+            "columnIndex": 0
+          },
+          "style": {
+            "foregroundColor": {
+              "opaqueColor": {
+                "rgbColor": {
+                  "blue": 1
+                }
+              }
+            },
+            "underline": false
+          },
+          "fields": "foregroundColor,underline"
+        }
+      }
+    ]
+  },
+  {
+    "kind": "slides",
+    "data": {
+      "slides": [
+        {
+          "objectId": "slide1",
+          "pageElements": [
+            {
+              "objectId": "group",
+              "elementGroup": {
+                "children": [
+                  {
+                    "objectId": "shape",
+                    "shape": {
+                      "text": {
+                        "textElements": [
+                          {
+                            "startIndex": 0,
+                            "endIndex": 6,
+                            "paragraphMarker": {
+                              "style": {
+                                "alignment": "START"
+                              },
+                              "bullet": {
+                                "glyph": "1."
+                              }
+                            }
+                          },
+                          {
+                            "startIndex": 0,
+                            "endIndex": 6,
+                            "textRun": {
+                              "content": "Target",
+                              "style": {
+                                "foregroundColor": {
+                                  "opaqueColor": {
+                                    "rgbColor": {
+                                      "blue": 1
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "objectId": "table",
+              "table": {
+                "tableRows": [
+                  {
+                    "tableCells": [
+                      {
+                        "text": {
+                          "textElements": [
+                            {
+                              "startIndex": 0,
+                              "endIndex": 6,
+                              "paragraphMarker": {
+                                "style": {
+                                  "alignment": "START"
+                                },
+                                "bullet": {
+                                  "glyph": "1."
+                                }
+                              }
+                            },
+                            {
+                              "startIndex": 0,
+                              "endIndex": 6,
+                              "textRun": {
+                                "content": "Target",
+                                "style": {
+                                  "foregroundColor": {
+                                    "opaqueColor": {
+                                      "rgbColor": {
+                                        "blue": 1
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "records": [
+      {
+        "slide_id": "slide1",
+        "element_id": "shape",
+        "cell": null,
+        "runs": [
+          {
+            "start": 0,
+            "end": 6,
+            "text": "Target",
+            "style": {
+              "foregroundColor": {
+                "opaqueColor": {
+                  "rgbColor": {
+                    "blue": 1
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "paragraphs": [
+          {
+            "start": 0,
+            "end": 6,
+            "paragraph_style": {
+              "alignment": "START"
+            },
+            "bullet": {
+              "glyph": "1."
+            },
+            "list_kind": "numbered"
+          }
+        ]
+      },
+      {
+        "slide_id": "slide1",
+        "element_id": "table",
+        "cell": {
+          "rowIndex": 0,
+          "columnIndex": 0
+        },
+        "runs": [
+          {
+            "start": 0,
+            "end": 6,
+            "text": "Target",
+            "style": {
+              "foregroundColor": {
+                "opaqueColor": {
+                  "rgbColor": {
+                    "blue": 1
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "paragraphs": [
+          {
+            "start": 0,
+            "end": 6,
+            "paragraph_style": {
+              "alignment": "START"
+            },
+            "bullet": {
+              "glyph": "1."
+            },
+            "list_kind": "numbered"
+          }
+        ]
+      }
+    ],
+    "style": {
+      "link": null,
+      "color": "#00FF80",
+      "underline": false
+    },
+    "requests": [
+      {
+        "updateTextStyle": {
+          "objectId": "shape",
+          "textRange": {
+            "type": "FIXED_RANGE",
+            "startIndex": 0,
+            "endIndex": 6
+          },
+          "style": {
+            "foregroundColor": {
+              "opaqueColor": {
+                "rgbColor": {
+                  "red": 0.0,
+                  "green": 1.0,
+                  "blue": 0.5019607843137255
+                }
+              }
+            },
+            "underline": false
+          },
+          "fields": "foregroundColor,link,underline"
+        }
+      },
+      {
+        "updateTextStyle": {
+          "objectId": "table",
+          "textRange": {
+            "type": "FIXED_RANGE",
+            "startIndex": 0,
+            "endIndex": 6
+          },
+          "cellLocation": {
+            "rowIndex": 0,
+            "columnIndex": 0
+          },
+          "style": {
+            "foregroundColor": {
+              "opaqueColor": {
+                "rgbColor": {
+                  "red": 0.0,
+                  "green": 1.0,
+                  "blue": 0.5019607843137255
+                }
+              }
+            },
+            "underline": false
+          },
+          "fields": "foregroundColor,link,underline"
+        }
+      }
+    ]
+  }
+]

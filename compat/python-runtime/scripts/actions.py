@@ -707,6 +707,17 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = build_parser().parse_args()
     try:
+        # Keep runtime validation in this same process, before any API action.
+        if sys.version_info < (3, 10):
+            raise RuntimeError("Python 3.10 or newer is required")
+        try:
+            import google.auth.transport.requests
+            import google.oauth2.credentials
+            import googleapiclient.discovery
+            from zoneinfo import ZoneInfo
+            ZoneInfo("America/Los_Angeles")
+        except Exception as exc:
+            raise RuntimeError(f"Python dependency check failed: {exc}") from exc
         args.func(args)
         return 0
     except Exception as exc:

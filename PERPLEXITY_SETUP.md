@@ -1,5 +1,12 @@
 # Perplexity demo setup
 
+**Native runtime update:** this branch now uses the bundled Windows ARM64 Rust
+executable. The old interpreter-selection and Python runtime notes below are
+historical. See [RUNTIME_README.md](skills/productivity/chief-of-staff/RUNTIME_README.md)
+for the current runtime and [native/README.md](skills/productivity/chief-of-staff/native/README.md)
+for builds and tests. Setup/reset utilities still use Python. Use your own OAuth
+credentials; never distribute installed `runtime/` or local state folders.
+
 ## Consolidated skill installation
 
 Perplexity exposes only `chief-of-staff` for this demo. Its bundled scripts include

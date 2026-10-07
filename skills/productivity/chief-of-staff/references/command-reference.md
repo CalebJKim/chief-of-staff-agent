@@ -1,16 +1,16 @@
 # Command reference
 
-Pass these service commands and arguments to `run-actions.ps1`, which runs the bundled `actions.py`. See Examples below. Uppercase placeholders require values. Brackets mark optional arguments. Defaults are shown where applicable.
+Pass these service commands and arguments to `run-actions.ps1`, which runs the bundled native helper. See Examples below. Uppercase placeholders require values. Brackets mark optional arguments. Defaults are shown where applicable.
 
 | Command | Purpose | Optional arguments |
 |---|---|---|
 | `gmail search 'QUERY'` | Find matching messages’ headers, IDs, and links. | `--max 5` (1–10) |
 | `gmail get MESSAGE_ID` | Read one message. | `--max-chars 12000` |
 | `gmail thread THREAD_ID` | Read latest thread messages. | `--max-messages 12`, `--max-chars 8000` per message |
-| `gmail threads THREAD_ID [THREAD_ID ...]` | Read multiple threads in one process, skipping duplicate IDs. Returns one JSON record per thread. | Same limits as `gmail thread`. |
+| `gmail threads THREAD_ID [THREAD_ID ...]` | Read multiple threads using Gmail HTTP batches of up to ten, skipping duplicate IDs. Returns one JSON record per thread in requested order. | Same limits as `gmail thread`. |
 | `gmail important` | Read recent messages marked Important in Gmail, including their bodies. | `--max 12` (1–20), `--newer-than-days 2` (1–30 days), `--max-chars 8000` per message |
 | `gmail drafts` | Read all saved drafts, including recipients, subjects, threads, and full bodies. | None |
-| `gmail draft --to EMAIL --subject 'SUBJECT' --body-file -` | Save a new draft. | See Supporting notes 1–2. |
+| `gmail draft --to EMAIL --subject 'SUBJECT' --body-file -` | Save a new draft (`save-draft` is an alias). | See Supporting notes 1–2. |
 | `gmail draft --reply-to-message MESSAGE_ID --expected-to EMAIL --body-file -` | Save a reply draft. | See Supporting notes 1–2. |
 | `drive search 'QUERY'` | Find files and return names, IDs, and links. | `--max 10`, `--raw-query` for Drive query syntax |
 | `docs get DOCUMENT_ID` | Read document paragraph text. | `--max-chars 30000` |
@@ -56,7 +56,7 @@ Paragraph properties affect whole containing paragraphs. Headings apply named-st
 
 Formatting uses the current revision and verifies requested styles and unchanged text in one read-back. A failed verification can follow a successful write. Inspect the error before retrying. No new layouts, images, or charts are supported.
 
-Previews save to a new subfolder under `--output-dir` inside the explicit workspace root. Linked folders/junctions are rejected. Files remain there. Docs exports a PDF and renders selected pages using PyMuPDF (default first three, maximum 20). Slides downloads Google-rendered PNGs (maximum 10 slides). These commands do not edit Google files or judge appearance. Inspect PNGs with an image-viewing tool before claiming visual verification.
+Previews save to a new subfolder under `--output-dir` inside the explicit workspace root. Linked folders/junctions are rejected. Files remain there. Docs exports a PDF and renders selected pages using Windows PDF APIs (default first three, maximum 20). Slides downloads Google-rendered PNGs (maximum 10 slides). These commands do not edit Google files or judge appearance. Inspect PNGs with an image-viewing tool before claiming visual verification.
 
 ## Examples
 

@@ -1,5 +1,11 @@
 # Hermes Chief of Staff Agent
 
+**Current `pplx_demo` runtime:** the skill ships a native Rust executable for
+**Windows ARM64**, with no runtime Python or Rust installation required. Python
+is still used by setup/reset utilities. See the [native runtime guide](skills/productivity/chief-of-staff/RUNTIME_README.md)
+for current architecture, installation boundaries, and build instructions.
+Older Python runtime notes below and in PERPLEXITY_SETUP.md are historical.
+
 > Perplexity copy: use [PERPLEXITY_SETUP.md](PERPLEXITY_SETUP.md) for this installed demo. The Hermes installation instructions below are retained from the original; commands are translated to PowerShell.
 
 A portable Hermes Agent configuration for a lightweight Google Workspace chief of staff. It reads bounded Gmail, Calendar, Drive, Docs, Sheets, and Slides evidence; highlights meaningful daily outcomes; accounts for calendar constraints; prepares meeting work; drafts email; and proposes guarded tracker/document updates.

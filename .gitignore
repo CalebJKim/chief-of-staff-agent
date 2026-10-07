@@ -43,3 +43,7 @@ runtime-local.json
 
 # Private self-contained skill runtime (never commit credentials or cached mail)
 /skills/productivity/chief-of-staff/runtime/
+
+# Rust build output (the distribution executable is tracked separately)
+/skills/productivity/chief-of-staff/native/target/
+/out/

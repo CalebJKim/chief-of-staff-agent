@@ -1,43 +1,33 @@
-# Private Perplexity installation
+# Perplexity native runtime
 
-Run this skill in a local Perplexity Computer session on Windows. Its PowerShell
-commands locate this directory through `PPLX_SKILLS_DIR`, then load
-`scripts/runtime.ps1 -WorkspaceRoot <absolute task workspace>`. No Desktop checkout is required during execution.
+The documented PowerShell launchers execute the bundled `scripts/cos-actions.exe`.
+No Python interpreter, Python packages, or Rust installation is needed at runtime.
+The distributed executable targets Windows ARM64. Other architectures require a
+matching build; native document previews use Windows PDF and imaging APIs.
 
-- `scripts/`: briefing, ingestion, Google actions, verification, and local notes.
-- `runtime/state/`: read-only seed credentials, workspace references, and cached evidence.
-- `runtime-local.json`: paths relative to this installed directory.
+`run-actions.ps1` provides the existing Google Workspace command interface and
+`-Batch { action ... }`. `run-second-brain.ps1` searches or reads local notes.
+`daily_brief.ps1` collects evidence and builds the packet in one native process;
+`-Fixture` runs offline. Command names, documented flags, JSON fields, confirmation
+requirements, and recipient checks retain the Python backend's contracts.
 
-The selected workspace must contain a direct `CoS_SecondBrain` subfolder.
-Initialization generates `<workspace>/.chief-of-staff-state/second-brain.json`
-from that path, ignoring legacy installed vault settings. No vault is bundled.
-Writable credentials and snapshots stay in `<workspace>/.chief-of-staff-state`.
-The initialization copies seed credentials once; token refresh and snapshot writes
-use this workspace copy. Updated workspace tokens are never overwritten by seeds.
-The installed skill directory is read-only to Perplexity's sandbox. Pass the selected workspace root explicitly, even from a subdirectory.
-A missing workspace or vault stops initialization without creating a replacement.
-Existing callers may still supply `COS_WORKSPACE_ROOT`; an explicit argument wins.
+Pass `-WorkspaceRoot` with the absolute selected workspace, which must directly
+contain `CoS_SecondBrain`. Each launcher initializes and executes in the same call.
+`runtime.ps1` sets `COS_STATE_DIR` to `<workspace>/.chief-of-staff-state`, creates
+`second-brain.json` for that vault, and copies credentials from the installed
+`runtime/state` only when the workspace copy is absent. Token refresh, snapshots,
+packets, and previews use the writable workspace; no vault or evidence is bundled.
+An explicit workspace takes precedence over the legacy `COS_WORKSPACE_ROOT` override.
 
-Python comes from the account's `template/venv/Scripts/python.exe`. If absent,
-initialization selects system `python.exe` or `python3.exe` from PATH, excluding
-Windows Store aliases. It checks the interpreter and Google dependencies before
-any work. If the selected interpreter fails, report the error without retrying.
-Required packages are installed during setup, never during a brief.
+The installed skill is read-only. Perplexity still controls access and execution;
+the native runtime does not bypass permission denials. OAuth uses silent refresh,
+and errors do not trigger automatic reconnects or script restarts.
 
-`COS_STATE_DIR` points to writable workspace state. Perplexity scripts require it
-and have no Hermes-directory fallback. For Start of Day, run `scripts/daily_brief.ps1 -WorkspaceRoot <absolute task workspace>`.
-It initializes the workspace and invokes the brief once. Add `-Fixture` for the
-offline fixture test. For `actions.py`, use `scripts/run-actions.ps1 -WorkspaceRoot <absolute task workspace> SERVICE COMMAND [arguments]`, or `-Batch { action ... }` for grouped commands. It initializes once per call and stops on failure. For local note searches and reads, use `scripts/run-second-brain.ps1 -WorkspaceRoot <absolute task workspace> search|read [arguments]`. It initializes and invokes `second_brain.py` in the same call, stopping on failure.
-The Google token can refresh silently in the workspace; no new sign-in is needed.
+Developers can rebuild with `setup/perplexity/build-native.ps1` in the source repo.
+Source is in `native/`; the installer ships the executable rather than build tools
+or source. The retired Python implementation is retained in the repository's
+`compat/python-runtime`, outside the skill, for parity tests and the demo reset's
+credential helper. Setup and reset utilities remain Python; the skill does not.
 
-This is the active installation. Editing its `SKILL.md` changes the installed
-instructions; start a fresh conversation to load them. The Desktop source and
-backup are not automatically synchronized. The companion `ingest` skill uses this
-runtime, but Chief of Staff includes its ingestion helpers and can run by itself.
-
-Perplexity still controls execution and write permissions. If prompted, select
-the workspace folder through its normal permission UI. This package does not
-alter permission settings or bypass the sandbox.
-
-The runtime includes private credentials and cached mail. Exclude `runtime/`
-before sharing source or instructions with anyone else.
+`runtime/` contains private credentials and must never be shared. Source changes
+must be installed explicitly; they do not automatically update an installed skill.

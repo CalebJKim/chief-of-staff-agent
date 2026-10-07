@@ -1,9 +1,11 @@
 # Dot-source at the start of each Perplexity shell call.
-# NativeActions is retained for compatibility with older launcher calls.
 param([string]$WorkspaceRoot, [switch]$NativeActions)
 $ErrorActionPreference = 'Stop'
 $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 [Console]::OutputEncoding = $OutputEncoding
+$env:PYTHONUTF8 = '1'
+$env:PYTHONIOENCODING = 'utf-8'
+$env:PYTHONDONTWRITEBYTECODE = '1'
 # Explicit task workspace; keep the environment override for existing callers.
 if (-not $WorkspaceRoot) { $WorkspaceRoot = $env:COS_WORKSPACE_ROOT }
 # PowerShell 5.1 Resolve-Path may return no ProviderPath for extended paths.
@@ -37,9 +39,43 @@ function Resolve-CosRuntimePath([string]$RelativePath) {
     return $ResolvedPath
 }
 $CosSeedHome = Resolve-CosRuntimePath ([string]$Runtime.seed_state_root)
-# All bundled functionality runs in the native executable; no interpreter lookup.
-$CosExecutable = Join-Path $CosRoot 'scripts\cos-actions.exe'
-foreach ($RequiredPath in @($CosSeedHome, $CosExecutable)) {
+# Python is supplied by Perplexity. Fall back only when it is absent.
+if (-not $NativeActions) {
+if (-not $env:PPLX_SKILLS_DIR) { throw 'PPLX_SKILLS_DIR is missing. Run from a Perplexity local thread.' }
+$CosProfileRoot = Split-Path -Parent ([IO.Path]::GetFullPath($env:PPLX_SKILLS_DIR))
+$ManagedPython = Join-Path $CosProfileRoot 'template\venv\Scripts\python.exe'
+if (Test-Path -LiteralPath $ManagedPython -PathType Leaf) {
+    $Python = $ManagedPython
+    $CosPythonSource = 'perplexity'
+} else {
+    $SystemPython = @(Get-Command python.exe, python3.exe -CommandType Application -ErrorAction SilentlyContinue |
+        Where-Object { $_.Source -notmatch '[\\/]WindowsApps[\\/]' }) | Select-Object -First 1
+    if (-not $SystemPython) { throw 'No Perplexity or system Python was found.' }
+    $Python = $SystemPython.Source
+    $CosPythonSource = 'system'
+}
+# Check dependencies before creating state or starting ingestion. Never retry a job.
+$PythonCheck = @'
+import sys
+assert sys.version_info >= (3, 10), "Python 3.10 or newer is required"
+import google.auth.transport.requests
+import google.oauth2.credentials
+import googleapiclient.discovery
+from zoneinfo import ZoneInfo
+ZoneInfo("America/Los_Angeles")
+'@
+try {
+    $PythonCheck | & $Python -B -
+    if ($LASTEXITCODE -ne 0) { throw 'Python or dependency check failed.' }
+} catch {
+    throw "Cannot use $CosPythonSource Python at $Python. $($_.Exception.Message) The brief was not started."
+}
+$Action = Join-Path $CosRoot 'scripts\actions.py'
+} else {
+    $Action = Join-Path $CosRoot 'scripts\cos-actions.exe'
+    $Python = $Action
+}
+foreach ($RequiredPath in @($CosSeedHome, $Python, $Action)) {
     if (-not (Test-Path -LiteralPath $RequiredPath)) {
         throw "Chief of Staff installation is incomplete: $RequiredPath"
     }
@@ -47,47 +83,16 @@ foreach ($RequiredPath in @($CosSeedHome, $CosExecutable)) {
 # Perplexity mounts installed skills read-only. Refreshing OAuth tokens and
 # writing snapshots must use the explicitly selected writable workspace.
 $CosHome = Join-Path $CosWorkspace '.chief-of-staff-state'
-[IO.Directory]::CreateDirectory($CosHome) | Out-Null
-# Hold a workspace-local lock only during state initialization, never execution.
-# Keep the lock file in place; closing the handle releases the lock.
-$InitLock = $null
-$InitWait = [Diagnostics.Stopwatch]::StartNew()
-try {
-    while ($null -eq $InitLock) {
-        try {
-            $InitLock = [IO.File]::Open((Join-Path $CosHome 'runtime-init.lock'),
-                [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
-        } catch [IO.IOException] {
-            # Only sharing/lock violations indicate another initializer to wait for.
-            $LockError = $_.Exception.HResult -band 0xffff
-            if ($LockError -notin @(32, 33)) { throw }
-            if ($InitWait.Elapsed.TotalSeconds -ge 15) {
-                throw "Timed out waiting for workspace initialization: $CosHome"
-            }
-            Start-Sleep -Milliseconds 50
-        }
+New-Item -ItemType Directory -Path $CosHome -Force | Out-Null
+foreach ($StateName in @('google_token.json', 'google_client_secret.json', 'chief-of-staff-workspace-state.json')) {
+    $SeedFile = Join-Path $CosSeedHome $StateName
+    $LiveFile = Join-Path $CosHome $StateName
+    if (-not (Test-Path -LiteralPath $LiveFile) -and (Test-Path -LiteralPath $SeedFile)) {
+        [IO.File]::WriteAllBytes($LiveFile, [IO.File]::ReadAllBytes($SeedFile))
     }
-    foreach ($StateName in @('google_token.json', 'google_client_secret.json', 'chief-of-staff-workspace-state.json')) {
-        $SeedFile = Join-Path $CosSeedHome $StateName
-        $LiveFile = Join-Path $CosHome $StateName
-        if (-not (Test-Path -LiteralPath $LiveFile) -and (Test-Path -LiteralPath $SeedFile)) {
-            [IO.File]::WriteAllBytes($LiveFile, [IO.File]::ReadAllBytes($SeedFile))
-        }
-    }
-    # The selected workspace determines the vault. Preserve matching connections.
-    $BrainFile = Join-Path $CosHome 'second-brain.json'
-    $ExistingVault = $null
-    if (Test-Path -LiteralPath $BrainFile -PathType Leaf) {
-        $ExistingBrain = [IO.File]::ReadAllText($BrainFile, [Text.Encoding]::UTF8)
-        try { $ExistingVault = ($ExistingBrain | ConvertFrom-Json).vault_path } catch { }
-    }
-    if (-not [string]::Equals([string]$ExistingVault, $NotesPath, [StringComparison]::OrdinalIgnoreCase)) {
-        $BrainJson = @{ vault_path = $NotesPath } | ConvertTo-Json
-        [IO.File]::WriteAllText($BrainFile, $BrainJson, [Text.UTF8Encoding]::new($false))
-    }
-} finally {
-    if ($null -ne $InitLock) { $InitLock.Dispose() }
-    $InitWait.Stop()
 }
+# The selected workspace determines the vault. Ignore old installed connections.
+$BrainJson = @{ vault_path = $NotesPath } | ConvertTo-Json
+[IO.File]::WriteAllText((Join-Path $CosHome 'second-brain.json'), $BrainJson, [Text.UTF8Encoding]::new($false))
 # Snapshots and packets belong to individual runs. Never restore bundled evidence.
 $env:COS_STATE_DIR = $CosHome

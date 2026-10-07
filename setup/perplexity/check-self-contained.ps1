@@ -4,9 +4,9 @@ $env:PPLX_SKILLS_DIR = $SkillsDir
 . (Join-Path $SkillsDir 'productivity\chief-of-staff\scripts\runtime.ps1') -WorkspaceRoot $WorkspaceRoot
 if ($PSVersionTable.PSVersion.Major -ne 5) { throw 'Run this check in Windows PowerShell 5.1.' }
 $ParsedBlocks = 0
-foreach ($SkillName in @('chief-of-staff', 'ingest')) {
-    $SkillFile = Join-Path $SkillsDir "productivity\$SkillName\SKILL.md"
-    $SkillText = Get-Content -LiteralPath $SkillFile -Raw
+$Documents = @((Join-Path $CosRoot 'SKILL.md')) + @(Get-ChildItem -LiteralPath (Join-Path $CosRoot 'references') -Filter '*.md' -File | Select-Object -ExpandProperty FullName)
+foreach ($Document in $Documents) {
+    $SkillText = Get-Content -LiteralPath $Document -Raw -Encoding UTF8
     foreach ($Block in [regex]::Matches($SkillText, '(?s)```powershell\r?\n(.*?)```')) {
         $Tokens = $null
         $ParseErrors = $null
@@ -15,20 +15,11 @@ foreach ($SkillName in @('chief-of-staff', 'ingest')) {
         $ParsedBlocks++
     }
 }
-# Help parsing does not authenticate or make requests.
-foreach ($Helper in @('actions.py', 'ingest.py', 'brief.py', 'second_brain.py')) {
-    & $Python (Join-Path $CosRoot "scripts\$Helper") --help | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "$Helper --help failed" }
+foreach ($Command in @('gmail', 'drive', 'docs', 'sheets', 'slides', 'calendar', 'second-brain', 'ingest', 'brief', 'daily-brief', 'verify')) {
+    & $CosExecutable $Command --help | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "$Command --help failed" }
 }
-$PythonInfo = @'
-import sys, json, google.auth, googleapiclient.discovery; from zoneinfo import ZoneInfo; ZoneInfo("America/Los_Angeles")
-print(json.dumps({'executable': sys.executable, 'paths': sys.path, 'isolated': sys.flags.isolated}))
-'@ | & $Python -
-if ($LASTEXITCODE -ne 0) { throw 'Python dependency check failed' }
-$Info = $PythonInfo | ConvertFrom-Json
-$Notes = & $Python (Join-Path $CosRoot 'scripts\second_brain.py') search 'NeoAgent V2' --max 1
-if ($LASTEXITCODE -ne 0 -or -not ($Notes | ConvertFrom-Json).notes.Count) { throw 'Workspace notes check failed' }
-$Brief = & $Python (Join-Path $CosRoot 'scripts\brief.py') --max-chars 14000
-if ($LASTEXITCODE -ne 0) { throw 'Cached briefing check failed' }
-$null = $Brief | ConvertFrom-Json
-[PSCustomObject]@{Shell=$PSVersionTable.PSVersion.ToString(); ParsedBlocks=$ParsedBlocks; Helpers=4; Python=$Info.executable; PythonSource=$CosPythonSource; StateDirectory=$env:COS_STATE_DIR; Notes=$true; CachedBrief=$true} | ConvertTo-Json
+if (@(Get-ChildItem -LiteralPath (Join-Path $CosRoot 'scripts') -Recurse -File | Where-Object Extension -in @('.py', '.pyc')).Count) {
+    throw 'Legacy Python code remains installed.'
+}
+[PSCustomObject]@{Shell=$PSVersionTable.PSVersion.ToString(); ParsedBlocks=$ParsedBlocks; Backend='Rust'; Executable=$CosExecutable; StateDirectory=$env:COS_STATE_DIR} | ConvertTo-Json

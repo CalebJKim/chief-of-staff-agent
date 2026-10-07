@@ -22,7 +22,7 @@ from zipfile import ZipFile
 from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "skills" / "productivity" / "chief-of-staff" / "scripts"))
+sys.path.insert(0, str(ROOT / "compat" / "python-runtime" / "scripts"))
 from actions import credentials  # noqa: E402
 from baseline import reset_sheet_baseline  # noqa: E402
 import task_scenario

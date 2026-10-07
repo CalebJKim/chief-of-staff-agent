@@ -1,6 +1,6 @@
-# Invoke one bundled native action helper command, or a batch with initialization once.
+# Invoke one bundled actions.py command, or a batch with initialization once.
 # Setup options must precede the service command. No advanced parameter binding:
-# native action helper flags and piped JSON must reach the helper without reinterpretation.
+# actions.py flags and piped JSON must reach the helper without reinterpretation.
 $ErrorActionPreference = 'Stop'
 $CosActionArgs = @($args)
 $CosActionInput = @($input)
@@ -48,7 +48,7 @@ function action {
     if (-not $command.Count) { throw 'action needs SERVICE COMMAND [arguments].' }
     $script:CosActionInvocationCount++
     $start = New-Object System.Diagnostics.ProcessStartInfo
-    $start.FileName = $CosExecutable
+    $start.FileName = $Python
     $nativeArgs = $command
     $start.Arguments = ($nativeArgs | ForEach-Object { ConvertTo-CosNativeArgument ([string]$_) }) -join ' '
     $start.UseShellExecute = $false
@@ -63,7 +63,7 @@ function action {
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $start
     try {
-        if (-not $process.Start()) { throw 'Could not start native action helper.' }
+        if (-not $process.Start()) { throw 'Could not start actions.py.' }
         # Drain both output streams while sending input to avoid pipe deadlocks.
         $stdoutTask = $process.StandardOutput.ReadToEndAsync()
         $stderrTask = $process.StandardError.ReadToEndAsync()
@@ -87,7 +87,7 @@ function action {
         if ($stdout.Length) { Write-Output -NoEnumerate $stdout.TrimEnd([char[]]"`r`n") }
         if ($stderr.Length) { [Console]::Error.Write($stderr) }
         if ($process.ExitCode -ne 0) {
-            throw "native action helper failed (exit code $($process.ExitCode)). Inspect the error above before retrying."
+            throw "actions.py failed (exit code $($process.ExitCode)). Inspect the error above before retrying."
         }
         if ($inputFailure) { throw $inputFailure }
     } finally {

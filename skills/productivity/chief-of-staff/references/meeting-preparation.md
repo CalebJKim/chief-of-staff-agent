@@ -4,7 +4,7 @@ Prepare a read-only, meeting-specific briefing. Do not run Start of Day or inspe
 
 ## 1. Gather evidence
 
-Use [Command reference](command-reference.md) for `actions.py` commands and arguments.
+Use [Command reference](command-reference.md) for `run-actions.ps1` commands and arguments.
 
 1. Use existing context first, including the daily brief’s content. A source link is not a reason to read its contents.
 2. If information needed for the meeting brief is missing, gather only relevant emails first. Batch necessary short thread reads; keep potentially large outputs separate.

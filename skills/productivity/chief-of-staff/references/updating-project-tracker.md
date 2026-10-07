@@ -4,12 +4,12 @@ A tracker update request authorizes evidence-backed changes to the requested tra
 
 ## 1. Gather evidence
 
-Use [Command reference](command-reference.md) for `actions.py` commands and arguments. Do not run ingest or Start of Day.
+Use [Command reference](command-reference.md) for `run-actions.ps1` commands and arguments. Do not run ingest or Start of Day.
 
 1. **Read the tracker.** Use `sheets get` unless its current contents are already in context. Find an unknown tracker ID with `drive search`. Do not search local notes for it. Use returned tab names and a range for another known tab. Identify each requested entry’s deliverable, status, and blocker, plus the tracker’s status definitions.
-2. **Check existing email evidence.** Use at most one relevant email per lane, reusing it across lanes when applicable. If sufficient evidence is already in context, do not search or reread it.
-3. **Find missing email evidence.** Batch bounded Gmail searches by verified sender or short project term. Select one relevant email per lane and read it once with `gmail get`. Do not read whole threads or additional emails for that lane. Search misses do not prove inputs are missing.
-4. **Email evidence only.** Do not read supporting documents, decks, or Second Brain notes. Preserve statuses when the evidence does not support a change.
+2. **Check existing email evidence.** Start with one relevant email per lane, reusing it across lanes when applicable. If sufficient evidence is already in context, do not search or reread it.
+3. **Find missing email evidence.** Batch bounded Gmail searches by verified sender or short project term. Select one relevant email per lane and read it once with `gmail get`. Do not reread evidence already in context. Search misses do not prove inputs are missing.
+4. **Fill remaining gaps.** After the first email, read more emails or files only if information required to assess that lane is still missing. Preserve statuses when the evidence does not support a change.
 
 ## 2. Reconcile entries
 
@@ -37,13 +37,13 @@ If no changes are supported, report that without modifying the tracker.
 - Omit unchanged or unsupported optional fields. Preserve formulas, source metric names, units, and approval scope.
 - Batch changes in one `sheets update-lanes` call with the verified spreadsheet ID, actual tab name via `--sheet`, and `--confirm`. Use `--updates-file -` with the quoted input format in the “[Supporting notes](command-reference.md#supporting-notes)” section of the command reference.
 - Submit the example directly to the shell tool, without a `powershell -Command` wrapper. Inside the single-quoted here-string, use plain JSON quotes (`"`), not `\"`.
-- Read back once to verify writes and catch missed evidence-backed changes.
+- Use the verified save receipt; do not reread the tracker after success. If verification fails, report it; do not retry writes automatically.
 
 ## 4. Report results
 
 Report only requested tracker work using collected evidence.
 
-- “Updated”: Table: **Lane | Original status | Updated status | Reason**. One row per changed lane with pre-edit and confirmed read-back statuses and a source-linked reason. Say if nothing changed.
+- “Updated”: Table: **Lane | Original status | Updated status | Reason**. One row per changed lane with the receipt’s before/after statuses and a source-linked reason. Say if nothing changed.
 - “Still needs action”: Missing updates or blockers requiring others’ action. Mark unclear ownership as unconfirmed.
 - “Waiting on you”: Only actions or decisions explicitly assigned to the user. Presenting, attending, or receiving email does not establish ownership.
 - “Next step”: At most one question offering a draft to a verified contact who owes information. No unrelated edits, requests for the user’s decisions from others, or drafts saved without approval.

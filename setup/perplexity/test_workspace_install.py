@@ -21,7 +21,7 @@ class WorkspaceInstallTests(unittest.TestCase):
                 folder = source / 'skills/productivity' / skill
                 (folder / 'scripts').mkdir(parents=True)
                 (folder / 'SKILL.md').write_text('Skill instructions')
-            for helper in ('actions.py', 'workspace_formatting.py', 'ingest.py', 'verify.py'):
+            for helper in ('cos-actions.exe', 'run-actions.ps1', 'run-second-brain.ps1', 'daily_brief.ps1'):
                 (source / 'skills/productivity/chief-of-staff/scripts' / helper).write_text('# helper')
             seed = source / '.pplx-state'
             seed.mkdir()
@@ -35,7 +35,7 @@ class WorkspaceInstallTests(unittest.TestCase):
             skills = root / 'installed/skills'
             installer.install(source, skills)
             chief = skills / 'productivity/chief-of-staff'
-            for helper in ('actions.py', 'workspace_formatting.py', 'ingest.py', 'verify.py'):
+            for helper in ('cos-actions.exe', 'run-actions.ps1', 'run-second-brain.ps1', 'daily_brief.ps1'):
                 self.assertEqual((chief / 'scripts' / helper).read_text(), '# helper')
             self.assertFalse((skills / 'productivity/ingest').exists())
             self.assertFalse((chief / 'notes').exists())
@@ -47,7 +47,10 @@ class WorkspaceInstallTests(unittest.TestCase):
             legacy.mkdir()
             (legacy / 'SKILL.md').write_text('Old standalone skill')
             (legacy / 'private-state.json').write_text('Preserve this')
+            (chief / 'scripts/actions.py').write_text('retired code')
             result = installer.install(source, skills)
+            self.assertFalse((chief / 'scripts/actions.py').exists())
+            self.assertEqual((Path(result['retired_python_backup']) / 'scripts/actions.py').read_text(), 'retired code')
             backup = Path(result['retired_ingest_backup'])
             self.assertFalse(backup.is_relative_to(skills))
             self.assertEqual((backup / 'SKILL.md').read_text(), 'Old standalone skill')
@@ -66,7 +69,7 @@ class WorkspaceInstallTests(unittest.TestCase):
             (old / 'SKILL.md').write_text('Old staging skill')
             installer.install_code(source, staging)
             self.assertFalse(old.exists())
-            for helper in ('actions.py', 'workspace_formatting.py', 'ingest.py', 'verify.py'):
+            for helper in ('cos-actions.exe', 'run-actions.ps1', 'run-second-brain.ps1', 'daily_brief.ps1'):
                 self.assertEqual((staging / 'productivity/chief-of-staff/scripts' / helper).read_text(), '# helper')
 
     def test_refresh_removes_old_public_helper_rows(self):

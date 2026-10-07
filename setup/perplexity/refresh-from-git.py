@@ -161,6 +161,8 @@ def main() -> None:
     source = Path(__file__).resolve().parents[2]
     if source.name != 'ChiefOfStaff_PPLX':
         raise ValueError('Run only from the PPLX source copy')
+    if args.deploy and (source / 'skills/productivity/chief-of-staff/native/Cargo.toml').exists():
+        raise ValueError('This legacy Hermes-to-Python converter cannot deploy over the Rust runtime. Use install-self-contained.py to deploy the native source bundle.')
     git = lambda *a: subprocess.check_output(['git', '-C', str(args.repository), *a])
     commit = git('rev-parse', args.ref + '^{commit}').decode().strip()
     paths = git('ls-tree', '-r', '--name-only', commit, 'skills/productivity').decode().splitlines()

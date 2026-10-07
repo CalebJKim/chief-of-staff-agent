@@ -16,7 +16,7 @@ For daily briefs or questions about what to work on, follow the “Start of Day�
 
 For every request, check the “Task Guidance” table first. For matching tasks, read the linked guidance unless already in context, then follow it and the “Shared Operating Rules” section of this skill. Do not search or read task data, run task scripts, or make changes beforehand. Otherwise, plan using available context and scripts.
 
-Read only content needed for the task that is missing from context. Use the command reference for `actions.py`. Do not guess syntax.
+Read only content needed for the task that is missing from context. Use the command reference for `run-actions.ps1`. Do not guess syntax.
 
 Combine workflows only when the user requests multiple outcomes.
 
@@ -45,7 +45,7 @@ For immediate or scheduled Second Brain updates, read “Updating Second Brain�
 - Carry out requested work without asking whether to begin. Make only requested or approved changes, following any additional approval steps in “Task Guidance” or its linked references. Wait for acceptance before making additional changes you propose.
 - Read local files only from the selected workspace or installed skills. Keep local writes inside the workspace. Do not ever, under any circumstances, search other local folders or write outside the workspace.
 - When the user requests file work without specifying a location, path, or link, check Google Workspace first, then the current local workspace if there’s no clear match. Stop searching once you confidently identify the right file.
-- Confirm drafts were saved and read back file edits once to check they were applied correctly.
+- Confirm saved drafts from the save result. Do not list or reread drafts just to verify saving. For tracker updates, use the verified save receipt. Read back other file edits once.
 - Link suggested actions to supporting sources using URLs already obtained and short, descriptive link text from existing context, without extra title lookups. Cite Second Brain notes by title only. Never show raw IDs or bare URLs.
 - Keep replies focused on requested work and results. Omit routine script, command, and connection details. Use the user's name (if configured) when natural.
 - When writing to files or drafts, use the user's confirmed name when needed. If unknown, omit references to them. For example, write “awaiting decisions” instead of “awaiting the user's decisions.”
@@ -58,7 +58,7 @@ For immediate or scheduled Second Brain updates, read “Updating Second Brain�
 | Script | Purpose | Usage |
 |---|---|---|
 | `daily_brief.ps1` | Runs ingest and builds, saves, and prints a bounded evidence packet. | Use for Start of Day or Updating Second Brain, following that task's guidance. |
-| `run-actions.ps1` | Searches and reads Gmail, reads and saves drafts, searches Drive, reads and edits Docs/Sheets/Slides, and creates Calendar events. | Initializes and runs bundled `actions.py` with `SERVICE COMMAND [arguments]`. Before use, read [Command reference](references/command-reference.md) unless already in context. |
+| `run-actions.ps1` | Searches and reads Gmail, reads and saves drafts, searches Drive, reads and edits Docs/Sheets/Slides, and creates Calendar events. | Initializes and runs the bundled native helper with `SERVICE COMMAND [arguments]`. Before use, read [Command reference](references/command-reference.md) unless already in context. |
 | `run-second-brain.ps1` | Initializes and searches or reads notes from the configured Second Brain vault. | Use the search/read commands in the “Second Brain” subsection below. |
 
 Do not load the command reference for Start of Day.
@@ -69,16 +69,16 @@ For every command, if it runs in the background, wait for its automatic completi
 
 Replace `WORKSPACE_ROOT` in each command with the absolute path of the folder selected for this task, not a working subfolder. It must contain `CoS_SecondBrain` directly. Initialization generates `.chief-of-staff-state/second-brain.json` from that location.
 
-Perplexity's `shell` tool runs Windows PowerShell 5.1. Submit commands directly, without an outer wrapper. Run this skill’s scripts only through its documented `.ps1` launchers. Never invoke its `.py` files directly; the launchers handle initialization and Python execution. Initialization selects Perplexity’s Python, or system Python if absent, and prepares writable credentials and snapshots in the workspace's `.chief-of-staff-state` folder; installed skills are read-only. Keep single-quoted PowerShell here-string delimiters on their own lines.
+Perplexity's `shell` tool runs Windows PowerShell 5.1. Submit commands directly, without an outer wrapper. Run this skill’s scripts only through its documented `.ps1` launchers. Do not invoke the bundled executable directly; the launchers handle initialization and native execution. Initialization prepares writable credentials and snapshots in the workspace's `.chief-of-staff-state` folder; installed skills are read-only. Keep single-quoted PowerShell here-string delimiters on their own lines.
 
-Run `actions.py` commands through `run-actions.ps1 -WorkspaceRoot WORKSPACE_ROOT SERVICE COMMAND [arguments]`, using the installed path shown below. The launcher handles initialization and stops on failure.
+Run action commands through `run-actions.ps1 -WorkspaceRoot WORKSPACE_ROOT SERVICE COMMAND [arguments]`, using the installed path shown below. The launcher handles initialization and stops on failure.
 
 1. **Choose necessary reads:** Use existing context to identify the minimum reads needed. Stop reading when required information is available.
 2. **Batch those reads:** Combine independent reads with small combined output in one launcher batch. For Second Brain, combine necessary launcher commands in one shell call. Keep potentially large outputs separate.
 3. **Respect dependencies:** Wait for results before choosing dependent reads. Add reads only for necessary gaps or required verification.
 4. **Prevent rereading:** Do not reread content already in context just to check freshness. Allow rereading only for a user-requested refresh, already-obtained evidence of a change, or verification required by task guidance.
 
-**Email-read batching example:** Use `gmail threads` for multiple necessary short threads with known IDs. It reuses one Python process and Gmail client. Keep potentially large outputs separate.
+**Email-read batching example:** Use `gmail threads` for multiple necessary short threads with known IDs. It reuses one native process and Gmail client. Keep potentially large outputs separate.
 
 ```powershell
 & "$env:PPLX_SKILLS_DIR/productivity/chief-of-staff/scripts/run-actions.ps1" -WorkspaceRoot 'WORKSPACE_ROOT' gmail threads 'THREAD_ID_1' 'THREAD_ID_2'
@@ -111,7 +111,7 @@ For explicitly requested status-only changes, use `--status-only` instead of `--
 
 Reuse current evidence. Unless the task is about Second Brain itself, check Google Workspace first for missing facts. Do not search or read Second Brain unless a specific fact needed for the task remains missing. Stop once the evidence is sufficient. Do not scan the vault with terminal commands or reload it on every turn. Do not edit notes for briefing requests. For requested note updates, follow [Updating Second Brain](references/updating-second-brain.md).
 
-Choose the needed command. The launcher initializes and runs `second_brain.py`; do not call Python directly.
+Choose the needed command. The launcher initializes and runs the native Second Brain helper.
 
 Search:
 
@@ -154,7 +154,7 @@ Only if the check returns `NO_SAVED_BRIEF`, run the generation command below exa
 & (Join-Path $env:PPLX_SKILLS_DIR 'productivity\chief-of-staff\scripts\daily_brief.ps1') -WorkspaceRoot 'WORKSPACE_ROOT'
 ```
 
-Wait for completion. Use the returned JSON. If truncated, read only the file at `packet_path`, following the tool’s offsets. Do not search for or read packets or snapshots from previous runs. Never rerun the command or run `ingest.py` or `brief.py` separately.
+Wait for completion. Use the returned JSON. If truncated, read only the file at `packet_path`, following the tool’s offsets. Do not search for or read packets or snapshots from previous runs. Never rerun the command or run ingestion or packet construction separately.
 
 For steps 2–5, use only the packet as evidence and context. Do not search for or read any additional sources. Follow its `instruction` field. No further tool calls, raw snapshots, source documents, extra lookups, parsers, output redirection, or task execution. Read or discuss trackers only on request.
 
