@@ -7,6 +7,24 @@ for the current runtime and [native/README.md](skills/productivity/chief-of-staf
 for builds and tests. Setup/reset utilities still use Python. Use your own OAuth
 credentials; never distribute installed `runtime/` or local state folders.
 
+## Local model server
+
+The versioned launcher `setup/perplexity/start-llama-server.ps1` reproduces this
+machine's Qwen3.6 server configuration, including `--reasoning-budget 756`.
+It expects llama.cpp and the named GGUF model/projector files under
+`C:\llama.cpp-n1x-b9775`; adjust `$llamaRoot` in the script for another location.
+Model files and server binaries are not included in this repository.
+
+```powershell
+& .\setup\perplexity\start-llama-server.ps1
+```
+
+The launcher leaves an existing server running. To apply changed server arguments,
+stop that server while idle and then run the launcher. The 756-token setting caps
+thinking per model request, not the whole task or final answer. Perplexity requests
+that disable thinking do not use this budget; request-level overrides may also
+change the effective setting. Skill installation does not start the model server.
+
 ## Consolidated skill installation
 
 Perplexity exposes only `chief-of-staff` for this demo. Its bundled scripts include
