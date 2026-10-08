@@ -15,6 +15,7 @@ mod cli;
 mod drafts;
 mod formatting;
 mod gmail_batch;
+mod gmail_evidence;
 mod ingest;
 mod mutations;
 mod preview;
@@ -607,6 +608,7 @@ fn run() -> Result<()> {
 }
 fn dispatch(api: &Api, a: &Args) -> Result<()> {
     match (a.group.as_str(), a.command.as_str()) {
+        ("gmail", "evidence") => emit(gmail_evidence::run(api, a)?),
         ("gmail", "drafts") => emit(drafts::list(api)?),
         ("gmail", "draft") => emit(drafts::save(api, a)?),
         ("docs" | "slides", "inspect" | "format") => emit(formatting::run(api, a)?),

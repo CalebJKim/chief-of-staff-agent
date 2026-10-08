@@ -1,14 +1,15 @@
 # Meeting Preparation
 
-Prepare a read-only, meeting-specific briefing. Do not run Start of Day or inspect trackers. List applying needed file edits as preparation tasks. Do not assume suggested edits have been completed. Apply edits or save drafts only when the user explicitly requests or approves those actions. A request for meeting preparation does not accept an earlier offer to edit files.
+Prepare a read-only, meeting-specific briefing. Do not run Start of Day or read tracker contents. Locate a spreadsheet tracker by filename only, as described below. List applying needed file edits as preparation tasks. Do not assume suggested edits have been completed. Apply edits or save drafts only when the user explicitly requests or approves those actions. A request for meeting preparation does not accept an earlier offer to edit files.
 
 ## 1. Gather evidence
 
-Use [Command reference](command-reference.md) for `run-actions.ps1` commands and arguments.
+Use [Command reference](command-reference.md) for syntax when needed; do not reread loaded guidance.
 
-1. Use existing context first, including the daily brief’s content. A source link is not a reason to read its contents.
-2. If information needed for the meeting brief is missing, gather only relevant emails first. Batch necessary short thread reads; keep potentially large outputs separate.
-3. If context and emails support the “Context,” “What needs to get done before the meeting,” and “Goals for the meeting” sections, stop gathering evidence and write the brief. Otherwise, read other files only if information needed to complete those sections is missing.
+1. Reuse conversation evidence, including the daily brief (if available). Identify facts missing from the three briefing sections below. Do not open sources merely because they are linked or reread them for background or freshness.
+2. Gather missing email facts with one `gmail evidence --requests-file -` call: supply known native `thread_ids` without queries and batch short, meeting-specific queries for the rest. Skip preliminary header searches and duplicate reads. Follow up on errors or truncation only when needed facts remain unresolved.
+3. Reuse a spreadsheet link whose filename clearly matches the initiative. Otherwise, use one `drive search --raw-query` lookup with `name contains 'INITIATIVE_NAME'`, using a known filename prefix and no MIME filter. Select the spreadsheet from the returned names and file types. If its inputs and the email requests are already known, combine them with `run-actions.ps1 -Batch`. Judge relevance by filename only; do not read tracker contents or investigate further. Omit “Status of Workstreams:” if no filename clearly matches.
+4. Once the sections are supported, write the brief; if only the tracker link is missing, perform only its lookup. Gather other file content only when specific facts are still needed; batch independent follow-ups and leave unsupported details unstated. Skip retrieval narration and intermediate summaries of findings.
 
 **Evidence rules:**
 
@@ -34,6 +35,8 @@ Assume preparation starts now. Suggest work times or meeting changes only when r
 
 **People:** [Other participants and roles, excluding the user.]
 
+**Status of Workstreams:** [Spreadsheet filename](SPREADSHEET_URL)
+
 > **Your Role:** [Source-linked role, including presenting when supported.]
 
 ### What needs to get done before the meeting
@@ -44,7 +47,7 @@ Assume preparation starts now. Suggest work times or meeting changes only when r
 
 - **[Outcome still to achieve](SOURCE_URL)** — [What must be decided or accomplished.]
 
-**Next steps:** [Relevant offer or question, if needed.]
+**Next steps:** [If useful, offer help with a specific outstanding action identified in this briefing. Do not offer to prepare for the meeting again or repeat the daily brief’s offer. Omit this line if there is no relevant follow-up.]
 ```
 
 ## 3. Check and respond

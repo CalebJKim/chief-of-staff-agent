@@ -1,6 +1,6 @@
 # Updating Project Tracker
 
-A tracker update request authorizes evidence-backed changes to the requested tracker and work items.
+A tracker update request authorizes evidence-backed changes to the requested tracker and work items. Complete the tracker update without deferring any of the update work to the user or asking clarifying questions in place of updating it. Gather the needed evidence yourself, apply all supported changes, and preserve values where evidence is insufficient.
 
 ## 1. Gather evidence
 
@@ -8,8 +8,8 @@ Use [Command reference](command-reference.md) for `run-actions.ps1` commands and
 
 1. **Read the tracker:** Use `sheets get` unless its current contents are already in context. Find an unknown tracker ID with `drive search`, not local notes. Use returned tab names and a range for another known tab. Identify each requested lane’s deliverable, status, blocker, and the tracker’s status definitions.
 2. **Identify evidence gaps:** For each lane, internally identify what existing context establishes and what information is still required to assess its status. Do not search or read for lanes with sufficient evidence.
-3. **Gather missing evidence:** Start with one relevant email per lane, reusing it across lanes where applicable. Use links or IDs already in context before searching. Batch independent, bounded Gmail searches by verified sender or short project term, then batch necessary reads. Do not reread email content already in context.
-4. **Reassess before reading more:** Check whether the collected evidence is sufficient for each lane. Read additional emails or files only for remaining required information. Stop reading once sufficient; preserve statuses when evidence does not support a change. Search misses do not prove inputs are missing.
+3. **Gather missing email evidence in one call:** Use `gmail evidence --requests-file -` with all independent requests, following the Email evidence example in the command reference. Use the lane name as each request's `key`. For known native thread IDs, supply `thread_ids` and omit `query`. For lanes needing discovery, supply a short Gmail `query` using a verified sender or project term and `max` (default 3). Reuse existing links/IDs before searching; never invent sender addresses. The helper batches searches and reads, shares threads across lanes, and returns the email content. Do not separately search for headers first or reread returned content.
+4. **Resolve remaining evidence gaps together:** Review the shared `threads`, per-lane `searches`, errors, and truncation flags. Identify the specific facts still missing to assess each lane, reusing returned evidence across lanes. If evidence is still missing, gather all independent follow-ups in one `gmail evidence` call, using known thread IDs before searching. Do not issue separate searches and reads. Revise unsuccessful queries using fewer, relevant terms. Do not reread returned threads or repeat unchanged empty searches. An empty search alone does not require a follow-up if other evidence answers the question. Read other files only for remaining required information. Stop once sufficient; preserve statuses when evidence does not support a change.
 
 ## 2. Reconcile entries
 
@@ -23,7 +23,7 @@ Use [Command reference](command-reference.md) for `run-actions.ps1` commands and
    - **On track:** Work remains and is progressing without a blocker.
 
    Missing input alone does not change **Awaiting update** to **Blocked**; evidence must establish an impediment to progress. Pending approvals block only work that requires them.
-5. **Check consistency before writing.** The status, next action, and blocker must describe the same lane. A completed deliverable cannot remain **On track** or **In progress**. Apply shared evidence to every requested lane. Received inputs cannot remain missing.
+5. **Check consistency before writing.** The status, next action, and blocker must describe the same lane. Assess every lane against all returned evidence, using that lane’s own completion criteria. A completed deliverable stays Complete even when other lanes still need to use it. Before keeping “Awaiting update” or “Blocked,” check whether the missing input has arrived.
 
 - Preserve accurate values. Clear values only when evidence shows they no longer apply, never because information is missing.
 

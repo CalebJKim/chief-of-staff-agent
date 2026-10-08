@@ -4,6 +4,7 @@ Pass these service commands and arguments to `run-actions.ps1`, which runs the b
 
 | Command | Purpose | Optional arguments |
 |---|---|---|
+| `gmail evidence --requests-file -` | Batch all requested searches and retrieve matching threads in one call; share duplicate searches and threads. Accepts known thread IDs too. See Email evidence below. | `--max 3` per query (1–10), `--max-threads 30` (1–60), `--max-messages 6`, `--max-chars 5000`, `--max-total-chars 100000` |
 | `gmail search 'QUERY'` | Find matching messages’ headers, IDs, and links. | `--max 5` (1–10) |
 | `gmail get MESSAGE_ID` | Read one message. | `--max-chars 12000` |
 | `gmail thread THREAD_ID` | Read latest thread messages. | `--max-messages 12`, `--max-chars 8000` per message |
@@ -29,6 +30,38 @@ Pass these service commands and arguments to `run-actions.ps1`, which runs the b
 | `slides replace-text PRESENTATION_ID --find 'OLD' --replace 'NEW' --confirm` | Replace matching slide text. | `--slide-id SLIDE_OBJECT_ID` (otherwise the whole deck). Case-insensitive unless `--match-case`. |
 | `slides delete PRESENTATION_ID --slide-id SLIDE_OBJECT_ID --confirm` | Delete one slide. | None |
 | `calendar create --title 'TITLE' --start START --end END --confirm` | Create an event. START and END require timestamps with UTC offsets. Attendees receive invitations. | `--description 'TEXT'`, `--attendees 'EMAIL1,EMAIL2'`, `--calendar primary` |
+
+## Email evidence
+
+Use `gmail evidence` when a focused task needs several email searches and their contents. Pass one JSON array containing all independent requests. A request can be a Gmail query string or an object with `key`, `query`, `max`, and/or `thread_ids`. Keys must be unique; use lane names to associate evidence with tracker rows. `max` bounds matching messages per query, which may belong to fewer unique threads. At most 30 requests are accepted.
+
+Reuse known native thread IDs with `thread_ids` and omit `query` when search is unnecessary. If both are supplied, both are used. Copy IDs and verified sender addresses from existing results; do not invent addresses. Supply short project terms when no sender address is known. URLs are not accepted as thread IDs.
+
+```powershell
+@'
+[
+  {"key":"LANE_WITH_KNOWN_EVIDENCE","thread_ids":["KNOWN_THREAD_ID"]},
+  {"key":"LANE_NEEDING_SEARCH","query":"SHORT_PROJECT_TERM","max":3}
+]
+'@ | & "$env:PPLX_SKILLS_DIR/productivity/chief-of-staff/scripts/run-actions.ps1" -WorkspaceRoot 'WORKSPACE_ROOT' gmail evidence --requests-file -
+```
+
+The single response contains `searches` mapping each key to `thread_ids`, plus one shared `threads` array containing the message bodies and source links. Read those bodies directly; do not separately fetch returned threads. `errors`, `unavailable_thread_ids`, and `omitted_thread_ids` identify unread sources. `search_has_more`, `omitted_messages`, and `body_truncated` identify bounded results. Follow up only when a flagged omission or other evidence gap matters to the requested decision. Search matches are leads; an empty result does not establish missing input or completion. This command only reads Gmail and does not update trackers.
+
+## Combining independent reads
+
+Use `-Batch { action ... }` for independent commands whose inputs are already known. The launcher initializes once and runs commands sequentially in one shell call. Each `action` starts its own native process; `-Batch` does not parallelize network calls. Pipe JSON to the individual action that needs it. For example, when both email evidence and a spreadsheet link are missing:
+
+```powershell
+& "$env:PPLX_SKILLS_DIR/productivity/chief-of-staff/scripts/run-actions.ps1" -WorkspaceRoot 'WORKSPACE_ROOT' -Batch {
+    @'
+[{"key":"meeting","query":"MEETING_PROJECT_TERM","max":3}]
+'@ | action gmail evidence --requests-file -
+    action drive search "trashed = false and name contains 'INITIATIVE_NAME'" --raw-query --max 5
+}
+```
+
+Replace placeholders with known terms; use a filename prefix for `INITIATIVE_NAME`. Escape apostrophes in Drive query values with a backslash. Omit unnecessary commands. Keep a command separate when its inputs depend on a preceding result. Gmail content already returned by `gmail evidence` does not need another read.
 
 ## Supporting notes
 

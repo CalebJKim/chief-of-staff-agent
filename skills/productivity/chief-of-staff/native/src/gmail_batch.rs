@@ -78,6 +78,23 @@ pub fn read_threads(api: &Api, ids: &[String]) -> Result<Vec<Result<Value>>> {
     parse_response(&content_type, &body, ids)
 }
 
+// Internal, read-only Gmail requests. Callers construct paths and encode every
+// user-supplied query value; Content-ID preserves order in reordered responses.
+pub fn get_many(api: &Api, paths: &[String]) -> Result<Vec<Result<Value>>> {
+    ensure!(!paths.is_empty() && paths.len() <= BATCH_SIZE, "Invalid Gmail batch size");
+    let mut request = String::new();
+    for (i, path) in paths.iter().enumerate() {
+        ensure!(path.starts_with("/gmail/v1/users/me/") && !path.contains(['\r', '\n', ' ']),
+            "Invalid Gmail batch read path");
+        request.push_str(&format!(
+            "--{BOUNDARY}\r\nContent-Type: application/http\r\nContent-ID: <cos-{i}>\r\n\r\nGET {path} HTTP/1.1\r\nAccept: application/json\r\n\r\n"
+        ));
+    }
+    request.push_str(&format!("--{BOUNDARY}--\r\n"));
+    let (content_type, body) = api.gmail_batch_post(request)?;
+    parse_response(&content_type, &body, &vec![String::new(); paths.len()])
+}
+
 fn parse_response(content_type: &str, body: &[u8], ids: &[String]) -> Result<Vec<Result<Value>>> {
     ensure!(
         !content_type.contains(['\r', '\n']),
@@ -158,7 +175,7 @@ fn parse_part(raw: &[u8], id: &str) -> Result<Value> {
     let value: Value = serde_json::from_str(body)
         .with_context(|| format!("Invalid JSON for Gmail thread {id}"))?;
     ensure!(
-        s(&value["id"]) == id,
+        id.is_empty() || s(&value["id"]) == id,
         "Gmail batch returned the wrong thread for {id}"
     );
     Ok(value)

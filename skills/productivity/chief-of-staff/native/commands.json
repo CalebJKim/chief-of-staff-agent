@@ -1,6 +1,19 @@
 [
   {
     "resource": "gmail",
+    "command": "evidence",
+    "fields": [
+      {"id":"requests_file","options":["--requests-file"],"required":true,"type":"string","help":"JSON array of query strings or {key, query, max, thread_ids} objects; use - for stdin"},
+      {"id":"max","options":["--max"],"default":3,"type":"int","bounds":[1,10],"help":"Maximum matching messages per query; can be overridden by each request"},
+      {"id":"max_threads","options":["--max-threads"],"default":30,"type":"int","bounds":[1,60],"help":"Maximum unique threads to retrieve across all requests"},
+      {"id":"max_messages","options":["--max-messages"],"default":6,"type":"int","bounds":[1,30],"help":"Latest messages returned per thread"},
+      {"id":"max_chars","options":["--max-chars"],"default":5000,"type":"int","bounds":[1,30000],"help":"Maximum body characters per message"},
+      {"id":"max_total_chars","options":["--max-total-chars"],"default":100000,"type":"int","bounds":[1000,300000],"help":"Combined body character budget; all omissions are flagged"}
+    ],
+    "exclusive": []
+  },
+  {
+    "resource": "gmail",
     "command": "get",
     "fields": [
       {
